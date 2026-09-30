@@ -23,8 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
+      - name: Assemble site (knee app at root, PF app at /pf/)
+        run: |
+          mkdir site
+          cp -r www/. site/
+          mkdir site/pf
+          cp -r pf-app/www/. site/pf/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: www
+          path: site
       - id: deployment
         uses: actions/deploy-pages@v4
