@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Knee Osteotomy Planner</title>
+<meta name="description" content="Measure lower-limb alignment on a long-leg scannogram and plan HTO or DFO corrections.">
+<meta name="theme-color" content="#05080b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Osteotomy">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+@font-face{font-family:"Archivo";font-weight:400;font-display:swap;src:url(fonts/archivo-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:500;font-display:swap;src:url(fonts/archivo-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:600;font-display:swap;src:url(fonts/archivo-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:700;font-display:swap;src:url(fonts/archivo-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-latin-600-normal.woff2) format("woff2")}
+
+/* Layout: dark radiograph viewer on top, tabbed control sheet below (phone) or beside (tablet/desktop) */
+:root{
+  --bg:#eaeef2; --surface:#ffffff; --ink:#14202b; --muted:#5a6876; --line:#d3dbe3;
+  --accent:#0a6f7d; --accent-ink:#ffffff; --soft:#e2f1f3;
+  --ok:#1d7f47; --warn:#a86a0f; --bad:#b8352a;
+  --view:#05080b; --chrome:#0b1116; --chrome-ink:#e6ecf1; --chrome-muted:#8d9aa6; --chrome-line:#1f2a33;
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1318; --surface:#151c23; --ink:#e2e8ee; --muted:#93a1ae; --line:#27323c;
+  --accent:#45b9c9; --accent-ink:#06161a; --soft:#16303a;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1318; --surface:#151c23; --ink:#e2e8ee; --muted:#93a1ae; --line:#27323c;
+  --accent:#45b9c9; --accent-ink:#06161a; --soft:#16303a;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}
+
+[hidden]{display:none!important}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{background:var(--chrome);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{height:100%;height:100dvh;display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+
+/* top bar sits on the dark chrome, continuous with the viewer */
+.bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--chrome);color:var(--chrome-ink)}
+.brand{display:flex;flex-direction:column;margin-right:auto;min-width:0}
+.brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand span{font-size:10.5px;color:var(--chrome-muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{border:1px solid var(--chrome-line);background:#121b22;color:var(--chrome-ink);border-radius:9px;min-height:38px;padding:0 11px;cursor:pointer;font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.ib svg{width:17px;height:17px;flex:none}
+.ib.primary{background:#45b9c9;color:#06161a;border-color:#45b9c9}
+.ib:focus-visible,.tab:focus-visible,.step:focus-visible,.chip:focus-visible,.btn:focus-visible{outline:2px solid #45b9c9;outline-offset:2px}
+
+.work{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:0}
+.viewer{position:relative;background:var(--view);overflow:hidden;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;display:block}
+.prompt{position:absolute;left:10px;right:10px;top:10px;background:rgba(8,12,16,.84);color:#e9eef2;border:1px solid rgba(255,194,71,.45);border-radius:9px;padding:7px 10px;font-size:13px;pointer-events:none;display:flex;gap:8px;align-items:baseline}
+.prompt .k{font-family:var(--f-num);color:#ffc247;font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.prompt small{color:#a9b4bd;display:block;font-size:11.5px}
+.vtools{position:absolute;right:10px;bottom:10px;display:flex;gap:6px}
+.vtools button{background:rgba(8,12,16,.84);color:#e9eef2;border:1px solid rgba(255,255,255,.18);border-radius:8px;min-width:40px;height:38px;padding:0 10px;font-size:13px;cursor:pointer}
+
+.panel{background:var(--surface);display:flex;flex-direction:column;min-height:0;min-width:0;border-left:1px solid var(--line)}
+.grab{display:none}
+.tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+.tab{flex:1;background:none;border:0;padding:12px 6px;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px;display:flex;flex-direction:column;gap:14px;min-height:0;flex:1;background:var(--surface)}
+h3{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.group{display:flex;flex-direction:column;gap:6px}
+.steps{display:flex;flex-direction:column;gap:2px}
+.step{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:8px;cursor:pointer;min-height:40px}
+.step.on{border-color:var(--accent);background:var(--soft)}
+.dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--muted)}
+.step.done .dot{background:#ffc247;border-color:#ffc247}
+.step .gl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.field{display:flex;align-items:center;gap:6px;font-size:13px}
+.field input[type=number],.field input[type=text]{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.field input[type=number]{width:84px;font-family:var(--f-num)}
+.slider{display:grid;grid-template-columns:78px 1fr 48px;gap:8px;align-items:center;font-size:12.5px}
+.slider output{font-family:var(--f-num);font-size:12px;text-align:right}
+input[type=range]{accent-color:var(--accent);width:100%;height:28px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;min-height:38px;padding:0 12px;cursor:pointer;font-weight:600;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.mt{width:100%;border-collapse:collapse;font-size:13px}
+.mt th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
+.mt td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.mt td.n{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt .ref{font-size:11px;color:var(--muted)}
+.pill{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:99px;letter-spacing:.03em;white-space:nowrap}
+.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{flex:1;border:0;background:none;padding:10px 6px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:6px 11px;font-size:12px;cursor:pointer;font-family:var(--f-num)}
+.chip.on{border-color:var(--accent);color:var(--accent)}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.big{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.big .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.big .v{font-family:var(--f-num);font-size:26px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big .v small{font-size:13px;color:var(--muted);font-weight:500}
+.big .s{font-size:11.5px;color:var(--muted)}
+.big.main{border-color:var(--accent);background:var(--soft)}
+.notes{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.notes li{font-size:12.5px;padding:8px 10px;border-radius:7px;border-left:3px solid var(--line);background:var(--bg)}
+.notes li.warn{border-left-color:var(--warn)} .notes li.bad{border-left-color:var(--bad)} .notes li.ok{border-left-color:var(--ok)}
+.fine{font-size:11.5px;color:var(--muted);margin:0}
+.empty{font-size:13px;color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:9px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;padding:4px 0}
+details[open] summary{margin-bottom:8px}
+
+/* cases sheet */
+.sheet{position:fixed;inset:0;background:rgba(3,6,9,.55);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet-card{background:var(--surface);color:var(--ink);width:100%;max-width:520px;max-height:85%;border-radius:16px 16px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sheet-head b{font-size:16px;margin-right:auto}
+.sheet-body{overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.case{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:10px}
+.case img{width:44px;height:64px;object-fit:cover;border-radius:5px;background:#000}
+.case .t{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.case .d{font-size:11.5px;color:var(--muted);font-family:var(--f-num)}
+.case .acts{display:flex;gap:6px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#14202b;color:#fff;padding:9px 14px;border-radius:9px;font-size:13px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+
+@media (max-width:820px){
+  .bar .lbl{display:none}
+  .brand span{display:none}
+  .work{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,44%)}
+  .work.tall{grid-template-rows:minmax(0,28%) minmax(0,1fr)}
+  .panel{border-left:0;border-radius:14px 14px 0 0;margin-top:-10px;position:relative;z-index:2}
+  .grab{display:block;border:0;background:none;padding:7px 0 2px;cursor:pointer}
+  .grab i{display:block;width:38px;height:4px;border-radius:4px;background:var(--line);margin:0 auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>Knee Osteotomy Planner</b><span>Long-leg standing AP · Paley angles · Miniaci planning</span></div>
+    <label class="ib primary" for="file" title="Open scannogram">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg><span class="lbl">Open image</span>
+    </label>
+    <input id="file" type="file" accept="image/*" hidden>
+    <button class="ib" id="casesBtn" title="Saved cases">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Cases</span>
+    </button>
+    <button class="ib" id="menuBtn" title="More">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+    </button>
+  </header>
+
+  <main class="work" id="work">
+    <section class="viewer" id="viewer">
+      <canvas id="cv" aria-label="Scannogram viewer"></canvas>
+      <div class="prompt" id="prompt"></div>
+      <div class="vtools">
+        <button id="fit">Fit</button>
+        <button id="zin" aria-label="Zoom in">+</button>
+        <button id="zout" aria-label="Zoom out">−</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="pts" aria-selected="true">Landmarks</button>
+        <button class="tab" role="tab" data-t="ana" aria-selected="false">Analysis</button>
+        <button class="tab" role="tab" data-t="plan" aria-selected="false">Osteotomy</button>
+      </div>
+
+      <div class="pane" id="p-pts">
+        <p class="fine">Select a landmark, then tap the image. Drag a point to refine it; a magnifier appears. Pinch to zoom, drag empty space to pan.</p>
+        <div class="steps" id="steps"></div>
+        <div class="group">
+          <h3>Calibration</h3>
+          <div class="row">
+            <label class="field" for="calmm">Marker length <input id="calmm" type="number" inputmode="decimal" min="1" step="0.5" value="25"> mm</label>
+            <span class="fine" id="scaleout"></span>
+          </div>
+        </div>
+        <details>
+          <summary>Image adjustments</summary>
+          <div class="group">
+            <div class="slider"><label for="con">Contrast</label><input id="con" type="range" min="50" max="250" value="100"><output id="cono">100%</output></div>
+            <div class="slider"><label for="bri">Brightness</label><input id="bri" type="range" min="40" max="200" value="100"><output id="brio">100%</output></div>
+            <label class="field"><input id="inv" type="checkbox"> Invert</label>
+          </div>
+        </details>
+      </div>
+
+      <div class="pane" id="p-ana" hidden></div>
+
+      <div class="pane" id="p-plan" hidden>
+        <div class="group">
+          <h3>Osteotomy level</h3>
+          <div class="seg" id="level">
+            <button data-v="HTO" class="on">HTO · tibia</button>
+            <button data-v="DFO">DFO · femur</button>
+          </div>
+          <p class="fine" id="levelnote"></p>
+        </div>
+        <div class="group">
+          <h3>Target weight-bearing line</h3>
+          <div class="slider"><label for="tgt">WBL ratio</label><input id="tgt" type="range" min="40" max="70" step="0.5" value="62.5"><output id="tgto">62.5%</output></div>
+          <div class="chips" id="presets">
+            <button class="chip" data-v="50">50%</button>
+            <button class="chip" data-v="55">55%</button>
+            <button class="chip" data-v="60">60%</button>
+            <button class="chip" data-v="62.5">62.5% Fujisawa</button>
+          </div>
+          <p class="fine">Across the tibial plateau from the medial edge (0%) to the lateral edge (100%).</p>
+        </div>
+        <div id="planout"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<!-- saved cases -->
+<div class="sheet" id="casesSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Saved cases">
+    <div class="sheet-head"><b>Saved cases</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <div class="group">
+        <h3>Save current case</h3>
+        <div class="row">
+          <label class="field" for="caseName" style="flex:1"><input id="caseName" type="text" placeholder="e.g. Patient initials, side" style="flex:1;min-width:0;width:100%"></label>
+          <button class="btn primary" id="saveCase">Save</button>
+        </div>
+        <p class="fine">Cases stay on this device only. Use initials, not full names.</p>
+      </div>
+      <div class="group"><h3>On this device</h3><div id="caseList" class="group"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- more menu -->
+<div class="sheet" id="menuSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="More actions">
+    <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn" id="newCase">New case (clear all points)</button>
+      <button class="btn" id="demoBtn">Open demo case</button>
+      <button class="btn" id="shareBtn">Share plan image</button>
+      <p class="fine">Planning aid only. Measurements depend on a correctly rotated, calibrated standing film; confirm intra-operatively. Not a certified medical device.</p>
+      <p class="fine">Version 1.0</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s);
+const cv=$('#cv'), ctx=cv.getContext('2d');
+const COL={pt:'#ffc247',axis:'#ffc247',seg:'#ff9f6b',jl:'#7fd0ff',post:'#4fe3b4',wedge:'rgba(79,227,180,.28)'};
+const isNative=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+
+const STEPS=[
+ ['cal1','Calibration','Marker edge A','One edge of the calibration ball or ruler segment'],
+ ['cal2','Calibration','Marker edge B','Opposite edge; enter its real length below'],
+ ['h1','Hip','Femoral head rim 1','Three points anywhere on the head outline; the centre is fitted'],
+ ['h2','Hip','Femoral head rim 2','Second point on the head outline'],
+ ['h3','Hip','Femoral head rim 3','Third point on the head outline'],
+ ['fm','Knee','Medial femoral condyle','Most distal point of the medial condyle'],
+ ['fl','Knee','Lateral femoral condyle','Most distal point of the lateral condyle'],
+ ['knee','Knee','Knee centre','Between the tibial spines, top of the notch'],
+ ['tm','Knee','Medial plateau edge','Medial rim of the tibial plateau'],
+ ['tl','Knee','Lateral plateau edge','Lateral rim of the tibial plateau'],
+ ['am','Ankle','Talar dome, medial','Medial shoulder of the talar dome'],
+ ['al','Ankle','Talar dome, lateral','Lateral shoulder of the talar dome'],
+ ['hinge','Osteotomy','Hinge point','HTO: lateral tibia near fibular head tip, ~10 mm from cortex. DFO: medial femur just above adductor tubercle'],
+ ['cut','Osteotomy','Osteotomy entry','Start of the cut on the opposite cortex'],
+];
+
+let img=null, iw=0, ih=0, filtered=null, imgBlob=null, isDemo=false;
+let view={s:1,tx:0,ty:0};
+let pts={};
+let active='cal1';
+const S={calMM:25, level:'HTO', target:62.5, con:100, bri:100, inv:false, tab:'pts'};
+let dragInfo=null;
+
+/* ---------- storage (IndexedDB) ---------- */
+const DB=(()=>{let p=null;const open=()=>p||(p=new Promise((res,rej)=>{try{const r=indexedDB.open('osteotomy-planner',1);
+  r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('cases'))d.createObjectStore('cases',{keyPath:'id'})};
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
+  const tx=async(mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('cases',mode);const st=t.objectStore('cases');const out=fn(st);t.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);t.onerror=()=>rej(t.error)})};
+  return{put:v=>tx('readwrite',s=>s.put(v)),get:id=>tx('readonly',s=>s.get(id)),del:id=>tx('readwrite',s=>s.delete(id)),all:()=>tx('readonly',s=>s.getAll())}})();
+
+function snapshot(){return{pts:JSON.parse(JSON.stringify(pts)),active,calMM:S.calMM,level:S.level,target:S.target,con:S.con,bri:S.bri,inv:S.inv,isDemo}}
+let saveT=0;
+function autosave(){clearTimeout(saveT);saveT=setTimeout(()=>{DB.put({id:'__current',...snapshot(),blob:isDemo?null:imgBlob,date:Date.now()}).catch(()=>{})},600)}
+async function loadRecord(r){
+  S.calMM=r.calMM||25;S.level=r.level||'HTO';S.target=r.target??62.5;S.con=r.con||100;S.bri=r.bri||100;S.inv=!!r.inv;
+  $('#calmm').value=S.calMM;$('#con').value=S.con;$('#cono').textContent=S.con+'%';$('#bri').value=S.bri;$('#brio').textContent=S.bri+'%';$('#inv').checked=S.inv;
+  if(r.isDemo||!r.blob){isDemo=true;imgBlob=null;setImage(makeDemo())}
+  else{isDemo=false;imgBlob=r.blob;setImage(await blobToCanvas(r.blob))}
+  pts=r.pts||{};active=r.active||'cal1';update();
+}
+function blobToCanvas(blob){return new Promise((res,rej)=>{const url=URL.createObjectURL(blob);const im=new Image();
+  im.onload=()=>{const MAX=5000,sc=Math.min(1,MAX/Math.max(im.width,im.height));const c=document.createElement('canvas');
+    c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c)};
+  im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('bad image'))};im.src=url})}
+
+/* ---------- geometry ---------- */
+const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y}), add=(a,b)=>({x:a.x+b.x,y:a.y+b.y});
+const mul=(a,k)=>({x:a.x*k,y:a.y*k}), dot=(a,b)=>a.x*b.x+a.y*b.y, cross=(a,b)=>a.x*b.y-a.y*b.x;
+const len=a=>Math.hypot(a.x,a.y), norm=a=>mul(a,1/len(a)), mid=(a,b)=>mul(add(a,b),.5);
+const D=180/Math.PI;
+const ang=(u,v)=>Math.acos(Math.max(-1,Math.min(1,dot(u,v)/(len(u)*len(v)))))*D;
+const rot=(p,c,deg)=>{const t=deg/D,cs=Math.cos(t),sn=Math.sin(t),d=sub(p,c);return{x:c.x+d.x*cs-d.y*sn,y:c.y+d.x*sn+d.y*cs}};
+function circ(a,b,c){const d=2*(a.x*(b.y-c.y)+b.x*(c.y-a.y)+c.x*(a.y-b.y));if(Math.abs(d)<1e-9)return null;
+  const A=a.x*a.x+a.y*a.y,B=b.x*b.x+b.y*b.y,C=c.x*c.x+c.y*c.y;
+  const x=(A*(b.y-c.y)+B*(c.y-a.y)+C*(a.y-b.y))/d, y=(A*(c.x-b.x)+B*(a.x-c.x)+C*(b.x-a.x))/d;
+  return {x,y,r:Math.hypot(a.x-x,a.y-y)}}
+function derive(p){const o={...p};
+  if(p.h1&&p.h2&&p.h3){const c=circ(p.h1,p.h2,p.h3);if(c){o.hip={x:c.x,y:c.y};o.hipR=c.r}}
+  if(p.am&&p.al)o.ankle=mid(p.am,p.al);return o}
+function mmpp(){return (pts.cal1&&pts.cal2)?S.calMM/len(sub(pts.cal1,pts.cal2)):null}
+function measure(o){
+  const m={};const {hip,knee,ankle,fm,fl,tm,tl,am,al}=o;
+  if(hip&&knee&&fm&&fl) m.mLDFA=ang(sub(hip,knee),sub(fl,fm));
+  if(knee&&ankle&&tm&&tl) m.MPTA=ang(sub(ankle,knee),sub(tm,tl));
+  if(knee&&ankle&&am&&al) m.LDTA=ang(sub(knee,ankle),sub(al,am));
+  if(fm&&fl&&tm&&tl){m.JLCA=ang(sub(fl,fm),sub(tl,tm));const gm=len(sub(fm,tm)),gl=len(sub(fl,tl));m.JLCAopen=gl>gm?'lateral':'medial'}
+  if(hip&&knee&&ankle&&tm&&tl){
+    const lat=norm(sub(tl,tm));const r=sub(ankle,hip),q=sub(knee,hip),u=dot(q,r)/dot(r,r);
+    const Q=add(hip,mul(r,u));const d=dot(sub(knee,Q),lat);
+    m.MADpx=Math.abs(d);m.MADside=d>0?'medial':'lateral';
+    const dev=180-ang(sub(hip,knee),sub(ankle,knee));m.HKA=d>0?dev:-dev;
+    const sv=sub(tl,tm),den=cross(sv,r);
+    if(Math.abs(den)>1e-9){const t=cross(sub(hip,tm),r)/den;m.WBL=t*100;m.WBLpt=add(tm,mul(sv,t))}
+    m.JLO=Math.abs(90-ang(r,sv));
+  }
+  return m;
+}
+
+/* ---------- osteotomy solve ---------- */
+function rotSet(){return S.level==='HTO'?['am','al']:['fm','fl','knee','tm','tl','am','al']}
+function applyRot(p,deg){const q={...p};for(const k of rotSet())if(p[k])q[k]=rot(p[k],p.hinge,deg);return derive(q)}
+function solve(){
+  if(['h1','h2','h3','fm','fl','knee','tm','tl','am','al','hinge'].some(k=>!pts[k]))return null;
+  const f=d=>{const w=measure(applyRot(pts,d)).WBL;return w==null?NaN:w-S.target};
+  let best=null,prev=f(-35),pd=-35;
+  for(let d=-34.75;d<=35;d+=.25){const v=f(d);
+    if(!isNaN(v)&&!isNaN(prev)&&Math.sign(v)!==Math.sign(prev)){
+      let a=pd,b=d,fa=prev;for(let i=0;i<50;i++){const c=(a+b)/2,fc=f(c);if(Math.sign(fc)===Math.sign(fa)){a=c;fa=fc}else b=c}
+      const r=(a+b)/2;if(best===null||Math.abs(r)<Math.abs(best))best=r}
+    prev=v;pd=d}
+  return best;
+}
+
+/* ---------- demo image ---------- */
+function makeDemo(){
+  const c=document.createElement('canvas');c.width=600;c.height=1800;const g=c.getContext('2d');
+  const bg=g.createLinearGradient(0,0,600,0);bg.addColorStop(0,'#050505');bg.addColorStop(.5,'#111');bg.addColorStop(1,'#050505');
+  g.fillStyle=bg;g.fillRect(0,0,600,1800);
+  g.fillStyle='rgba(120,120,120,.18)';g.beginPath();
+  g.moveTo(150,120);g.bezierCurveTo(120,500,170,820,190,900);g.bezierCurveTo(200,1150,230,1500,265,1760);
+  g.lineTo(395,1760);g.bezierCurveTo(400,1450,420,1150,395,900);g.bezierCurveTo(430,700,440,400,420,120);g.closePath();g.fill();
+  const bone=(poly)=>{const gr=g.createLinearGradient(poly[0][0]-60,0,poly[0][0]+160,0);
+    gr.addColorStop(0,'#8d8d8d');gr.addColorStop(.5,'#d6d6d6');gr.addColorStop(1,'#8d8d8d');g.fillStyle=gr;g.beginPath();
+    poly.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill()};
+  g.fillStyle='#cfcfcf';g.beginPath();g.arc(300,170,42,0,7);g.fill();
+  bone([[272,150],[330,195],[312,240],[296,330],[312,700],[362,862],[352,906],[288,896],[220,902],[214,862],[258,700],[244,330],[206,262],[226,206],[262,196]]);
+  bone([[220,912],[350,917],[346,965],[318,1060],[344,1640],[362,1695],[300,1698],[308,1640],[284,1060],[228,965]]);
+  g.strokeStyle='#a9a9a9';g.lineWidth=13;g.lineCap='round';g.beginPath();g.moveTo(214,975);g.lineTo(284,1705);g.stroke();
+  g.fillStyle='#b5b5b5';g.beginPath();g.arc(212,968,15,0,7);g.fill();
+  g.fillStyle='#c4c4c4';g.beginPath();g.ellipse(330,1726,36,22,0,0,7);g.fill();
+  g.strokeStyle='rgba(60,60,60,.55)';g.lineWidth=6;g.beginPath();g.moveTo(272,330);g.lineTo(290,760);g.moveTo(300,1080);g.lineTo(322,1600);g.stroke();
+  const ball=g.createRadialGradient(495,295,3,500,300,21);ball.addColorStop(0,'#fff');ball.addColorStop(1,'#bdbdbd');
+  g.fillStyle=ball;g.beginPath();g.arc(500,300,21,0,7);g.fill();
+  g.fillStyle='#e8e8e8';g.font='bold 40px sans-serif';g.fillText('R',50,80);
+  g.fillStyle='#777';g.font='14px sans-serif';g.fillText('SYNTHETIC DEMO · right leg · 25 mm ball',150,1785);
+  return c;
+}
+const DEMO_PTS={cal1:{x:479,y:300},cal2:{x:521,y:300},h1:{x:258,y:170},h2:{x:300,y:128},h3:{x:330,y:200},
+  fm:{x:350,y:905},fl:{x:220,y:900},knee:{x:285,y:908},tm:{x:348,y:915},tl:{x:222,y:911},
+  am:{x:360,y:1698},al:{x:300,y:1702},hinge:{x:238,y:968},cut:{x:344,y:1005}};
+function openDemo(){isDemo=true;imgBlob=null;setImage(makeDemo());pts=JSON.parse(JSON.stringify(DEMO_PTS));S.calMM=25;$('#calmm').value=25;S.level='HTO';S.target=62.5;active='cut';selectTab('plan')}
+
+/* ---------- image handling ---------- */
+function setImage(src){img=src;iw=src.width;ih=src.height;buildFiltered();fit()}
+function buildFiltered(){
+  if(!img)return;
+  if(S.con===100&&S.bri===100&&!S.inv){filtered=img;draw();return}
+  const c=document.createElement('canvas');c.width=iw;c.height=ih;const g=c.getContext('2d');g.drawImage(img,0,0);
+  const d=g.getImageData(0,0,iw,ih),a=d.data,k=S.con/100,b=S.bri/100;
+  const lut=new Uint8ClampedArray(256);for(let i=0;i<256;i++){let v=((i/255-.5)*k+.5)*b*255;if(S.inv)v=255-v;lut[i]=v}
+  for(let i=0;i<a.length;i+=4){a[i]=lut[a[i]];a[i+1]=lut[a[i+1]];a[i+2]=lut[a[i+2]]}
+  g.putImageData(d,0,0);filtered=c;draw();
+}
+$('#file').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const c=await blobToCanvas(f);
+    imgBlob=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));isDemo=false;
+    pts={};active='cal1';S.con=100;S.bri=100;S.inv=false;$('#con').value=100;$('#bri').value=100;$('#inv').checked=false;$('#cono').textContent=$('#brio').textContent='100%';
+    setImage(c);selectTab('pts')}
+  catch{toast('That file could not be opened. Export the scannogram as JPEG or PNG.')}
+});
+
+/* ---------- view ---------- */
+function resize(){const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));draw()}
+function fit(){if(!img)return;const r=cv.getBoundingClientRect();if(!r.width)return;
+  const top=56,s=Math.min(r.width/iw,(r.height-top)/ih)*.96;view={s,tx:(r.width-iw*s)/2,ty:top+(r.height-top-ih*s)/2};draw()}
+let lastSize='';
+new ResizeObserver(()=>{const r=cv.getBoundingClientRect();const key=Math.round(r.width)+'x'+Math.round(r.height);if(key===lastSize)return;lastSize=key;resize();fit()}).observe($('#viewer'));
+$('#fit').onclick=fit;
+const zoomAt=(k,x,y)=>{const ns=Math.max(.05,Math.min(40,view.s*k));const kk=ns/view.s;view.tx=x-(x-view.tx)*kk;view.ty=y-(y-view.ty)*kk;view.s=ns;draw()};
+$('#zin').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1.4,r.width/2,r.height/2)};
+$('#zout').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1/1.4,r.width/2,r.height/2)};
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top)},{passive:false});
+const toS=p=>({x:p.x*view.s+view.tx,y:p.y*view.s+view.ty});
+const toI=(x,y)=>({x:(x-view.tx)/view.s,y:(y-view.ty)/view.s});
+
+/* ---------- pointer interaction ---------- */
+const ptrs=new Map();let G=null;
+const loc=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+function hit(x,y){let best=null,bd=24;for(const k in pts){const s=toS(pts[k]);const d=Math.hypot(s.x-x,s.y-y);if(d<bd){bd=d;best=k}}return best}
+cv.addEventListener('pointerdown',e=>{if(!img)return;cv.setPointerCapture(e.pointerId);const p=loc(e);ptrs.set(e.pointerId,p);
+  if(ptrs.size===1){const h=hit(p.x,p.y);G={type:h?'drag':'tap',id:h,sx:p.x,sy:p.y,lx:p.x,ly:p.y}}
+  else if(ptrs.size===2){const [a,b]=[...ptrs.values()];G={type:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y),c0:mid(a,b),v0:{...view}};dragInfo=null}
+});
+cv.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId)||!G)return;const p=loc(e);ptrs.set(e.pointerId,p);
+  if(G.type==='pinch'&&ptrs.size>=2){const [a,b]=[...ptrs.values()];const c=mid(a,b),d=Math.hypot(a.x-b.x,a.y-b.y);
+    const s=Math.max(.05,Math.min(40,G.v0.s*d/G.d0));const I={x:(G.c0.x-G.v0.tx)/G.v0.s,y:(G.c0.y-G.v0.ty)/G.v0.s};
+    view={s,tx:c.x-I.x*s,ty:c.y-I.y*s};draw();return}
+  if(G.type==='drag'){if(Math.hypot(p.x-G.sx,p.y-G.sy)>3||dragInfo){const q=pts[G.id];q.x+=(p.x-G.lx)/view.s;q.y+=(p.y-G.ly)/view.s;dragInfo={id:G.id};G.lx=p.x;G.ly=p.y;update()}return}
+  if(G.type==='tap'&&Math.hypot(p.x-G.sx,p.y-G.sy)>8)G.type='pan';
+  if(G.type==='pan'){view.tx+=p.x-G.lx;view.ty+=p.y-G.ly;G.lx=p.x;G.ly=p.y;draw()}
+});
+function up(e){if(!ptrs.has(e.pointerId))return;const p=loc(e);ptrs.delete(e.pointerId);
+  if(G&&G.type==='tap'&&ptrs.size===0)place(toI(p.x,p.y));
+  if(G&&G.type==='drag'&&!dragInfo&&ptrs.size===0){active=G.id;update()}
+  if(ptrs.size===0){G=null;if(dragInfo){dragInfo=null;draw()}}}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+function place(p){if(!active)return;pts[active]=p;
+  const i=STEPS.findIndex(s=>s[0]===active);const next=STEPS.slice(i+1).find(s=>!pts[s[0]])||STEPS.find(s=>!pts[s[0]]);
+  active=next?next[0]:active;update();if(navigator.vibrate)try{navigator.vibrate(8)}catch{}}
+
+/* ---------- drawing ---------- */
+let raf=0;function draw(){if(!raf)raf=requestAnimationFrame(render)}
+function render(){raf=0;const dpr=window.devicePixelRatio||1;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#05080b';ctx.fillRect(0,0,cv.width,cv.height);
+  if(!filtered)return;
+  ctx.setTransform(dpr*view.s,0,0,dpr*view.s,dpr*view.tx,dpr*view.ty);ctx.imageSmoothingQuality='high';ctx.drawImage(filtered,0,0);
+  ctx.setTransform(dpr,0,0,dpr,0,0);overlays();
+  if(dragInfo&&pts[dragInfo.id])loupe(pts[dragInfo.id],dpr)}
+function line(a,b,col,w=1.6,dash=null){const A=toS(a),B=toS(b);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=w;if(dash)ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore()}
+function extLine(a,b,col,w,dash,ext=.12){const d=sub(b,a);line(sub(a,mul(d,ext)),add(b,mul(d,ext)),col,w,dash)}
+function tag(p,text,col,dx=10,dy=-10){const s=toS(p);ctx.save();ctx.font='600 11.5px "IBM Plex Mono", monospace';const w=ctx.measureText(text).width+10;
+  let x=s.x+dx,y=s.y+dy;if(dx<0)x-=w;ctx.fillStyle='rgba(5,8,11,.84)';ctx.fillRect(x,y-13,w,18);ctx.fillStyle=col;ctx.fillText(text,x+5,y);ctx.restore()}
+function overlays(){
+  const o=derive(pts),m=measure(o);const post=S.tab==='plan'?planData():null;
+  if(o.hip){const s=toS(o.hip);ctx.save();ctx.strokeStyle='rgba(255,194,71,.7)';ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(s.x,s.y,o.hipR*view.s,0,7);ctx.stroke();ctx.restore()}
+  if(pts.cal1&&pts.cal2)line(pts.cal1,pts.cal2,'#ffffff',1.4);
+  if(o.hip&&o.knee)line(o.hip,o.knee,COL.seg,1.4);
+  if(o.knee&&o.ankle)line(o.knee,o.ankle,COL.seg,1.4);
+  if(pts.fm&&pts.fl)extLine(pts.fm,pts.fl,COL.jl,1.5,null,.35);
+  if(pts.tm&&pts.tl)extLine(pts.tm,pts.tl,COL.jl,1.5,null,.35);
+  if(pts.am&&pts.al)extLine(pts.am,pts.al,COL.jl,1.5,null,.5);
+  if(o.hip&&o.ankle)line(o.hip,o.ankle,COL.axis,1.8,[8,6]);
+  if(m.WBLpt){const s=toS(m.WBLpt);ctx.fillStyle=COL.axis;ctx.beginPath();ctx.arc(s.x,s.y,4.5,0,7);ctx.fill();tag(m.WBLpt,`WBL ${m.WBL.toFixed(1)}%`,COL.axis,12,50)}
+  if(post){const {p2,deg}=post;
+    if(pts.cut){const c2=rot(pts.cut,pts.hinge,deg);const H=toS(pts.hinge),C=toS(pts.cut),C2=toS(c2);
+      ctx.save();ctx.fillStyle=COL.wedge;ctx.strokeStyle=COL.post;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(H.x,H.y);ctx.lineTo(C.x,C.y);ctx.lineTo(C2.x,C2.y);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore()}
+    if(p2.hip&&p2.ankle)line(p2.hip,p2.ankle,COL.post,2,[3,4]);
+    if(S.level==='DFO'&&p2.tm&&p2.tl)extLine(p2.tm,p2.tl,COL.post,1.3,[4,4],.35);
+    if(p2.am&&p2.al){line(p2.am,p2.al,COL.post,1.3);const s=toS(p2.ankle);ctx.strokeStyle=COL.post;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(s.x,s.y,6,0,7);ctx.stroke()}
+    const m2=post.m2;if(m2.WBLpt){const s=toS(m2.WBLpt);ctx.fillStyle=COL.post;ctx.beginPath();ctx.arc(s.x,s.y,4.5,0,7);ctx.fill();tag(m2.WBLpt,`→ ${m2.WBL.toFixed(1)}%`,COL.post,12,-12)}
+    if(pts.hinge)tag(pts.hinge,`${Math.abs(deg).toFixed(1)}°`,COL.post,-12,4)}
+  if(m.mLDFA!=null)tag(pts.fl,`mLDFA ${m.mLDFA.toFixed(1)}°`,COL.jl,-14,-12);
+  if(m.MPTA!=null)tag(pts.tm,`MPTA ${m.MPTA.toFixed(1)}°`,COL.jl,14,20);
+  if(m.HKA!=null)tag(o.knee,`HKA ${Math.abs(m.HKA).toFixed(1)}° ${m.HKA>=0?'varus':'valgus'}`,COL.axis,-14,-40);
+  if(m.LDTA!=null)tag(pts.al,`LDTA ${m.LDTA.toFixed(1)}°`,COL.jl,-14,-14);
+  if(o.hip){const s=toS(o.hip);ctx.strokeStyle=COL.pt;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(s.x-7,s.y);ctx.lineTo(s.x+7,s.y);ctx.moveTo(s.x,s.y-7);ctx.lineTo(s.x,s.y+7);ctx.stroke()}
+  if(o.ankle){const s=toS(o.ankle);ctx.fillStyle=COL.pt;ctx.beginPath();ctx.arc(s.x,s.y,3,0,7);ctx.fill()}
+  for(const k in pts){const s=toS(pts[k]);const on=k===active;
+    ctx.save();ctx.lineWidth=on?2.4:1.6;ctx.strokeStyle=on?'#ffffff':COL.pt;ctx.fillStyle='rgba(5,8,11,.5)';
+    ctx.beginPath();ctx.arc(s.x,s.y,on?8:6,0,7);ctx.fill();ctx.stroke();ctx.fillStyle=on?'#fff':COL.pt;ctx.beginPath();ctx.arc(s.x,s.y,1.6,0,7);ctx.fill();ctx.restore()}
+}
+function loupe(p,dpr){const r=cv.getBoundingClientRect();const s=toS(p);const R=64,Z=3;
+  const cx=s.x<r.width/2?r.width-R-14:R+14,cy=R+60;
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.clip();ctx.fillStyle='#000';ctx.fillRect(cx-R,cy-R,2*R,2*R);
+  const k=view.s*Z;ctx.setTransform(dpr*k,0,0,dpr*k,dpr*(cx-p.x*k),dpr*(cy-p.y*k));ctx.drawImage(filtered,0,0);
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.strokeStyle=COL.pt;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx-6,cy);ctx.moveTo(cx+6,cy);ctx.lineTo(cx+R,cy);ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy-6);ctx.moveTo(cx,cy+6);ctx.lineTo(cx,cy+R);ctx.stroke();ctx.restore();
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.stroke()}
+
+/* ---------- panels ---------- */
+const f1=v=>v==null||isNaN(v)?'—':v.toFixed(1);
+function status(v,lo,hi,warn=2){if(v==null)return'';if(v>=lo&&v<=hi)return'<span class="pill ok">Normal</span>';
+  const off=v<lo?lo-v:v-hi;return `<span class="pill ${off>warn?'bad':'warn'}">${v<lo?'Low':'High'}</span>`}
+function hkaTxt(v){return v==null?'—':`${Math.abs(v).toFixed(1)}° ${Math.abs(v)<.05?'':v>0?'varus':'valgus'}`}
+function renderSteps(){
+  $('#steps').innerHTML=STEPS.map(([id,g,l])=>`<button class="step ${pts[id]?'done':''} ${id===active?'on':''}" data-id="${id}"><span class="dot"></span><span>${l}</span><span class="gl">${g}</span></button>`).join('');
+  $('#steps').querySelectorAll('.step').forEach(b=>b.onclick=()=>{active=b.dataset.id;update()});
+  const st=STEPS.find(s=>s[0]===active);const done=STEPS.every(s=>pts[s[0]]);
+  $('#prompt').innerHTML=!img?'<span class="k">Start</span><span>Open a standing long-leg AP scannogram.</span>'
+    :`<span class="k">${pts[active]?'Adjust':'Tap'}</span><span>${st[2]}<small>${done&&pts[active]?'All landmarks placed. Drag any point to refine.':st[3]}</small></span>`;
+  const k=mmpp();$('#scaleout').textContent=k?`${k.toFixed(3)} mm/px`:'Place both marker points for mm values';
+}
+function renderAnalysis(){
+  const o=derive(pts),m=measure(o),k=mmpp();
+  if(m.mLDFA==null&&m.MPTA==null&&m.HKA==null){$('#p-ana').innerHTML='<div class="empty">Place hip, knee and ankle landmarks to see the alignment analysis.</div>';return}
+  const mad=m.MADpx==null?'—':k?`${(m.MADpx*k).toFixed(1)} mm ${m.MADside}`:`${m.MADpx.toFixed(0)} px ${m.MADside}`;
+  let dx='';
+  if(m.HKA!=null){const src=[];
+    if(m.mLDFA!=null&&(m.mLDFA<85||m.mLDFA>90))src.push(`femur (mLDFA ${f1(m.mLDFA)}°)`);
+    if(m.MPTA!=null&&(m.MPTA<85||m.MPTA>90))src.push(`tibia (MPTA ${f1(m.MPTA)}°)`);
+    if(m.JLCA!=null&&m.JLCA>2)src.push(`joint (JLCA ${f1(m.JLCA)}°)`);
+    dx=`<ul class="notes"><li class="${Math.abs(m.HKA)>3?'warn':'ok'}"><b>${hkaTxt(m.HKA)}</b> mechanical alignment. ${src.length?'Deformity source: '+src.join(', ')+'.':'No single-level source outside normal ranges.'}</li></ul>`}
+  $('#p-ana').innerHTML=`${dx}
+  <table class="mt"><thead><tr><th>Parameter</th><th>Value</th><th></th></tr></thead><tbody>
+  <tr><td>HKA (mTFA)<div class="ref">Normal 1.2° ± 2.2° varus</div></td><td class="n">${hkaTxt(m.HKA)}</td><td>${m.HKA==null?'':status(m.HKA,-1,3.4,3)}</td></tr>
+  <tr><td>WBL ratio<div class="ref">% of plateau from medial edge</div></td><td class="n">${m.WBL==null?'—':f1(m.WBL)+'%'}</td><td></td></tr>
+  <tr><td>MAD<div class="ref">Normal 8 ± 7 mm medial</div></td><td class="n">${mad}</td><td></td></tr>
+  <tr><td>mLDFA<div class="ref">Normal 85–90°</div></td><td class="n">${f1(m.mLDFA)}°</td><td>${status(m.mLDFA,85,90)}</td></tr>
+  <tr><td>MPTA<div class="ref">Normal 85–90°</div></td><td class="n">${f1(m.MPTA)}°</td><td>${status(m.MPTA,85,90)}</td></tr>
+  <tr><td>JLCA<div class="ref">Normal 0–2°</div></td><td class="n">${f1(m.JLCA)}°${m.JLCA>0.3?' <span class="ref">'+m.JLCAopen+' open</span>':''}</td><td>${status(m.JLCA,0,2,1)}</td></tr>
+  <tr><td>LDTA<div class="ref">Normal 86–92°</div></td><td class="n">${f1(m.LDTA)}°</td><td>${status(m.LDTA,86,92)}</td></tr>
+  <tr><td>Joint line vs limb axis<div class="ref">Plateau vs line ⊥ hip–ankle axis</div></td><td class="n">${f1(m.JLO)}°</td><td>${m.JLO==null?'':m.JLO>5?'<span class="pill warn">High</span>':''}</td></tr>
+  </tbody></table>
+  <p class="fine">Reference ranges after Paley. JLCA is measured on the standing film, so soft-tissue laxity affects it.</p>`;
+}
+function planData(){const deg=solve();if(deg==null)return null;const p2=applyRot(pts,deg);return{deg,p2,m2:measure(p2)}}
+let lastSummary='';
+function renderPlan(){
+  $('#levelnote').textContent=S.level==='HTO'
+    ?'Proximal tibia. Hinge on the lateral tibia for a medial opening wedge, or medial tibia for a lateral closing wedge.'
+    :'Distal femur. Hinge on the medial femur for a lateral opening wedge, or lateral femur for a medial closing wedge.';
+  document.querySelectorAll('#level button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.level));
+  document.querySelectorAll('#presets .chip').forEach(b=>b.classList.toggle('on',+b.dataset.v===S.target));
+  $('#tgt').value=S.target;$('#tgto').textContent=S.target+'%';
+  const missing=STEPS.filter(s=>s[1]!=='Calibration'&&s[0]!=='cut'&&!pts[s[0]]).map(s=>s[2]);
+  if(missing.length){$('#planout').innerHTML=`<div class="empty">Still needed: ${missing.join(', ')}.</div>`;lastSummary='';return}
+  const r=planData();if(!r){$('#planout').innerHTML='<div class="empty">No correction within ±35° reaches this target from the chosen hinge. Check the hinge position and landmarks.</div>';lastSummary='';return}
+  const o=derive(pts),m=measure(o),m2=r.m2,k=mmpp();
+  let gap='—',gapTxt='—',L='—',gapMM=null;
+  if(pts.cut){const Lp=len(sub(pts.cut,pts.hinge));const g=2*Lp*Math.sin(Math.abs(r.deg)/2/D);
+    if(k){gapMM=g*k;gap=`${gapMM.toFixed(1)}<small> mm</small>`;gapTxt=`${gapMM.toFixed(1)} mm`;L=`${(Lp*k).toFixed(0)} mm`}
+    else{gap=`${g.toFixed(0)}<small> px</small>`;gapTxt=`${g.toFixed(0)} px`;L=`${Lp.toFixed(0)} px`}}
+  const row=(n,a,b)=>`<tr><td>${n}</td><td class="n">${a}</td><td class="n">${b}</td></tr>`;
+  const mad=mm=>mm.MADpx==null?'—':k?`${(mm.MADpx*k).toFixed(1)} mm ${mm.MADside[0].toUpperCase()}`:'—';
+  const notes=[];
+  if(S.level==='HTO'){
+    if(m2.MPTA>95)notes.push(['bad',`Planned MPTA ${f1(m2.MPTA)}° exceeds 95°. Consider a double-level osteotomy (DFO + HTO) to limit joint-line obliquity.`]);
+    else if(m2.MPTA>93)notes.push(['warn',`Planned MPTA ${f1(m2.MPTA)}° is approaching the 95° limit.`]);
+    if(m.mLDFA>90)notes.push(['warn',`mLDFA ${f1(m.mLDFA)}° suggests a femoral component to the varus.`]);
+  }else{
+    if(m2.mLDFA<85)notes.push(['bad',`Planned mLDFA ${f1(m2.mLDFA)}° is below 85°. The correction overshoots the femoral anatomy; consider a double-level plan.`]);
+    if(m.MPTA<85)notes.push(['warn',`MPTA ${f1(m.MPTA)}° suggests a tibial component to the deformity.`]);
+  }
+  if(m2.JLO>5)notes.push(['warn',`Joint line vs limb axis will be ${f1(m2.JLO)}° after correction.`]);
+  if(gapMM&&S.level==='HTO'&&gapMM>15)notes.push(['warn','Opening gap over 15 mm. Consider graft or substitute, and protect the lateral hinge.']);
+  if(m.JLCA>3)notes.push(['warn',`JLCA ${f1(m.JLCA)}° on the standing film. Part of the deformity is soft tissue, so a purely bony plan may overcorrect; many surgeons subtract (JLCA − 2°)/2.`]);
+  if(!k)notes.push(['warn','No calibration yet. Wedge size and MAD need both marker points.']);
+  if(!pts.cut)notes.push(['warn','Place the osteotomy entry point to get the wedge size.']);
+  if(!notes.length)notes.push(['ok','Planned joint-line parameters stay within commonly accepted limits.']);
+  $('#planout').innerHTML=`
+  <div class="hero">
+    <div class="big main"><div class="l">Correction</div><div class="v">${Math.abs(r.deg).toFixed(1)}<small>°</small></div><div class="s">Miniaci, hinge-based</div></div>
+    <div class="big"><div class="l">Wedge at entry</div><div class="v">${gap}</div><div class="s">Hinge → entry ${L}</div></div>
+  </div>
+  <table class="mt"><thead><tr><th>Parameter</th><th>Pre-op</th><th>Planned</th></tr></thead><tbody>
+  ${row('HKA',hkaTxt(m.HKA),hkaTxt(m2.HKA))}${row('WBL ratio',f1(m.WBL)+'%',f1(m2.WBL)+'%')}${row('MAD',mad(m),mad(m2))}
+  ${row('mLDFA',f1(m.mLDFA)+'°',f1(m2.mLDFA)+'°')}${row('MPTA',f1(m.MPTA)+'°',f1(m2.MPTA)+'°')}${row('LDTA',f1(m.LDTA)+'°',f1(m2.LDTA)+'°')}
+  ${row('Joint line vs axis',f1(m.JLO)+'°',f1(m2.JLO)+'°')}
+  </tbody></table>
+  <ul class="notes">${notes.map(([c,t])=>`<li class="${c}">${t}</li>`).join('')}</ul>
+  <div class="row"><button class="btn" id="copy">Copy summary</button><button class="btn" id="share2">Share image</button><span class="fine" id="copied"></span></div>
+  <textarea id="rep" readonly hidden style="width:100%;height:160px;font-family:var(--f-num);font-size:12px"></textarea>
+  <p class="fine">Wedge size is the chord between cut surfaces at the entry point (2·L·sin θ/2). Planning aid only; confirm on calibrated films and intra-operatively.</p>`;
+  lastSummary=[`Osteotomy plan (${S.level==='HTO'?'high tibial':'distal femoral'})`,`Target WBL ${S.target}%`,`Correction ${Math.abs(r.deg).toFixed(1)}°`,
+    `Wedge at entry ${gapTxt} (hinge→entry ${L})`,`HKA ${hkaTxt(m.HKA)} → ${hkaTxt(m2.HKA)}`,`WBL ${f1(m.WBL)}% → ${f1(m2.WBL)}%`,
+    `mLDFA ${f1(m.mLDFA)}° → ${f1(m2.mLDFA)}°`,`MPTA ${f1(m.MPTA)}° → ${f1(m2.MPTA)}°`,`JLCA ${f1(m.JLCA)}°`,`LDTA ${f1(m.LDTA)}° → ${f1(m2.LDTA)}°`].join('\n');
+  $('#copy').onclick=()=>{const ta=$('#rep');ta.value=lastSummary;
+    const fail=()=>{ta.hidden=false;ta.select();$('#copied').textContent='Select and copy the text below'};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(lastSummary).then(()=>$('#copied').textContent='Copied').catch(fail);else fail()};
+  $('#share2').onclick=sharePlan;
+}
+function update(){renderSteps();if(S.tab==='ana')renderAnalysis();if(S.tab==='plan')renderPlan();draw();if(img)autosave()}
+
+/* ---------- share plan image ---------- */
+async function sharePlan(){
+  if(S.tab!=='plan'){selectTab('plan')}
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  const text=lastSummary||'Knee osteotomy plan';
+  // compose: viewer snapshot + summary strip
+  const lines=text.split('\n');const W=cv.width,pad=24,lh=30,H=cv.height+pad*2+lines.length*lh;
+  const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  g.fillStyle='#05080b';g.fillRect(0,0,W,H);g.drawImage(cv,0,0);
+  g.fillStyle='#e6ecf1';g.font='22px "IBM Plex Mono", monospace';lines.forEach((l,i)=>g.fillText(l,pad,cv.height+pad+22+i*lh));
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+  try{
+    if(isNative&&window.Capacitor.Plugins.Filesystem&&window.Capacitor.Plugins.Share){
+      const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(blob)});
+      const {Filesystem,Share}=window.Capacitor.Plugins;
+      const w=await Filesystem.writeFile({path:'osteotomy-plan.png',data:b64,directory:'CACHE'});
+      await Share.share({title:'Osteotomy plan',text,files:[w.uri]});return}
+    const file=new File([blob],'osteotomy-plan.png',{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Osteotomy plan',text});return}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='osteotomy-plan.png';document.body.appendChild(a);a.click();a.remove();toast('Plan image saved');
+  }catch(e){if(e&&e.name!=='AbortError')toast('Sharing is not available here')}
+}
+
+/* ---------- cases UI ---------- */
+function openSheet(id){$(id).hidden=false}
+document.querySelectorAll('.sheet').forEach(s=>{s.addEventListener('click',e=>{if(e.target===s||e.target.hasAttribute('data-close'))s.hidden=true})});
+$('#casesBtn').onclick=()=>{$('#caseName').value='';renderCases();openSheet('#casesSheet')};
+$('#menuBtn').onclick=()=>openSheet('#menuSheet');
+$('#newCase').onclick=()=>{pts={};active='cal1';$('#menuSheet').hidden=true;selectTab('pts');toast('Points cleared')};
+$('#demoBtn').onclick=()=>{$('#menuSheet').hidden=true;openDemo()};
+$('#shareBtn').onclick=()=>{$('#menuSheet').hidden=true;sharePlan()};
+function thumb(){if(!filtered)return null;const h=128,w=Math.max(1,Math.round(iw/ih*h));const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(filtered,0,0,w,h);return c.toDataURL('image/jpeg',.7)}
+$('#saveCase').onclick=async()=>{if(!img){toast('Open an image first');return}
+  const name=$('#caseName').value.trim()||('Case '+new Date().toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
+  try{await DB.put({id:'c'+Date.now(),name,...snapshot(),blob:isDemo?null:imgBlob,thumb:thumb(),date:Date.now()});toast('Saved “'+name+'”');$('#caseName').value='';renderCases()}
+  catch{toast('Could not save on this device')}};
+async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>c.id!=='__current').sort((a,b)=>b.date-a.date)}catch{}
+  const el=$('#caseList');
+  if(!list.length){el.innerHTML='<div class="empty">No saved cases yet. Plan a case, give it a name above and tap Save.</div>';return}
+  el.innerHTML=list.map(c=>`<div class="case"><img alt="" src="${c.thumb||''}"><div style="min-width:0"><div class="t"></div><div class="d">${new Date(c.date).toLocaleDateString()} · ${c.level} · ${Object.keys(c.pts||{}).length}/14 pts</div></div>
+    <div class="acts"><button class="btn primary" data-open="${c.id}">Open</button><button class="btn danger" data-del="${c.id}" aria-label="Delete">✕</button></div></div>`).join('');
+  el.querySelectorAll('.case .t').forEach((t,i)=>t.textContent=list[i].name);
+  el.querySelectorAll('[data-open]').forEach(b=>b.onclick=async()=>{const r=await DB.get(b.dataset.open);$('#casesSheet').hidden=true;await loadRecord(r);selectTab(r.pts&&r.pts.hinge?'plan':'pts')});
+  el.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+    if(b.dataset.armed){await DB.del(b.dataset.del);renderCases();toast('Case deleted')}else{b.dataset.armed='1';b.textContent='Delete?';setTimeout(()=>{if(b.isConnected){delete b.dataset.armed;b.textContent='✕'}},3000)}});
+}
+let toastT=0;function toast(msg){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t)}t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2200)}
+
+/* ---------- controls ---------- */
+function selectTab(t){S.tab=t;document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===t));
+  ['pts','ana','plan'].forEach(n=>$('#p-'+n).hidden=n!==t);update()}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.t));
+$('#grab').onclick=()=>$('#work').classList.toggle('tall');
+$('#calmm').addEventListener('input',e=>{const v=parseFloat(e.target.value);if(v>0){S.calMM=v;update()}});
+document.querySelectorAll('#level button').forEach(b=>b.onclick=()=>{S.level=b.dataset.v;S.target=S.level==='HTO'?62.5:50;update()});
+$('#tgt').addEventListener('input',e=>{S.target=parseFloat(e.target.value);update()});
+document.querySelectorAll('#presets .chip').forEach(b=>b.onclick=()=>{S.target=parseFloat(b.dataset.v);update()});
+const adj=(id,key)=>{$(id).addEventListener('input',e=>{S[key]=+e.target.value;$(id+'o').textContent=e.target.value+'%'});$(id).addEventListener('change',()=>{buildFiltered();autosave()})};
+adj('#con','con');adj('#bri','bri');
+$('#inv').addEventListener('change',e=>{S.inv=e.target.checked;buildFiltered();autosave()});
+
+/* ---------- boot ---------- */
+resize();
+(async()=>{let r=null;try{r=await DB.get('__current')}catch{}
+  if(r&&(r.blob||r.isDemo)){await loadRecord(r).catch(()=>openDemo());selectTab(r.pts&&r.pts.hinge?'plan':'pts')}else openDemo()})();
+
+if('serviceWorker' in navigator&&!isNative&&/^https?:$/.test(location.protocol)){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+})();
+</script>
+</body>
+</html>

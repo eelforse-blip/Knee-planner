@@ -1,0 +1,24 @@
+{
+  "name": "knee-osteotomy-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Measure lower-limb alignment on long-leg scannograms and plan osteotomy around the knee.",
+  "scripts": {
+    "android:add": "cap add android",
+    "android:icons": "capacitor-assets generate --android --iconBackgroundColor '#0b1116' --iconBackgroundColorDark '#0b1116' --splashBackgroundColor '#05080b' --splashBackgroundColorDark '#05080b'",
+    "android:sync": "cap sync android",
+    "ios:add": "cap add ios",
+    "ios:sync": "cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/ios": "8.5.2",
+    "@capacitor/share": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.2"
+  }
+}

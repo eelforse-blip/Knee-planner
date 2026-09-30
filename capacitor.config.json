@@ -1,0 +1,7 @@
+{
+  "appId": "com.elforse.osteotomyplanner",
+  "appName": "Osteotomy Planner",
+  "webDir": "www",
+  "backgroundColor": "#05080b",
+  "android": { "allowMixedContent": false }
+}
