@@ -68,6 +68,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .prompt .k{font-family:var(--f-num);color:#ffc247;font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 .prompt small{color:#a9b4bd;display:block;font-size:11.5px}
 .vtools{position:absolute;right:10px;bottom:10px;display:flex;gap:6px}
+.vtools #delPt{color:#ffb4aa;border-color:rgba(255,120,100,.45)}
 .vtools button{background:rgba(8,12,16,.84);color:#e9eef2;border:1px solid rgba(255,255,255,.18);border-radius:8px;min-width:40px;height:38px;padding:0 10px;font-size:13px;cursor:pointer}
 
 .panel{background:var(--surface);display:flex;flex-direction:column;min-height:0;min-width:0;border-left:1px solid var(--line)}
@@ -186,6 +187,7 @@ details[open] summary{margin-bottom:8px}
       <canvas id="cv" aria-label="Scannogram viewer"></canvas>
       <div class="prompt" id="prompt"></div>
       <div class="vtools">
+        <button id="delPt" hidden>Delete point</button>
         <button id="fit">Fit</button>
         <button id="zin" aria-label="Zoom in">+</button>
         <button id="zout" aria-label="Zoom out">−</button>
@@ -203,7 +205,7 @@ details[open] summary{margin-bottom:8px}
       <div class="pane" id="p-pts">
         <p class="fine">Select a landmark, then tap the image. Drag a point to refine it; a magnifier appears. Pinch to zoom, drag empty space to pan. Osteotomy points are placed automatically; drag them to match your technique.</p>
         <div class="steps" id="steps"></div>
-        <button class="btn" id="resetAuto" hidden>Reset osteotomy points to automatic</button>
+        <div class="row"><button class="btn danger" id="delPt2" hidden>Delete selected point</button><button class="btn" id="resetAuto" hidden>Reset osteotomy points to automatic</button></div>
         <div class="group">
           <h3>Calibration</h3>
           <div class="row">
@@ -288,7 +290,7 @@ details[open] summary{margin-bottom:8px}
       <h3>Export</h3>
       <button class="btn" id="shareBtn">Share plan image</button>
       <p class="fine">Planning aid only. Measurements depend on a correctly rotated, calibrated standing film; confirm intra-operatively. Not a certified medical device.</p>
-      <p class="fine">Version 1.1</p>
+      <p class="fine">Version 1.2</p>
     </div>
   </div>
 </div>
@@ -631,12 +633,15 @@ function loupe(p,dpr){const r=cv.getBoundingClientRect();const s=toS(p);const R=
 function status(v,lo,hi,warn=2){if(v==null)return'';if(v>=lo&&v<=hi)return'<span class="pill ok">Normal</span>';
   const off=v<lo?lo-v:v-hi;return `<span class="pill ${off>warn?'bad':'warn'}">${v<lo?'Low':'High'}</span>`}
 function hkaTxt(v){return v==null?'—':`${Math.abs(v).toFixed(1)}° ${Math.abs(v)<.05?'':v>0?'varus':'valgus'}`}
+const st0=id=>(STEPS.find(s=>s[0]===id)||[])[2]||id;
 function renderSteps(){
   const o=full();
   $('#steps').innerHTML=STEPS.map(([id,g,l])=>{const isA=AUTO.includes(id)&&!pts[id];
     return `<button class="step ${pts[id]?'done':''} ${isA&&o[id]?'auto':''} ${id===active?'on':''}" data-id="${id}"><span class="dot"></span><span>${l}</span><span class="gl">${isA?(o[id]?'Auto':'—'):g}</span></button>`}).join('');
   $('#steps').querySelectorAll('.step').forEach(b=>b.onclick=()=>{active=b.dataset.id;update()});
   $('#resetAuto').hidden=!AUTO.some(k=>pts[k]);
+  const canDel=!!(img&&pts[active]);$('#delPt').hidden=!canDel;$('#delPt2').hidden=!canDel;
+  $('#delPt2').textContent=canDel?`Delete “${st0(active)}”`:'Delete selected point';
   const st=STEPS.find(s=>s[0]===active);const done=REQUIRED.every(k=>pts[k]);
   const shown=pts[active]||(AUTO.includes(active)&&o[active]);
   $('#prompt').innerHTML=!img?'<span class="k">Start</span><span>Open a standing long-leg AP scannogram.</span>'
@@ -781,6 +786,9 @@ $('#grab').onclick=()=>$('#work').classList.toggle('tall');
 $('#calmm').addEventListener('input',e=>{const v=parseFloat(e.target.value);if(v>0){S.calMM=v;update()}});
 $('#tgt').addEventListener('input',e=>{S.target=parseFloat(e.target.value);S.targetAuto=false;update()});
 document.querySelectorAll('#presets .chip').forEach(b=>b.onclick=()=>{S.target=parseFloat(b.dataset.v);S.targetAuto=false;update()});
+function deletePoint(){if(!pts[active])return;const name=st0(active);delete pts[active];
+  toast(AUTO.includes(active)?`${name} back to automatic position`:`${name} deleted. Tap the image to place it again`);update()}
+$('#delPt').onclick=deletePoint;$('#delPt2').onclick=deletePoint;
 $('#resetAuto').onclick=()=>{AUTO.forEach(k=>delete pts[k]);update()};
 function syncTh(){document.querySelectorAll('.th input').forEach(i=>i.value=S.th[i.dataset.k]);$('#lax').checked=S.lax}
 document.querySelectorAll('.th input').forEach(i=>i.addEventListener('change',()=>{const v=parseFloat(i.value);if(isFinite(v)){S.th[i.dataset.k]=v;update()}else i.value=S.th[i.dataset.k]}));
