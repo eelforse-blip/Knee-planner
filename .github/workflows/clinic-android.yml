@@ -1,0 +1,49 @@
+name: Build Clinic Android app
+
+on:
+  push:
+    branches: [main]
+    paths: ['clinic-app/**', '.github/workflows/clinic-android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clinic-app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install
+        run: npm ci
+      - name: Copy web app into Android project
+        run: npx cap sync android
+      - name: Build APK
+        working-directory: clinic-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk ClinicApp.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClinicApp-apk
+          path: clinic-app/ClinicApp.apk
+      - name: Publish to the "clinic-latest" release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete clinic-latest --yes --cleanup-tag || true
+          gh release create clinic-latest ClinicApp.apk \
+            --title "Knee & Shoulder Clinic (latest build)" \
+            --notes "Built from ${GITHUB_SHA::7}. On Android: download ClinicApp.apk, open it, allow installing from this source."

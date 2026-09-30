@@ -1,0 +1,42 @@
+rules_version = '2';
+// Firestore security rules for the Knee & Shoulder Clinic app.
+// Paste into Firebase console → Firestore Database → Rules → Publish.
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function em() { return request.auth.token.email.lower(); }
+    function memberDoc(cid) { return /databases/$(db)/documents/clinics/$(cid)/members/$(em()); }
+    function member(cid) { return signedIn() && exists(memberDoc(cid)); }
+    function doctor(cid) { return member(cid) && get(memberDoc(cid)).data.role == 'doctor'; }
+    function owner(cid) { return signedIn() && get(/databases/$(db)/documents/clinics/$(cid)).data.ownerUid == request.auth.uid; }
+
+    // email -> clinic lookup used at sign-in
+    match /memberships/{email} {
+      allow read: if signedIn() && email == em();
+      allow create, update: if signedIn() && (
+        doctor(request.resource.data.clinicId) ||
+        (email == em() && request.resource.data.role == 'doctor' && owner(request.resource.data.clinicId)));
+      allow delete: if signedIn() && doctor(resource.data.clinicId);
+    }
+
+    match /clinics/{cid} {
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if member(cid);
+      allow update: if doctor(cid);
+
+      match /members/{email} {
+        allow read: if member(cid) || (signedIn() && email == em());
+        allow create: if doctor(cid) || (owner(cid) && email == em() && request.resource.data.role == 'doctor');
+        allow update, delete: if doctor(cid);
+      }
+      // clinical notes: everyone in the clinic reads, only doctors write
+      match /visits/{id} { allow read: if member(cid); allow write: if doctor(cid); }
+      match /surgeries/{id} { allow read: if member(cid); allow write: if doctor(cid); }
+      // registration, scores, files, appointments: whole team
+      match /patients/{id} { allow read, create, update: if member(cid); allow delete: if doctor(cid); }
+      match /scores/{id} { allow read, write: if member(cid); }
+      match /files/{id} { allow read, write: if member(cid); }
+      match /appointments/{id} { allow read, write: if member(cid); }
+    }
+  }
+}

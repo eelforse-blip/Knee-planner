@@ -1,0 +1,16 @@
+{
+  "name": "knee-shoulder-clinic",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": { "bundle": "esbuild src/lib.js --bundle --minify --format=iife --outfile=www/lib.bundle.js" },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
+    "firebase": "12.19.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.0"
+  },
+  "devDependencies": { "@capacitor/assets": "3.0.5", "@capacitor/cli": "8.5.2", "esbuild": "0.28.2", "@fontsource/cairo": "^5.0.0" }
+}
