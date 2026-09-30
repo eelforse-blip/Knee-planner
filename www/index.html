@@ -795,7 +795,7 @@ syncTh();resize();
 (async()=>{let r=null;try{r=await DB.get('__current')}catch{}
   if(r&&(r.blob||r.isDemo)){await loadRecord(r).catch(()=>openDemo(0));selectTab(REQUIRED.every(k=>pts[k])?'plan':'pts')}else openDemo(0)})();
 
-window.__planner={decide,openDemo,full,measure,S};
+window.__planner={decide,openDemo,full,measure,S,getView:()=>view,selectTab:t=>selectTab(t),setPlan:k=>{S.planSel=k;update()}};
 if('serviceWorker' in navigator&&!isNative&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
 })();
