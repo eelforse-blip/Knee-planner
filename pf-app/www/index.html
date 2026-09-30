@@ -73,7 +73,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .panel{background:var(--surface);display:flex;flex-direction:column;min-height:0;min-width:0;border-left:1px solid var(--line)}
 .grab{display:none}
 .tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
-.tab{flex:1;background:none;border:0;padding:12px 4px;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);border-bottom:2px solid transparent}
+.tab{flex:1;background:none;border:0;padding:12px 2px;cursor:pointer;font-weight:600;font-size:12.5px;color:var(--muted);border-bottom:2px solid transparent}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .pane{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px;min-height:0;flex:1;background:var(--surface)}
 h3{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
@@ -158,6 +158,16 @@ details[open] summary{margin-bottom:8px}
 .case .t{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .case .d{font-size:11.5px;color:var(--muted);font-family:var(--f-num)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#141c2b;color:#fff;padding:9px 14px;border-radius:9px;font-size:13px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90%}
+.work.calc{grid-template-columns:1fr!important;grid-template-rows:1fr!important}
+.work.calc .viewer{display:none}
+.work.calc .panel{margin-top:0!important;border-radius:0!important;max-width:720px;width:100%;justify-self:center;border-left:0}
+.cgrid{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center;font-size:13.5px}
+.cgrid input,.cgrid select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;width:92px;font-family:var(--f-num)}
+.cgrid select{width:auto;font-family:var(--f-ui)}
+.cgrid .u{font-size:11px;color:var(--muted);min-width:58px}
+.work.calc .grab{display:none!important}
+.cgrid .ref{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-4px}
+.cout .pc{padding:10px 12px}
 @media (max-width:820px){
   .brand span{display:none}
   .bar .lbl{display:none}
@@ -194,11 +204,14 @@ details[open] summary{margin-bottom:8px}
     <aside class="panel">
       <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
       <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="calc" aria-selected="false">Calculator</button>
         <button class="tab" role="tab" data-t="pt" aria-selected="true">Patient</button>
         <button class="tab" role="tab" data-t="img" aria-selected="false">Images</button>
         <button class="tab" role="tab" data-t="res" aria-selected="false">Results</button>
         <button class="tab" role="tab" data-t="dec" aria-selected="false">Decision</button>
       </div>
+
+      <div class="pane" id="p-calc" hidden></div>
 
       <div class="pane" id="p-pt">
         <div class="group"><h3>Instability history</h3>
@@ -223,7 +236,8 @@ details[open] summary{margin-bottom:8px}
           <div class="form">
             <label for="cart">Patellar cartilage lesion</label>
             <select id="cart" data-f="cart"><option value="none">None / minor</option><option value="distlat">Distal or lateral facet</option><option value="prox">Proximal pole</option><option value="med">Medial facet</option><option value="diffuse">Diffuse</option></select>
-            <label for="valgus">Genu valgum, HKA (° valgus)</label><input id="valgus" type="number" step="0.5" min="0" data-f="valgus">
+            <label for="hka">HKA angle (°)</label><input id="hka" type="number" step="0.5" min="0" data-f="hka">
+            <label for="hkaDir">Direction</label><select id="hkaDir" data-f="hkaDir"><option value="valgus">Valgus</option><option value="varus">Varus</option></select>
           </div>
         </div>
         <div class="group"><h3>Imaging used</h3>
@@ -268,13 +282,14 @@ details[open] summary{margin-bottom:8px}
     <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
     <div class="sheet-body">
       <button class="btn" id="newCase">New case (clear everything)</button>
+      <button class="btn" id="newCalc">New quick calculation</button>
       <h3>Demo cases</h3>
       <button class="btn" data-demo="0">17 y, recurrent, closed physes: complex</button>
       <button class="btn" data-demo="1">13 y, first-time, open physes</button>
       <button class="btn" data-demo="2">24 y, first-time, no risk factors</button>
       <button class="btn" data-demo="3">15 y, first-time with osteochondral fracture</button>
       <p class="fine">Planning aid only. Thresholds come from published studies and are editable under Decision → Thresholds. Confirm every measurement on the original images. Not a certified medical device.</p>
-      <p class="fine">Version 1.0</p>
+      <p class="fine">Version 1.2</p>
     </div>
   </div>
 </div>
@@ -323,7 +338,7 @@ const SLICES={
 };
 const SLICE_ORDER=['knee','pat','tt','tib','hip','ankle','sag'];
 const TH_DEFAULT={ttTgCT:20,ttTgMRI:17,ttPcl:24,cdi:1.2,isr:1.2,tilt:20,av:25,tors:40,tfr:10,sulcus:145,lti:11,valgus:5,ttTarget:10,avTarget:15,torsTarget:30,cdiTarget:1.0};
-const BLANK_PT={episode:'recurrent',nDisl:2,ocf:false,contra:false,failed:false,age:16,physes:'closed',jsign:false,laxity:false,cart:'none',valgus:0,modality:'CT'};
+const BLANK_PT={episode:'recurrent',nDisl:2,ocf:false,contra:false,failed:false,age:16,physes:'closed',jsign:false,laxity:false,cart:'none',hka:'',hkaDir:'valgus',modality:'CT'};
 
 let S={pt:{...BLANK_PT},P:{},man:{},dejour:'',bump:'',pti:'',patLen:'',cal:{knee:50,sag:50},th:{...TH_DEFAULT},plan:{},tab:'pt',slice:'knee',active:'cal1'};
 let imgs={},blobs={},filtered={};
@@ -373,6 +388,8 @@ const METRICS=[
  ['av','Femoral anteversion','°',()=>`Normal about 10–20°; high > ${S.th.av}°`],
  ['tors','External tibial torsion','°',()=>`Normal about 25–40°; high > ${S.th.tors}°`],
  ['tfr','Tibiofemoral rotation','°',()=>`External rotation of tibia; high > ${S.th.tfr}°`],
+ ['mldfa','mLDFA','°',()=>'Normal 85–90°; < 85° = femoral valgus'],
+ ['mpta','MPTA','°',()=>'Normal 85–90°; > 90° = tibial valgus'],
 ];
 function values(){const im=computeImage();const v={},src={};
   for(const [k] of METRICS){const man=S.man[k];if(man!==''&&man!=null&&!isNaN(+man)){v[k]=+man;src[k]='manual'}else if(im[k]!=null){v[k]=im[k];src[k]='image'}}
@@ -391,14 +408,16 @@ function status(k,v){const T=S.th;if(v==null)return null;
    case'tilt':return v>T.tilt?'bad':'ok';
    case'av':return v>T.av?'bad':v>20?'warn':'ok';
    case'tors':return v>T.tors?'bad':v<15?'warn':'ok';
-   case'tfr':return v>T.tfr?'bad':'ok';}return null}
+   case'tfr':return v>T.tfr?'bad':'ok';
+   case'mldfa':return v<85||v>90?'bad':'ok';
+   case'mpta':return v<85||v>90?'bad':'ok';}return null}
 const PILL={ok:'<span class="pill ok">Normal</span>',warn:'<span class="pill warn">Borderline</span>',bad:'<span class="pill bad">Abnormal</span>'};
 
 /* ---------- risk ---------- */
 function risk(v){
   const pt=S.pt,dj=S.dejour;const items=[];
   const age=+pt.age;
-  items.push(['Age ≤ 16',age<=16?1:0]);
+  items.push([`Age ≤ 16${pt.age===''?' (age not entered)':''}`,pt.age!==''&&age<=16?1:0]);
   items.push(['Bilateral instability',pt.contra?1:0]);
   const djs=dj===''?null:dj==='none'?0:dj==='A'?1:2;
   items.push([`Trochlear dysplasia${dj?` (${dj==='none'?'none':'Dejour '+dj})`:' (not graded)'}`,djs??0]);
@@ -415,7 +434,7 @@ function risk(v){
 function decide(){
   const {v}=values();const pt=S.pt,T=S.th;const R=risk(v);
   const first=pt.episode==='first',open=pt.physes==='open',closing=pt.physes==='closing',closed=pt.physes==='closed';
-  const young=+pt.age<18;
+  const young=pt.age!==''&&+pt.age<18;
   const ttThr=pt.modality==='MRI'?T.ttTgMRI:T.ttTgCT;
   const dj=S.dejour;const high=dj==='B'||dj==='C'||dj==='D';const bump=+S.bump||0;
   const reasons=[];let title,mode;
@@ -503,7 +522,7 @@ function decide(){
       L.push('Always combined with MPFL reconstruction.');
       return{lines:L,figs:F}}});
   // femoral derotation
-  const av=v.av;let fdState='no',fdWhy='';const valg=+pt.valgus||0;const valgHigh=valg>=T.valgus;
+  const av=v.av;let fdState='no',fdWhy='';const HK=hkaVal(pt);const valg=HK.dir==='valgus'?HK.deg:0;const valgHigh=valg>=T.valgus;
   if(av==null)fdWhy='Needs femoral anteversion.';
   else if(av<=T.av)fdWhy=`Anteversion ${f1(av)}° ≤ ${T.av}°.`;
   else if(open){fdState='consider';fdWhy=`Anteversion ${f1(av)}° > ${T.av}°. In a growing child, torsion often remodels; defer derotation unless symptoms are severe, and use a physis-sparing level (proximal).`}
@@ -539,17 +558,31 @@ function decide(){
       else L.push('Proximal level also lets the tubercle be medialised at the same time, but carries peroneal nerve and compartment risks.');
       return{lines:L,figs:F}}});
   // valgus
+  const ml=v.mldfa,mp=v.mpta;const srcF=ml!=null&&ml<85,srcT=mp!=null&&mp>90;
+  const lvl=srcF&&srcT?'both':srcT?'tib':'fem';
   let vgState='no',vgWhy='';
-  if(!valgHigh)vgWhy=valg?`Genu valgum ${valg}° below ${T.valgus}°.`:'No genu valgum entered.';
-  else if(!closed){vgState='ind';vgWhy=`Genu valgum ${valg}° with ${open?'open':'closing'} physes: guided growth is the least invasive correction.`}
-  else{vgState=surgical?'ind':'consider';vgWhy=`Genu valgum ${valg}° ≥ ${T.valgus}°: increases the Q-angle and lateral patellar force.`}
+  const srcTxt=ml==null&&mp==null?' Enter mLDFA and MPTA to localise it.':` Source: ${lvl==='both'?`femur (mLDFA ${f1(ml)}°) and tibia (MPTA ${f1(mp)}°)`:lvl==='tib'?`tibia (MPTA ${f1(mp)}°)`:srcF?`femur (mLDFA ${f1(ml)}°)`:'no single bone clearly abnormal; femur is the usual level'}.`;
+  if(HK.dir==='varus'&&HK.deg>=T.valgus){vgWhy=`Varus alignment (HKA ${f1(HK.deg)}° varus): no valgus correction. Avoid over-medialising the tubercle, which adds medial compartment load.`;reasons.push(`Varus limb (HKA ${f1(HK.deg)}°): be cautious with tubercle medialisation (medial overload).`)}
+  else if(!valgHigh)vgWhy=valg?`Genu valgum ${f1(valg)}° below ${T.valgus}°.`:'No genu valgum entered.';
+  else if(!closed){vgState='ind';vgWhy=`Genu valgum ${f1(valg)}° with ${open?'open':'closing'} physes: guided growth is the least invasive correction.${srcTxt}`}
+  else{vgState=surgical?'ind':'consider';vgWhy=`Genu valgum ${f1(valg)}° ≥ ${T.valgus}°: increases the Q-angle and lateral patellar force.${srcTxt}`}
   add({key:'valg',name:'Valgus correction',state:vgState,why:vgWhy,
-    types:[['auto','Suggested for this case'],['gg','Guided growth (medial hemiepiphysiodesis)'],['low','Lateral opening-wedge DFO'],['mcw','Medial closing-wedge DFO']],
-    params:[['width','Femoral width at cut (mm)',65]],
-    plan:(o)=>{const L=[],F=[];let type=o.type;if(type==='auto')type=closed?'low':'gg';
-      if(type==='gg'){L.push('<b>Guided growth</b>: tension-band plate across the medial distal femoral physis. Review every 3 months; remove at neutral alignment and watch for rebound.');return{lines:L,figs:F}}
-      const corr=valg;const h=o.width*Math.tan(corr/D);F.push(['Correction',corr,'°'],['Wedge',h,'mm']);
-      L.push(`<b>${type==='low'?'Lateral opening-wedge':'Medial closing-wedge'} distal femoral osteotomy</b>${o.type==='auto'?' (suggested)':''}: ${f1(corr)}° to neutral, wedge about ${f1(h)} mm at ${o.width} mm width.`);
+    types:[['auto','Suggested for this case'],['gg','Guided growth, distal femur'],['ggT','Guided growth, proximal tibia'],['low','Lateral opening-wedge DFO'],['mcw','Medial closing-wedge DFO'],['tibMcw','Medial closing-wedge HTO'],['tibLow','Lateral opening-wedge HTO'],['dlo','Double level (DFO + HTO)']],
+    params:[['width','Bone width at cut (mm)',65]],
+    plan:(o)=>{const L=[],F=[];let type=o.type;
+      if(type==='auto')type=!closed?(lvl==='tib'?'ggT':'gg'):(lvl==='both'?'dlo':lvl==='tib'?'tibMcw':'mcw');
+      if(type==='gg'||type==='ggT'){L.push(`<b>Guided growth</b>${o.type==='auto'?' (suggested)':''}: tension-band plate across the medial ${type==='gg'?'distal femoral':'proximal tibial'} physis${lvl==='both'?'; the other physis may also need a plate (both bones contribute)':''}. Review every 3 months; remove at neutral alignment and watch for rebound.`);return{lines:L,figs:F}}
+      const corr=valg;const wedge=a=>o.width*Math.tan(a/D);
+      if(type==='dlo'){const cF=ml!=null?Math.max(0,Math.min(corr,87-ml)):corr/2;const cT=Math.max(0,corr-cF);
+        F.push(['DFO',cF,'°'],['DFO wedge',wedge(cF),'mm'],['HTO',cT,'°'],['HTO wedge',wedge(cT),'mm']);
+        L.push(`<b>Double-level varus osteotomy</b>${o.type==='auto'?' (suggested)':''}: femur ${f1(cF)}° to bring mLDFA to about 87°, tibia takes the remaining ${f1(cT)}°.`);
+        if(mp!=null)L.push(`Planned MPTA ≈ ${f1(mp-cT)}°, planned mLDFA ≈ ${f1((ml??87)+cF)}°.`)}
+      else{const fem=type==='low'||type==='mcw';F.push(['Correction',corr,'°'],['Wedge',wedge(corr),'mm']);
+        const nm={low:'Lateral opening-wedge distal femoral osteotomy',mcw:'Medial closing-wedge distal femoral osteotomy',tibMcw:'Medial closing-wedge high tibial osteotomy',tibLow:'Lateral opening-wedge high tibial osteotomy'}[type];
+        L.push(`<b>${nm}</b>${o.type==='auto'?' (suggested)':''}: ${f1(corr)}° to neutral, wedge about ${f1(wedge(corr))} mm at ${o.width} mm width.`);
+        if(fem&&ml!=null){const post=ml+corr;L.push(`Planned mLDFA ≈ ${f1(post)}°${post>92?': above 92°, the femur would be overcorrected into varus. Consider double level.':'.'}`)}
+        if(!fem&&mp!=null){const post=mp-corr;L.push(`Planned MPTA ≈ ${f1(post)}°${post<85?': below 85°, the tibia would be overcorrected. Consider double level.':'.'}`)}
+        if(!fem&&!srcT)L.push('MPTA is not raised: a tibial correction would create joint-line obliquity. The femur is usually the right level.')}
       L.push('Plan the exact wedge on a long-leg film with the Knee Osteotomy Planner. Combine with derotation if anteversion is also high.');
       return{lines:L,figs:F}}});
   // lateral retinaculum
@@ -560,6 +593,7 @@ function decide(){
   if(v.tfr!=null&&v.tfr>T.tfr)reasons.push(`Tibiofemoral rotation ${f1(v.tfr)}° is high: the tibia is externally rotated under the femur, which raises TT–TG without a lateral tubercle.`);
   if(v.pti!=null&&v.pti<12.5&&!(v.cdi>T.cdi))reasons.push(`PTI ${f1(v.pti)}% suggests functional patella alta even though CDI is within limits.`);
   return{title,mode,reasons,procs,R,v}}
+function hkaVal(pt){const h=pt.hka!=null&&pt.hka!==''?+pt.hka:(+pt.valgus||0);return{deg:h||0,dir:pt.hka!=null&&pt.hka!==''?(pt.hkaDir||'valgus'):'valgus'}}
 function distalisation(v){const T=S.th;if(v.cdi==null)return null;const L=v.patLen;const mm=L?L*(v.cdi-T.cdiTarget):null;return{mm}}
 
 /* ---------- demo cases ---------- */
@@ -573,7 +607,7 @@ const DEMO0_P={
  sag:{cal1:{x:40,y:470},cal2:{x:140,y:470},CA:{x:300,y:250},CB:{x:310,y:180},CT:{x:270,y:340},SP:{x:318,y:160},IP:{x:296,y:265},TI:{x:255,y:420}}};
 const DEMOS=[
  {pt:{episode:'recurrent',nDisl:3,ocf:false,contra:false,failed:false,age:17,physes:'closed',jsign:true,laxity:false,cart:'distlat',valgus:0,modality:'CT'},dejour:'B',bump:6,pti:'',man:{},P:DEMO0_P,cal:{knee:50,sag:40}},
- {pt:{episode:'first',nDisl:1,ocf:false,contra:false,failed:false,age:13,physes:'open',jsign:false,laxity:true,cart:'none',valgus:6,modality:'MRI'},dejour:'A',bump:'',pti:'',man:{ttTg:14,ttPcl:20,cdi:1.5,isr:1.3,tilt:18,sulcus:148,av:22,tors:32},P:{},cal:{knee:50,sag:50}},
+ {pt:{episode:'first',nDisl:1,ocf:false,contra:false,failed:false,age:13,physes:'open',jsign:false,laxity:true,cart:'none',hka:6,hkaDir:'valgus',modality:'MRI'},dejour:'A',bump:'',pti:'',man:{ttTg:14,ttPcl:20,cdi:1.5,isr:1.3,tilt:18,sulcus:148,av:22,tors:32,mldfa:83,mpta:88},P:{},cal:{knee:50,sag:50}},
  {pt:{episode:'first',nDisl:1,ocf:false,contra:false,failed:false,age:24,physes:'closed',jsign:false,laxity:false,cart:'none',valgus:0,modality:'MRI'},dejour:'none',bump:'',pti:'',man:{ttTg:11,ttPcl:19,cdi:1.05,isr:1.0,tilt:12,sulcus:138,av:14,tors:30},P:{},cal:{knee:50,sag:50}},
  {pt:{episode:'first',nDisl:1,ocf:true,contra:false,failed:false,age:15,physes:'closing',jsign:false,laxity:false,cart:'distlat',valgus:0,modality:'MRI'},dejour:'A',bump:'',pti:'',man:{ttTg:15,ttPcl:21,cdi:1.25,isr:1.25,tilt:19,av:18,tors:33},P:{},cal:{knee:50,sag:50}},
 ];
@@ -736,12 +770,66 @@ function renderRes(){const {v,src,im}=values();
   $$('#dj button').forEach(b=>b.onclick=()=>{S.dejour=b.dataset.v;update()});
   $('#bump').onchange=e=>{S.bump=e.target.value;update()};$('#patLen').onchange=e=>{S.patLen=e.target.value;update()}}
 const STATE={ind:['acc','Indicated'],consider:['warn','Consider'],contra:['bad','Contraindicated now'],no:['mut','Not indicated']};
+function planFor(p){const o=S.plan[p.key]=S.plan[p.key]||{};if(p.types&&!o.type)o.type='auto';(p.params||[]).forEach(([k,,def])=>{if(o[k]==null||o[k]==='')o[k]=def});
+  return p.plan({...o,...Object.fromEntries((p.params||[]).map(([k])=>[k,+o[k]]))})}
+const CALC_FIELDS=[
+ ['ttTg','TT–TG','mm'],['ttPcl','TT–PCL (optional)','mm'],['av','Femoral anteversion','°'],['tors','External tibial torsion','°'],['tfr','Tibiofemoral rotation (optional)','°'],
+ ['cdi','Caton–Deschamps',''],['isr','Insall–Salvati',''],['tilt','Patellar tilt','°'],['mldfa','mLDFA','°'],['mpta','MPTA','°']];
+function renderCalcForm(){const pt=S.pt;const {v}=values();const mv=k=>S.man[k]!==''&&S.man[k]!=null?S.man[k]:'';
+  const refOf=k=>(METRICS.find(m=>m[0]===k)||[])[3];
+  $('#p-calc').innerHTML=`
+  <p class="fine">Type the values you already have from the report or PACS. No images needed. Leave a box empty if you don't have it; the plan uses whatever is filled in.</p>
+  <div class="group"><h3>Patient</h3>
+    <div class="seg" data-cs="episode"><button data-v="first">First-time</button><button data-v="recurrent">Recurrent</button></div>
+    <div class="seg" data-cs="physes"><button data-v="open">Physes open</button><button data-v="closing">Closing</button><button data-v="closed">Closed</button></div>
+    <div class="seg" data-cs="modality"><button data-v="CT">Measured on CT</button><button data-v="MRI">On MRI</button></div>
+    <div class="cgrid">
+      <label for="c-age">Age (years)</label><input id="c-age" type="number" inputmode="numeric" data-cp="age" value="${pt.age??''}"><span class="u"></span>
+      <label for="c-hka">HKA angle (°)</label><input id="c-hka" type="number" inputmode="decimal" step="0.5" data-cp="hka" value="${pt.hka??''}"><span class="u"></span>
+    </div>
+    <div class="seg" data-cs="hkaDir"><button data-v="valgus">HKA valgus</button><button data-v="varus">HKA varus</button></div>
+    <label class="tog"><input type="checkbox" data-cpc="ocf" ${pt.ocf?'checked':''}> Osteochondral fracture / loose body</label>
+    <label class="tog"><input type="checkbox" data-cpc="contra" ${pt.contra?'checked':''}> Contralateral dislocation</label>
+    <label class="tog"><input type="checkbox" data-cpc="jsign" ${pt.jsign?'checked':''}> J-sign</label>
+  </div>
+  <div class="group"><h3>Measurements</h3>
+    <div class="cgrid">
+      ${CALC_FIELDS.map(([k,l,u])=>`<label for="c-${k}">${l}${u?` (${u})`:''}</label><input id="c-${k}" type="number" inputmode="decimal" step="0.1" data-cm="${k}" value="${mv(k)}" placeholder="${S.man[k]===''||S.man[k]==null?(v[k]!=null?(u===''?f2(v[k]):f1(v[k])):''):''}"><span class="u" id="cs-${k}"></span><span class="ref">${refOf(k)()}</span>`).join('')}
+      <label for="c-dj">Trochlear dysplasia (Dejour)</label><select id="c-dj" data-cx="dejour">${[['','—'],['none','None'],['A','A'],['B','B'],['C','C'],['D','D']].map(([x,l])=>`<option value="${x}" ${S.dejour===x?'selected':''}>${l}</option>`).join('')}</select><span class="u"></span>
+      <label for="c-bump">Supratrochlear spur (mm)</label><input id="c-bump" type="number" inputmode="decimal" step="0.5" data-cx="bump" value="${S.bump}"><span class="u"></span>
+      <label for="c-patLen">Patellar articular length (mm)</label><input id="c-patLen" type="number" inputmode="decimal" step="0.5" data-cx="patLen" value="${S.patLen}"><span class="u"></span>
+      <span class="ref">Needed only to convert distalisation into millimetres (typically 28–35 mm).</span>
+    </div>
+    <p class="fine">Image-measured values show in grey as placeholders; a typed value overrides them.</p>
+  </div>
+  <div class="cout" id="calcOut"></div>`;
+  const segSync=()=>$$('#p-calc [data-cs]').forEach(g=>g.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.pt[g.dataset.cs])));segSync();
+  $$('#p-calc [data-cs] button').forEach(b=>b.onclick=()=>{const k=b.parentElement.dataset.cs;S.pt[k]=b.dataset.v;if(k==='episode')S.pt.nDisl=b.dataset.v==='first'?1:Math.max(2,+S.pt.nDisl||2);segSync();update()});
+  $$('#p-calc [data-cp]').forEach(i=>i.addEventListener('input',()=>{S.pt[i.dataset.cp]=i.value===''?'':+i.value;update()}));
+  $$('#p-calc [data-cpc]').forEach(i=>i.addEventListener('change',()=>{S.pt[i.dataset.cpc]=i.checked;update()}));
+  $$('#p-calc [data-cm]').forEach(i=>i.addEventListener('input',()=>{S.man[i.dataset.cm]=i.value;update()}));
+  $$('#p-calc [data-cx]').forEach(i=>i.addEventListener(i.tagName==='SELECT'?'change':'input',()=>{S[i.dataset.cx]=i.value;update()}));
+  renderCalcOut()}
+function renderCalcOut(){const el=$('#calcOut');if(!el)return;const d=decide();const {v}=values();
+  CALC_FIELDS.forEach(([k,,u])=>{const st=status(k,v[k]);const c=$('#cs-'+k);if(c)c.innerHTML=st?`<span class="pill ${st}">${st==='ok'?'Normal':st==='warn'?'Border':k==='lti'||k==='pti'?'Low':'High'}</span>`:''});
+  const act=d.procs.filter(p=>p.state==='ind'||p.state==='consider'),contra=d.procs.filter(p=>p.state==='contra');
+  el.innerHTML=`<div class="group">
+   <div class="rec"><span class="l">Result · PISS ${d.R.piss}/7 · Jaquith–Parikh ${d.R.jn}/4 (${d.R.jp})</span><span class="h">${d.title}</span><ul>${d.reasons.map(t=>`<li>${t}</li>`).join('')}</ul></div>
+   ${act.map(p=>{const pl=planFor(p);const [cls,lab]=STATE[p.state];
+     return`<div class="pc ${p.state==='ind'?'ind':''}"><div class="hd"><b>${p.name}</b><span class="pill ${cls}">${lab}</span></div>
+       ${pl.figs&&pl.figs.length?`<div class="figs">${pl.figs.map(([k,x,u])=>`<div><span class="k">${k}</span><span class="v">${f1(x)}<small> ${u}</small></span></div>`).join('')}</div>`:''}
+       <div class="why">${(pl.lines[0]||'').replace(/<[^>]+>/g,'')}</div></div>`}).join('')}
+   ${contra.map(p=>`<div class="pc"><div class="hd"><b>${p.name}</b><span class="pill bad">Contraindicated now</span></div><div class="why">${p.why}</div></div>`).join('')}
+   <div class="row"><button class="btn primary" id="toDec">Open full plan and osteotomy options</button><button class="btn" id="calcCopy">Copy summary</button></div>
+  </div>`;
+  $('#toDec').onclick=()=>selectTab('dec');
+  $('#calcCopy').onclick=()=>{const t=summary(d);if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast('Summary copied')).catch(()=>{selectTab('dec')});else selectTab('dec')}}
 let lastSummary='';
 function renderDec(){const d=decide();const R=d.R;
   const procs=d.procs;const order={ind:0,consider:1,contra:2,no:3};procs.sort((a,b)=>order[a.state]-order[b.state]);
   const card=p=>{const [cls,lab]=STATE[p.state];const o=S.plan[p.key]=S.plan[p.key]||{};
     if(p.types&&!o.type)o.type='auto';(p.params||[]).forEach(([k,,def])=>{if(o[k]==null||o[k]==='')o[k]=def});
-    let body='';if(p.state==='ind'||p.state==='consider'){const pl=p.plan({...o,...Object.fromEntries((p.params||[]).map(([k])=>[k,+o[k]]))});
+    let body='';if(p.state==='ind'||p.state==='consider'){const pl=planFor(p);
       body=`${p.types?`<div class="opts"><label for="ty-${p.key}">Type</label><select id="ty-${p.key}" data-p="${p.key}" data-k="type">${p.types.map(([v,l])=>`<option value="${v}" ${o.type===v?'selected':''}>${l}</option>`).join('')}</select>
         ${(p.params||[]).map(([k,l])=>`<label for="pa-${p.key}-${k}">${l}</label><input id="pa-${p.key}-${k}" type="number" step="0.5" data-p="${p.key}" data-k="${k}" value="${o[k]}">`).join('')}</div>`:''}
         ${pl.figs&&pl.figs.length?`<div class="figs">${pl.figs.map(([k,v,u])=>`<div><span class="k">${k}</span><span class="v">${f1(v)}<small> ${u}</small></span></div>`).join('')}</div>`:''}
@@ -787,9 +875,9 @@ const segBind=(id,key)=>$$(`#${id} button`).forEach(b=>b.onclick=()=>{S.pt[key]=
 segBind('episode','episode');segBind('physes','physes');segBind('modality','modality');
 $('#calmm').addEventListener('change',e=>{const v=parseFloat(e.target.value);if(v>0){S.cal[S.slice==='sag'?'sag':'knee']=v;update()}});
 
-function update(){if(S.tab==='img')renderImg();if(S.tab==='res')renderRes();if(S.tab==='dec')renderDec();renderPrompt();draw();autosave()}
-function selectTab(t){S.tab=t;$$('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===t));['pt','img','res','dec'].forEach(n=>$('#p-'+n).hidden=n!==t);
-  $('#work').classList.toggle('tall',t!=='img');syncForm();update();requestAnimationFrame(()=>{resize();fit()})}
+function update(){if(S.tab==='calc')renderCalcOut();if(S.tab==='img')renderImg();if(S.tab==='res')renderRes();if(S.tab==='dec')renderDec();renderPrompt();draw();autosave()}
+function selectTab(t){S.tab=t;$$('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===t));['calc','pt','img','res','dec'].forEach(n=>$('#p-'+n).hidden=n!==t);
+  $('#work').classList.toggle('tall',t!=='img');$('#work').classList.toggle('calc',t==='calc');if(t==='calc')renderCalcForm();syncForm();update();requestAnimationFrame(()=>{resize();fit()})}
 $$('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.t));
 $('#grab').onclick=()=>{$('#work').classList.toggle('tall');requestAnimationFrame(()=>{resize();fit()})};
 
@@ -812,6 +900,7 @@ async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>c.i
   $$('#caseList [data-open]').forEach(b=>b.onclick=async()=>{const r=await DB.get(b.dataset.open);await loadRecord(r);$('#casesSheet').hidden=true;selectTab('dec')});
   $$('#caseList [data-del]').forEach(b=>b.onclick=async()=>{if(b.dataset.armed){await DB.del(b.dataset.del);renderCases()}else{b.dataset.armed=1;b.textContent='Delete?'}})}
 $('#newCase').onclick=()=>{S={pt:{...BLANK_PT},P:{},man:{},dejour:'',bump:'',pti:'',patLen:'',cal:{knee:50,sag:50},th:{...S.th},plan:{},tab:'pt',slice:'knee',active:'cal1'};imgs={};blobs={};$('#menuSheet').hidden=true;selectTab('pt');toast('New case')};
+$('#newCalc').onclick=()=>{S={pt:{...BLANK_PT,age:''},P:{},man:{},dejour:'',bump:'',pti:'',patLen:'',cal:{knee:50,sag:50},th:{...S.th},plan:{},tab:'calc',slice:'knee',active:'cal1'};imgs={};blobs={};$('#menuSheet').hidden=true;selectTab('calc');toast('Enter the values you have')};
 $$('[data-demo]').forEach(b=>b.onclick=()=>{$('#menuSheet').hidden=true;openDemo(+b.dataset.demo)});
 let toastT=0;function toast(m){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t)}t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2200)}
 
@@ -819,7 +908,7 @@ let toastT=0;function toast(m){let t=$('.toast');if(!t){t=document.createElement
 resize();
 (async()=>{let r=null;try{r=await DB.get('__current')}catch{}
   if(r&&r.state){await loadRecord(r);selectTab('dec')}else openDemo(0)})();
-window.__pf={decide,values,openDemo,selectTab,S:()=>S,setSlice:s=>chooseSlice(s),getView:()=>view};
+window.__pf={renderCalcForm,decide,values,openDemo,selectTab,S:()=>S,setSlice:s=>chooseSlice(s),getView:()=>view};
 if('serviceWorker' in navigator&&!isNative&&/^https?:$/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 })();
 </script>

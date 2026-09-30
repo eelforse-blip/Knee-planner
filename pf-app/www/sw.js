@@ -1,4 +1,4 @@
-const VERSION='pf-v1.0.0';
+const VERSION='pf-v1.2.0';
 const FILES=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png','./icons/apple-touch-icon.png',
 './fonts/archivo-latin-400-normal.woff2','./fonts/archivo-latin-500-normal.woff2','./fonts/archivo-latin-600-normal.woff2','./fonts/archivo-latin-700-normal.woff2',
 './fonts/ibm-plex-mono-latin-400-normal.woff2','./fonts/ibm-plex-mono-latin-500-normal.woff2','./fonts/ibm-plex-mono-latin-600-normal.woff2'];
