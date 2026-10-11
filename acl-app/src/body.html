@@ -1,6 +1,7 @@
 <div class="app">
   <header class="bar">
     <div class="brand"><b>ACL Decision Planner</b><span>Surgery vs rehab · timing · graft · LET · slope · varus · children</span></div>
+    <button class="ib" id="installBtn" hidden title="Install on this computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Install app</span></button>
     <button class="ib" id="casesBtn" title="Patients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Patients</span></button>
     <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
   </header>
@@ -73,10 +74,12 @@
     <div class="sheet-body">
       <button class="btn" id="newCase">New patient (clear the screen)</button>
       <button class="btn" id="setBtn">Letterhead for printing</button>
+      <button class="btn" id="installMenu" hidden>Install on this computer / phone</button>
+      <p class="fine pcOnly">On a computer: drag an X-ray onto the window or paste it (Ctrl+V) from PACS · Delete removes the selected point · Ctrl+S saves the patient · Ctrl+P prints · Esc closes panels.</p>
       <h3>Demo cases</h3>
       <div id="demoList" class="group"></div>
       <p class="fine">Decision aid only. Thresholds come from published studies and can be edited under Decision → Thresholds. Confirm every measurement on the original images. Not a certified medical device.</p>
-      <p class="fine">Version 1.4</p>
+      <p class="fine">Version 1.5</p>
     </div>
   </div>
 </div>

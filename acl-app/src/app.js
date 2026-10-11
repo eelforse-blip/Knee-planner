@@ -563,10 +563,25 @@ function curImg(){return imgs[S.mode]||null}
 function blobToCanvas(blob){return new Promise((res,rej)=>{const url=URL.createObjectURL(blob);const im=new Image();
   im.onload=()=>{const MAX=3000,sc=Math.min(1,MAX/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c)};
   im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('bad'))};im.src=url})}
-$('#file').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+async function loadImageFile(f){if(!f)return;
   try{const c=await blobToCanvas(f);imgs[S.mode]=c;blobs[S.mode]=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
     S.P[S.mode]={};S.active=MODES[S.mode].pts[MODES[S.mode].cal?2:0][0];S.noViewer=false;layout();fit();update();toast(`${MODES[S.mode].name} image loaded`)}
-  catch{toast('That file could not be opened. Export the image as JPEG or PNG.')}});
+  catch{toast('That file could not be opened. Export the image as JPEG or PNG.')}}
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';loadImageFile(f)});
+/* desktop: drag-and-drop, paste, keyboard */
+['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{if(!e.dataTransfer||![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();
+  if(ev==='drop'){const f=[...e.dataTransfer.files].find(x=>x.type.startsWith('image/'));if(!f)return;if(S.tab!=='img')selectTab('img');loadImageFile(f)}}));
+document.addEventListener('paste',e=>{const it=[...(e.clipboardData||{}).items||[]].find(x=>x.type&&x.type.startsWith('image/'));if(!it)return;e.preventDefault();if(S.tab!=='img')selectTab('img');loadImageFile(it.getAsFile())});
+document.addEventListener('keydown',e=>{const tag=(e.target.tagName||'').toLowerCase();const typing=['input','textarea','select'].includes(tag);
+  if(e.key==='Escape'){$$('.sheet').forEach(s=>s.hidden=true);return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='p'){e.preventDefault();openPrintSheet();return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveCase(false);return}
+  if(typing)return;
+  if((e.key==='Delete'||e.key==='Backspace')&&S.tab==='img'){e.preventDefault();deletePoint()}});
+let installEvt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('#installBtn').hidden=false;$('#installMenu').hidden=false});
+const doInstall=async()=>{if(!installEvt){toast('Use the browser menu → Install app');return}installEvt.prompt();try{await installEvt.userChoice}catch{}installEvt=null;$('#installBtn').hidden=true;$('#installMenu').hidden=true};
+$('#installBtn').onclick=doInstall;$('#installMenu').onclick=()=>{$('#menuSheet').hidden=true;doInstall()};
+window.addEventListener('appinstalled',()=>{$('#installBtn').hidden=true;$('#installMenu').hidden=true;toast('Installed: open it from the desktop or Start menu')});
 
 /* ---------- viewer ---------- */
 function resize(){const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));draw()}
