@@ -1,7 +1,7 @@
 <div class="app">
   <header class="bar">
     <div class="brand"><b>ACL Decision Planner</b><span>Surgery vs rehab · timing · graft · LET · slope · varus · children</span></div>
-    <button class="ib" id="casesBtn" title="Saved cases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Cases</span></button>
+    <button class="ib" id="casesBtn" title="Patients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Patients</span></button>
     <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
   </header>
 
@@ -21,13 +21,15 @@
     <aside class="panel">
       <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
       <div class="tabs" role="tablist">
-        <button class="tab" role="tab" data-t="pt" aria-selected="true">Patient</button>
+        <button class="tab" role="tab" data-t="rec" aria-selected="false">Record</button>
+        <button class="tab" role="tab" data-t="pt" aria-selected="true">History</button>
         <button class="tab" role="tab" data-t="ex" aria-selected="false">Exam</button>
         <button class="tab" role="tab" data-t="img" aria-selected="false">Imaging</button>
         <button class="tab" role="tab" data-t="ch" aria-selected="false">Child</button>
         <button class="tab" role="tab" data-t="sc" aria-selected="false">Scores</button>
         <button class="tab" role="tab" data-t="dec" aria-selected="false">Decision</button>
       </div>
+      <div class="pane" id="p-rec" hidden></div>
       <div class="pane" id="p-pt"></div>
       <div class="pane" id="p-ex" hidden></div>
       <div class="pane" id="p-img" hidden>
@@ -52,12 +54,15 @@
 </div>
 
 <div class="sheet" id="casesSheet" hidden>
-  <div class="sheet-card" role="dialog" aria-label="Saved cases">
-    <div class="sheet-head"><b>Saved cases</b><button class="btn" data-close>Close</button></div>
+  <div class="sheet-card" role="dialog" aria-label="Patients">
+    <div class="sheet-head"><b>Patients</b><span class="fine" id="caseCount"></span><button class="btn" data-close>Close</button></div>
     <div class="sheet-body">
-      <div class="row"><input id="caseName" type="text" placeholder="Patient initials, side" style="flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px"><button class="btn primary" id="saveCase">Save</button></div>
-      <p class="fine">Cases stay on this device only. Use initials, not full names.</p>
+      <div class="row"><input id="caseName" type="text" placeholder="Name for the current case" class="inp"><button class="btn primary" id="saveCase">Save current</button></div>
+      <input id="caseSearch" type="search" placeholder="Search name, file number, phone, surgery date" class="inp">
       <div id="caseList" class="group"></div>
+      <h3>Export and backup</h3>
+      <div class="row"><button class="btn" id="exportCsv">Export all to Excel (CSV)</button><button class="btn" id="backupBtn">Back up</button><label class="btn" for="restoreFile">Restore</label><input id="restoreFile" type="file" accept=".json,application/json" hidden></div>
+      <p class="fine">Records are stored only on this device. Back up regularly and keep the file somewhere safe; it contains patient-identifiable data.</p>
     </div>
   </div>
 </div>
@@ -65,11 +70,11 @@
   <div class="sheet-card" role="dialog" aria-label="More">
     <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
     <div class="sheet-body">
-      <button class="btn" id="newCase">New case (clear everything)</button>
+      <button class="btn" id="newCase">New patient (clear the screen)</button>
       <h3>Demo cases</h3>
       <div id="demoList" class="group"></div>
       <p class="fine">Decision aid only. Thresholds come from published studies and can be edited under Decision → Thresholds. Confirm every measurement on the original images. Not a certified medical device.</p>
-      <p class="fine">Version 1.1</p>
+      <p class="fine">Version 1.2</p>
     </div>
   </div>
 </div>

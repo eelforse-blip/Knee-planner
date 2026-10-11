@@ -238,13 +238,26 @@ details[open] summary{margin-bottom:8px}
 #scView button{padding:9px 2px;font-size:12px}
 .tab{font-size:11.5px;padding:12px 0}
 .pane>*{flex-shrink:0}
+.tabs{overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;padding:12px 10px;font-size:12.5px}
+.inp{flex:1;min-width:0;width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px}
+.fgrid input.wide,.fgrid input[type=date],.fgrid input[type=tel]{grid-column:2/4;padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;min-width:0;width:100%;max-width:220px}
+.ta{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px;font-family:var(--f-ui);resize:vertical}
+details.sec{border:1px solid var(--line);border-radius:12px;padding:6px 12px 10px}
+details.sec>summary{font-size:12px;padding:8px 0}
+details.visit summary{display:flex;gap:6px;align-items:center;flex-wrap:wrap;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--ink)}
+.case.cur{border-color:var(--accent)}
+.sheet-head .fine{margin-right:8px}
+details.visit{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+details.visit[open]>summary{margin-bottom:8px}
+details.visit .fgrid{margin-bottom:8px}
 </style>
 </head>
 <body>
 <div class="app">
   <header class="bar">
     <div class="brand"><b>ACL Decision Planner</b><span>Surgery vs rehab · timing · graft · LET · slope · varus · children</span></div>
-    <button class="ib" id="casesBtn" title="Saved cases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Cases</span></button>
+    <button class="ib" id="casesBtn" title="Patients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Patients</span></button>
     <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
   </header>
 
@@ -264,13 +277,15 @@ details[open] summary{margin-bottom:8px}
     <aside class="panel">
       <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
       <div class="tabs" role="tablist">
-        <button class="tab" role="tab" data-t="pt" aria-selected="true">Patient</button>
+        <button class="tab" role="tab" data-t="rec" aria-selected="false">Record</button>
+        <button class="tab" role="tab" data-t="pt" aria-selected="true">History</button>
         <button class="tab" role="tab" data-t="ex" aria-selected="false">Exam</button>
         <button class="tab" role="tab" data-t="img" aria-selected="false">Imaging</button>
         <button class="tab" role="tab" data-t="ch" aria-selected="false">Child</button>
         <button class="tab" role="tab" data-t="sc" aria-selected="false">Scores</button>
         <button class="tab" role="tab" data-t="dec" aria-selected="false">Decision</button>
       </div>
+      <div class="pane" id="p-rec" hidden></div>
       <div class="pane" id="p-pt"></div>
       <div class="pane" id="p-ex" hidden></div>
       <div class="pane" id="p-img" hidden>
@@ -295,12 +310,15 @@ details[open] summary{margin-bottom:8px}
 </div>
 
 <div class="sheet" id="casesSheet" hidden>
-  <div class="sheet-card" role="dialog" aria-label="Saved cases">
-    <div class="sheet-head"><b>Saved cases</b><button class="btn" data-close>Close</button></div>
+  <div class="sheet-card" role="dialog" aria-label="Patients">
+    <div class="sheet-head"><b>Patients</b><span class="fine" id="caseCount"></span><button class="btn" data-close>Close</button></div>
     <div class="sheet-body">
-      <div class="row"><input id="caseName" type="text" placeholder="Patient initials, side" style="flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px"><button class="btn primary" id="saveCase">Save</button></div>
-      <p class="fine">Cases stay on this device only. Use initials, not full names.</p>
+      <div class="row"><input id="caseName" type="text" placeholder="Name for the current case" class="inp"><button class="btn primary" id="saveCase">Save current</button></div>
+      <input id="caseSearch" type="search" placeholder="Search name, file number, phone, surgery date" class="inp">
       <div id="caseList" class="group"></div>
+      <h3>Export and backup</h3>
+      <div class="row"><button class="btn" id="exportCsv">Export all to Excel (CSV)</button><button class="btn" id="backupBtn">Back up</button><label class="btn" for="restoreFile">Restore</label><input id="restoreFile" type="file" accept=".json,application/json" hidden></div>
+      <p class="fine">Records are stored only on this device. Back up regularly and keep the file somewhere safe; it contains patient-identifiable data.</p>
     </div>
   </div>
 </div>
@@ -308,11 +326,11 @@ details[open] summary{margin-bottom:8px}
   <div class="sheet-card" role="dialog" aria-label="More">
     <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
     <div class="sheet-body">
-      <button class="btn" id="newCase">New case (clear everything)</button>
+      <button class="btn" id="newCase">New patient (clear the screen)</button>
       <h3>Demo cases</h3>
       <div id="demoList" class="group"></div>
       <p class="fine">Decision aid only. Thresholds come from published studies and can be edited under Decision → Thresholds. Confirm every measurement on the original images. Not a certified medical device.</p>
-      <p class="fine">Version 1.1</p>
+      <p class="fine">Version 1.2</p>
     </div>
   </div>
 </div>
@@ -450,7 +468,7 @@ const BLANK={age:'',sex:'M',side:'R',sport:'I',goal:'return',level:'rec',tegner:
  physes:'closed',tanner:'',boneAge:'',menarche:'na',childInj:'mid',spine:'1'};
 for(let i=0;i<9;i++)BLANK['b'+i]=false;
 
-let S={d:{...BLANK},P:{},cal:{att:50,notch:50},th:{...TH_DEFAULT},tab:'pt',mode:'slope',active:'A1',noViewer:false,sc:{tp:'preop',view:'ikdc',d:{}}};
+let S={d:{...BLANK},P:{},cal:{att:50,notch:50},th:{...TH_DEFAULT},tab:'pt',mode:'slope',active:'A1',noViewer:false,sc:{tp:'preop',view:'ikdc',d:{}},rec:blankRec(),caseId:null};
 let imgs={},blobs={};
 let view={s:1,tx:0,ty:0};
 
@@ -676,11 +694,11 @@ const DEMOS=[
  {t:'22 y footballer, hyperlax, high slope',d:{age:22,sex:'M',sport:'I',goal:'return',level:'comp',tegner:9,weeks:6,episodes:2,lachman:'3',endpoint:'soft',pivot:'3',kt:7,extDef:0,flex:130,effusion:'mild',recurv:12,recurvOther:11,b0:true,b1:true,b2:true,b3:true,b6:true,b7:true,pray:true,meniscus:'repair',segond:true,hka:1,kl:'0'},img:true},
  {t:'34 y recreational runner, coper',d:{age:34,sex:'F',sport:'III',goal:'modify',level:'rec',tegner:4,weeks:8,episodes:0,lachman:'2',pivot:'1',kt:4,extDef:0,flex:135,hop:88,kos:90,grs:80,meniscus:'none'}},
  {t:'38 y labourer, chronic ACL + varus',d:{age:38,sex:'M',sport:'II',goal:'return',level:'rec',tegner:5,job:'heavy',pray:true,weeks:150,episodes:6,lachman:'3',pivot:'2',kt:8,extDef:0,flex:125,thrust:true,pts:13,hka:7,mpta:83,kl:'2',medMen:true,width:62,meniscus:'irrep'}},
- {t:'26 y second revision, slope 16°',sc:{tp:'m12',view:'ikdc',d:{preop:{date:'2025-10-02',tegner:'3',lys:{limp:'3',support:'5',lock:'10',inst:'10',pain:'15',swell:'6',stairs:'6',squat:'4'},ikdc:{q1:'1',q2:'6',q3:'5',q4:'2',q5:'2',q6:'0',q7:'1',q8:'1',q9a:'3',q9b:'2',q9c:'2',q9d:'2',q9e:'3',q9f:'3',q9g:'2',q9h:'1',q9i:'1',q10:'5'},rsi:{},obj:{eff:'1',ext:'2',flex:'5',ap:'9',pivot:'3',hop:'60'}},m6:{date:'2026-04-08',tegner:'4',lys:{limp:'5',support:'5',lock:'15',inst:'20',pain:'20',swell:'6',stairs:'10',squat:'4'},ikdc:{q1:'2',q2:'3',q3:'3',q4:'3',q5:'3',q6:'1',q7:'3',q8:'2',q9a:'4',q9b:'3',q9c:'2',q9d:'3',q9e:'4',q9f:'4',q9g:'3',q9h:'2',q9i:'2',q10:'7'},rsi:{},obj:{}},m12:{date:'2026-10-05',tegner:'7',lys:{limp:'5',support:'5',lock:'15',inst:'25',pain:'20',swell:'10',stairs:'10',squat:'5'},ikdc:{q1:'3',q2:'2',q3:'2',q4:'4',q5:'4',q6:'1',q7:'4',q8:'3',q9a:'4',q9b:'4',q9c:'3',q9d:'3',q9e:'4',q9f:'4',q9g:'4',q9h:'3',q9i:'3',q10:'8'},rsi:{r0:'70',r1:'40',r2:'40',r3:'70',r4:'60',r5:'50',r6:'40',r7:'70',r8:'40',r9:'30',r10:'70',r11:'60'},obj:{eff:'0',ext:'0',flex:'5',ap:'2',pivot:'0',hop:'92'}}}},d:{age:26,sex:'M',sport:'I',goal:'return',level:'comp',tegner:8,weeks:40,episodes:4,lachman:'3',pivot:'3',kt:9,extDef:0,flex:135,recurv:4,revision:true,revN:2,prevGraft:'HT',tunnel:13,pts:16,att:7.5,hka:2,acwoLevel:'supra',depth:58}},
+ {t:'26 y second revision, slope 16°',rec:{name:'Demo patient A.M.',fileNo:'1042',phone:'',injuryDate:'2025-06-14',firstVisit:'2025-07-01',mechanism:'noncontact',op:{date:'2025-10-09',surgeon:'Dr Elforse',anaes:'spinal',tq:95,euaL:'3',euaP:'3',type:'rev1',graft:'qts',graftSide:'ipsi',dia:10,len:75,fem:'am',femT:10,tibT:10,femFix:'adj',tibFix:'hybrid',tension:20,let:'lemaire',medMen:'ramp',latMen:'none',sutures:2,ost:'acwo',ostCorr:10,ostWedge:10,wb:'pwb6',brace:'stop',dvt:true,antibiotic:true},visits:[{date:'2025-10-23',extDef:'3',flex:'80',effusion:'mild',wound:'ok',comp:'none',phase:'1'},{date:'2026-04-08',extDef:'0',flex:'130',effusion:'none',lachman:'0',kt:'2',pivot:'0',quad:'78',hop:'75',pain:'1',wound:'ok',comp:'none',phase:'3',sport:'no'},{date:'2026-10-05',extDef:'0',flex:'135',effusion:'none',lachman:'0',kt:'1',pivot:'0',quad:'92',hop:'92',pain:'0',comp:'none',phase:'5',sport:'train'}],out:{}},sc:{tp:'m12',view:'ikdc',d:{preop:{date:'2025-10-02',tegner:'3',lys:{limp:'3',support:'5',lock:'10',inst:'10',pain:'15',swell:'6',stairs:'6',squat:'4'},ikdc:{q1:'1',q2:'6',q3:'5',q4:'2',q5:'2',q6:'0',q7:'1',q8:'1',q9a:'3',q9b:'2',q9c:'2',q9d:'2',q9e:'3',q9f:'3',q9g:'2',q9h:'1',q9i:'1',q10:'5'},rsi:{},obj:{eff:'1',ext:'2',flex:'5',ap:'9',pivot:'3',hop:'60'}},m6:{date:'2026-04-08',tegner:'4',lys:{limp:'5',support:'5',lock:'15',inst:'20',pain:'20',swell:'6',stairs:'10',squat:'4'},ikdc:{q1:'2',q2:'3',q3:'3',q4:'3',q5:'3',q6:'1',q7:'3',q8:'2',q9a:'4',q9b:'3',q9c:'2',q9d:'3',q9e:'4',q9f:'4',q9g:'3',q9h:'2',q9i:'2',q10:'7'},rsi:{},obj:{}},m12:{date:'2026-10-05',tegner:'7',lys:{limp:'5',support:'5',lock:'15',inst:'25',pain:'20',swell:'10',stairs:'10',squat:'5'},ikdc:{q1:'3',q2:'2',q3:'2',q4:'4',q5:'4',q6:'1',q7:'4',q8:'3',q9a:'4',q9b:'4',q9c:'3',q9d:'3',q9e:'4',q9f:'4',q9g:'4',q9h:'3',q9i:'3',q10:'8'},rsi:{r0:'70',r1:'40',r2:'40',r3:'70',r4:'60',r5:'50',r6:'40',r7:'70',r8:'40',r9:'30',r10:'70',r11:'60'},obj:{eff:'0',ext:'0',flex:'5',ap:'2',pivot:'0',hop:'92'}}}},d:{age:26,sex:'M',sport:'I',goal:'return',level:'comp',tegner:8,weeks:40,episodes:4,lachman:'3',pivot:'3',kt:9,extDef:0,flex:135,recurv:4,revision:true,revN:2,prevGraft:'HT',tunnel:13,pts:16,att:7.5,hka:2,acwoLevel:'supra',depth:58}},
  {t:'11 y girl, complete tear + bucket-handle',d:{age:11,sex:'F',sport:'I',goal:'return',level:'comp',weeks:3,episodes:2,lachman:'3',pivot:'2',locked:true,meniscus:'bucket',physes:'open',tanner:'2',boneAge:10.5,menarche:'na',b6:true,b7:true}},
  {t:'14 y boy, partial tear < 50 %',d:{age:14,sex:'M',sport:'I',goal:'return',weeks:4,episodes:0,lachman:'1',pivot:'1',kt:2,tear:'partial',pct:'lt50',physes:'open',tanner:'3',boneAge:13.5}},
  {t:'9 y tibial spine avulsion, type III',d:{age:9,sex:'M',sport:'I',weeks:1,lachman:'2',pivot:'1',effusion:'mod',physes:'open',tanner:'1',childInj:'spine',spine:'3'}}];
-function openDemo(i){const x=DEMOS[i];S.d={...BLANK,...x.d};S.sc=x.sc?JSON.parse(JSON.stringify(x.sc)):{tp:'preop',view:'ikdc',d:{}};S.P={};S.cal={att:50,notch:50};imgs={};blobs={};
+function openDemo(i){const x=DEMOS[i];S.d={...BLANK,...x.d};S.sc=x.sc?JSON.parse(JSON.stringify(x.sc)):{tp:'preop',view:'ikdc',d:{}};S.rec={...blankRec(),...JSON.parse(JSON.stringify(x.rec||{}))};S.rec.op={...blankRec().op,...S.rec.op};S.rec.visits=S.rec.visits||[];S.rec.out=S.rec.out||{};S.caseId=null;S.P={};S.cal={att:50,notch:50};imgs={};blobs={};
   if(x.img){const c=demoImage();imgs={slope:c,att:c,notch:c};S.P=JSON.parse(JSON.stringify(DEMO_P))}
   S.mode='slope';S.active='A1';selectTab('dec');toast('Demo: '+x.t)}
 
@@ -697,7 +715,7 @@ function fieldHTML(f,d,meas){
 function renderForm(tab,el){const d=S.d;const meas=computeImage();
   el.innerHTML=FORMS[tab].map(([title,fs])=>`<div class="group"><h3>${title}</h3><div class="fgrid">${fs.map(f=>fieldHTML(f,d,meas)).join('')}</div></div>`).join('')}
 function formTarget(tab){return tab==='img'?$('#imgForm'):$('#p-'+tab)}
-function renderTab(tab){if(tab==='ch'){renderChild();return}if(tab==='sc'){renderScores();return}if(FORMS[tab])renderForm(tab,formTarget(tab));if(tab==='img')renderImg()}
+function renderTab(tab){if(tab==='rec'){renderRecord();return}if(tab==='ch'){renderChild();return}if(tab==='sc'){renderScores();return}if(FORMS[tab])renderForm(tab,formTarget(tab));if(tab==='img')renderImg()}
 document.addEventListener('click',e=>{const b=e.target.closest('.seg button[data-k]');if(!b)return;S.d[b.dataset.k]=b.dataset.v;renderTab(S.tab);autosave()});
 document.addEventListener('change',e=>{const i=e.target;if(!i.dataset||!i.dataset.k)return;const k=i.dataset.k;
   S.d[k]=i.type==='checkbox'?i.checked:i.value;
@@ -1073,11 +1091,171 @@ function scoresCard(){const rows=scoreHistoryRows();if(!rows.length)return'';con
    ${rows.map(r=>`<tr><td>${r.l}</td><td class="n">${r.tegner??'—'}</td><td class="n">${r.lys??'—'}</td><td class="n">${r.ikdc!=null?f1(r.ikdc):'—'}</td><td class="n">${G(r.obj)}</td><td class="n">${r.rsi!=null?f0(r.rsi):'—'}</td></tr>`).join('')}</table></div>`}
 function scoresSummary(){const rows=scoreHistoryRows();return rows.map(r=>`${r.l}${r.date?' ('+r.date+')':''}: `+[r.tegner!=null?'Tegner '+r.tegner:'',r.lys!=null?'Lysholm '+r.lys:'',r.ikdc!=null?'IKDC '+f1(r.ikdc):'',r.obj!=null?'IKDC exam '+GRADE[r.obj]:'',r.rsi!=null?'ACL-RSI '+f0(r.rsi):''].filter(Boolean).join(', '))}
 
+/* ---------- patient record: identity, operation, follow-up visits, outcome; patient list; export ---------- */
+const O_LACH=[['0','Normal'],['1','Grade I · 3–5 mm'],['2','Grade II · 6–10 mm'],['3','Grade III · > 10 mm']];
+const O_PIV=[['0','0 · equal'],['1','1 · glide'],['2','2 · clunk'],['3','3 · gross']];
+const O_MEN=[['none','Intact / not treated'],['left','Stable tear left alone'],['partial','Partial meniscectomy'],['allin','All-inside repair'],['insideout','Inside-out repair'],['outsidein','Outside-in repair'],['root','Root repair'],['ramp','Ramp repair'],['bh','Bucket-handle repair']];
+const O_COMP=[['none','None'],['superf','Superficial wound infection'],['deep','Deep infection / septic arthritis'],['dvt','DVT / PE'],['stiff','Stiffness / arthrofibrosis'],['cyclops','Cyclops lesion'],['retear','Graft re-rupture'],['contra','Contralateral ACL tear'],['menis','Meniscal re-tear'],['hw','Hardware irritation'],['nerve','Infrapatellar nerve numbness'],['other','Other (see notes)']];
+const REC_FORM=[
+ ['Patient details',[
+  {p:'name',l:'Name',t:'txt'},{p:'fileNo',l:'File number',t:'txt'},{p:'phone',l:'Phone',t:'tel'},
+  {p:'injuryDate',l:'Date of injury',t:'date'},{p:'firstVisit',l:'First clinic visit',t:'date'},
+  {p:'mechanism',l:'Mechanism',t:'sel',o:[['','—'],['noncontact','Non-contact pivoting / landing'],['contact','Contact injury'],['fall','Fall'],['rta','Road traffic accident'],['other','Other']]},
+  {p:'notes',l:'Notes (history, comorbidities)',t:'area'}]],
+ ['Operation',[
+  {p:'op.date',l:'Date of surgery',t:'date'},{p:'op.surgeon',l:'Surgeon',t:'txt'},{p:'op.assistant',l:'Assistant',t:'txt'},
+  {p:'op.anaes',l:'Anaesthesia',t:'sel',o:[['','—'],['spinal','Spinal'],['ga','General'],['gablock','General + nerve block'],['other','Other']]},
+  {p:'op.tq',l:'Tourniquet time',t:'num',u:'min'},
+  {p:'op.euaL',l:'Lachman under anaesthesia',t:'sel',o:[['','—'],...O_LACH]},{p:'op.euaP',l:'Pivot shift under anaesthesia',t:'sel',o:[['','—'],...O_PIV]},
+  {p:'op.type',l:'Procedure',t:'sel',o:[['primary','Primary ACLR'],['rev1','Revision, single stage'],['rev2a','Revision stage 1 (tunnel grafting)'],['rev2b','Revision stage 2'],['phys','Physeal-sparing / paediatric']]},
+  {p:'op.graft',l:'Graft',t:'sel',o:[['','—'],['st4','Semitendinosus 4-strand'],['stg4','ST + gracilis 4-strand'],['st56','Hamstring 5–6 strand'],['bptb','Bone–patellar tendon–bone'],['qtb','Quadriceps tendon with bone'],['qts','Quadriceps tendon, all soft tissue'],['pl','Peroneus longus'],['allo','Allograft'],['itb','Iliotibial band (Kocher–Micheli)']]},
+  {p:'op.graftSide',l:'Harvest side',t:'sel',o:[['ipsi','Ipsilateral'],['contra','Contralateral'],['na','Not applicable']]},
+  {p:'op.dia',l:'Graft diameter',t:'num',u:'mm'},{p:'op.len',l:'Graft length',t:'num',u:'mm'},
+  {p:'op.fem',l:'Femoral tunnel technique',t:'sel',o:[['','—'],['am','Anteromedial portal'],['tt','Transtibial'],['oi','Outside-in'],['epi','All-epiphyseal'],['ott','Over-the-top']]},
+  {p:'op.femT',l:'Femoral tunnel',t:'num',u:'mm'},{p:'op.tibT',l:'Tibial tunnel',t:'num',u:'mm'},
+  {p:'op.femFix',l:'Femoral fixation',t:'sel',o:[['','—'],['fixed','Cortical button, fixed loop'],['adj','Cortical button, adjustable loop'],['iscrew','Interference screw'],['xpin','Cross-pin'],['other','Other']]},
+  {p:'op.tibFix',l:'Tibial fixation',t:'sel',o:[['','—'],['iscrew','Interference screw'],['button','Cortical button'],['post','Screw-post / staple'],['hybrid','Hybrid (screw + button)'],['other','Other']]},
+  {p:'op.tension',l:'Graft fixed at flexion',t:'num',u:'°'},
+  {p:'op.remnant',l:'Remnant preserved',t:'chk'},{p:'op.notchplasty',l:'Notchplasty',t:'chk'},
+  {p:'op.let',l:'Lateral procedure',t:'sel',o:[['none','None'],['lemaire','Modified Lemaire LET'],['all','ALL reconstruction'],['other','Other']]},
+  {p:'op.medMen',l:'Medial meniscus',t:'sel',o:O_MEN},{p:'op.latMen',l:'Lateral meniscus',t:'sel',o:O_MEN},
+  {p:'op.sutures',l:'Number of meniscal sutures/implants',t:'num',u:'n'},
+  {p:'op.cart',l:'Cartilage',t:'sel',o:[['none','Normal / not treated'],['debr','Debridement'],['mfx','Microfracture'],['other','Other cartilage procedure']]},
+  {p:'op.cartNote',l:'Cartilage lesion (site, ICRS grade, size)',t:'txt'},
+  {p:'op.mcl',l:'MCL',t:'sel',o:[['none','No procedure'],['repair','Repair'],['recon','Reconstruction']]},
+  {p:'op.plc',l:'Posterolateral corner',t:'sel',o:[['none','No procedure'],['repair','Repair'],['recon','Reconstruction']]},
+  {p:'op.ost',l:'Osteotomy',t:'sel',o:[['none','None'],['owhto','Medial opening-wedge HTO'],['cwhto','Lateral closing-wedge HTO'],['acwo','Anterior closing wedge (slope)'],['comb','Combined']]},
+  {p:'op.ostCorr',l:'Osteotomy correction',t:'num',u:'°'},{p:'op.ostWedge',l:'Wedge / gap',t:'num',u:'mm'},
+  {p:'op.intraComp',l:'Intra-operative complications',t:'txt'},
+  {p:'op.notes',l:'Operative notes',t:'area'}]],
+ ['Post-operative protocol',[
+  {p:'op.wb',l:'Weight-bearing',t:'sel',o:[['','—'],['fwb','Full as tolerated'],['pwb2','Partial for 2 weeks'],['pwb6','Partial for 4–6 weeks'],['nwb','Non-weight-bearing']]},
+  {p:'op.brace',l:'Brace',t:'sel',o:[['','—'],['none','None'],['hinged','Hinged brace'],['ext','Locked in extension'],['stop','Extension stop at 0°']]},
+  {p:'op.rom',l:'Range-of-motion limits',t:'txt'},{p:'op.dvt',l:'DVT prophylaxis',t:'chk'},{p:'op.antibiotic',l:'Antibiotic prophylaxis',t:'chk'}]],
+ ['Outcome',[
+  {p:'out.rtsDate',l:'Return to sport date',t:'date'},
+  {p:'out.rtsLevel',l:'Return to sport',t:'sel',o:[['','—'],['same','Same level'],['lower','Lower level'],['changed','Changed to another sport'],['no','Did not return']]},
+  {p:'out.retearDate',l:'Graft re-rupture date',t:'date'},{p:'out.revDate',l:'Revision surgery date',t:'date'},
+  {p:'out.contraDate',l:'Contralateral ACL tear date',t:'date'},
+  {p:'out.satisfied',l:'Patient satisfaction',t:'sel',o:[['','—'],['4','Very satisfied'],['3','Satisfied'],['2','Neutral'],['1','Dissatisfied']]}]]];
+const VISIT_F=[
+ {p:'date',l:'Visit date',t:'date'},
+ {p:'extDef',l:'Extension deficit',t:'num',u:'°'},{p:'flex',l:'Flexion',t:'num',u:'°'},
+ {p:'effusion',l:'Effusion',t:'sel',o:[['','—'],['none','None'],['mild','Mild'],['mod','Moderate'],['severe','Severe']]},
+ {p:'lachman',l:'Lachman',t:'sel',o:[['','—'],...O_LACH]},{p:'kt',l:'KT side-to-side',t:'num',u:'mm'},{p:'pivot',l:'Pivot shift',t:'sel',o:[['','—'],...O_PIV]},
+ {p:'quad',l:'Quadriceps strength LSI',t:'num',u:'%'},{p:'hop',l:'Hop test LSI',t:'num',u:'%'},{p:'pain',l:'Pain (0–10)',t:'num',u:'/10'},
+ {p:'wound',l:'Wound',t:'sel',o:[['','—'],['ok','Healed'],['delay','Delayed / oozing'],['inf','Infected']]},
+ {p:'comp',l:'Complication',t:'sel',o:O_COMP},
+ {p:'phase',l:'Rehab phase',t:'sel',o:[['','—'],['1','1 · protection, ROM, quads'],['2','2 · strength'],['3','3 · running, plyometrics'],['4','4 · sport-specific'],['5','5 · returned to sport']]},
+ {p:'sport',l:'Sport status',t:'sel',o:[['','—'],['no','Not yet'],['train','Training'],['same','Competing, same level'],['lower','Competing, lower level'],['stop','Stopped sport']]},
+ {p:'notes',l:'Notes',t:'area'}];
+function blankRec(){return{name:'',fileNo:'',phone:'',injuryDate:'',firstVisit:'',mechanism:'',notes:'',op:{type:'primary',graftSide:'ipsi',let:'none',medMen:'none',latMen:'none',cart:'none',mcl:'none',plc:'none',ost:'none'},visits:[],out:{}}}
+const getP=(o,p)=>p.split('.').reduce((a,k)=>a==null?a:a[k],o);
+const setP=(o,p,v)=>{const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++)a=a[ks[i]]=a[ks[i]]||{};a[ks[ks.length-1]]=v};
+const lab=(f,v)=>{if(v===''||v==null)return'';if(f.t==='chk')return v?'Yes':'';if(f.t==='sel'){const o=f.o.find(x=>String(x[0])===String(v));return o?o[1]:v}return String(v)+(f.u&&f.u!=='n'?' '+f.u:'')};
+function weeksPostOp(date){const od=S.rec.op.date;if(!od||!date)return null;return Math.round((new Date(date)-new Date(od))/6048e5*10)/10}
+function rField(f,val,attr){const id='r_'+Math.random().toString(36).slice(2,8);
+  if(f.t==='chk')return`<label class="tog"><input type="checkbox" ${attr} ${val?'checked':''}> ${f.l}</label>`;
+  if(f.t==='area')return`<div class="full"><span>${f.l}</span><textarea ${attr} rows="3" class="ta">${esc(val??'')}</textarea></div>`;
+  if(f.t==='sel')return`<label for="${id}">${f.l}</label><select id="${id}" ${attr}>${f.o.map(([v,l])=>`<option value="${v}" ${String(val??'')===String(v)?'selected':''}>${l}</option>`).join('')}</select>`;
+  if(f.t==='num')return`<label for="${id}">${f.l}</label><input id="${id}" type="number" inputmode="decimal" step="any" ${attr} value="${esc(val??'')}"><span class="u">${f.u||''}</span>`;
+  return`<label for="${id}">${f.l}</label><input id="${id}" type="${f.t==='txt'?'text':f.t}" ${attr} value="${esc(val??'')}" class="wide">`}
+function renderRecord(){const el=$('#p-rec');const R=S.rec;let h='';
+  h+=`<div class="rec" style="padding:10px 12px"><span class="l">Patient record</span><span class="h" style="font-size:16px" id="recHead">${esc(R.name||'Unnamed patient')}${R.fileNo?' · #'+esc(R.fileNo):''}</span>
+   <span class="fine">${S.caseId?'Saved in the patient list; changes save automatically.':'Not in the patient list yet.'}${R.op.date?' · Surgery '+esc(R.op.date):''}${R.visits.length?' · '+R.visits.length+' follow-up visit'+(R.visits.length>1?'s':''):''}</span>
+   <div class="row">${S.caseId?'':'<button class="btn primary" id="recSave">Add to patient list</button>'}<button class="btn" id="recShare">Share report</button></div></div>`;
+  h+=`<p class="fine">Pre-operative findings come from the History, Exam, Imaging and Child tabs; scores from the Scores tab.</p>`;
+  REC_FORM.forEach(([title,fs],gi)=>{h+=`<details class="sec" ${gi<2?'open':''}><summary>${title}</summary><div class="fgrid">${fs.map(f=>rField(f,getP(R,f.p),`data-r="${f.p}"`)).join('')}</div></details>`;
+    if(gi===2){h+=`<details class="sec" open><summary>Follow-up visits · ${R.visits.length}</summary><div class="group" id="visits">${visitsHTML()}</div><div class="row"><button class="btn primary" id="addVisit">Add visit</button></div></details>`}});
+  const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;bindRecord()}
+function visitsHTML(){const V=S.rec.visits;if(!V.length)return'<div class="empty">No follow-up visits yet.</div>';
+  return V.map((v,i)=>`<details class="visit" ${v._open?'open':''} data-vi="${i}"><summary>${visitSummary(v,i)}</summary>
+   <div class="fgrid">${VISIT_F.map(f=>rField(f,v[f.p],`data-v="${i}.${f.p}"`)).join('')}</div><div class="row"><button class="btn danger" data-vdel="${i}">Delete visit</button></div></details>`).join('')}
+function visitSummary(v,i){const w=weeksPostOp(v.date);return`<b>${v.date?esc(v.date):'Visit '+(i+1)}</b>${w!=null?` <span class="pill mut">${w<0?'pre-op':w+' wk post-op'}</span>`:''}${v.comp&&v.comp!=='none'?` <span class="pill bad">${lab(VISIT_F.find(f=>f.p==='comp'),v.comp)}</span>`:''}`}
+function recHeader(){const R=S.rec,h=$('#recHead');if(h)h.textContent=(R.name||'Unnamed patient')+(R.fileNo?' · #'+R.fileNo:'')}
+function bindRecord(){const el=$('#p-rec');
+  const sv=$('#recSave');if(sv)sv.onclick=()=>saveCase(true);
+  $('#recShare').onclick=()=>shareText('ACL patient report',recordReport());
+  $('#addVisit').onclick=()=>{S.rec.visits.forEach(v=>v._open=false);S.rec.visits.push({date:new Date().toISOString().slice(0,10),comp:'none',_open:true});renderRecord();autosave();
+    const last=[...$$('#visits .visit')].pop();if(last)last.scrollIntoView({block:'start'})};
+  $$('#p-rec [data-vdel]').forEach(b=>b.onclick=()=>{if(b.dataset.armed){S.rec.visits.splice(+b.dataset.vdel,1);renderRecord();autosave()}else{b.dataset.armed=1;b.textContent='Tap again to delete'}});
+  $$('#p-rec details.visit').forEach(d=>d.addEventListener('toggle',()=>{S.rec.visits[+d.dataset.vi]._open=d.open}))}
+function recInput(e,commit){const i=e.target;if(!i.closest||!i.closest('#p-rec'))return;
+  const val=i.type==='checkbox'?i.checked:i.value;
+  if(i.dataset.r){setP(S.rec,i.dataset.r,val);recHeader();if(commit&&i.dataset.r==='op.date')$$('#visits .visit').forEach(d=>{const k=+d.dataset.vi;d.querySelector('summary').innerHTML=visitSummary(S.rec.visits[k],k)});autosave()}
+  else if(i.dataset.v){const [vi,k]=i.dataset.v.split('.');S.rec.visits[+vi][k]=val;if(k==='date'||k==='comp'){const d=i.closest('.visit');if(d)d.querySelector('summary').innerHTML=visitSummary(S.rec.visits[+vi],+vi)}autosave()}}
+document.addEventListener('input',e=>recInput(e,false));document.addEventListener('change',e=>recInput(e,true));
+
+/* ---------- text report ---------- */
+function recordReport(){const R=S.rec,L=[];
+  L.push(`${R.name||'Patient'}${R.fileNo?' · file '+R.fileNo:''}${R.phone?' · '+R.phone:''}`);
+  const fl=(fs,obj)=>fs.map(f=>{const v=lab(f,getP(obj,f.p));return v&&f.t!=='area'?`${f.l}: ${v}`:''}).filter(Boolean);
+  const dets=fl(REC_FORM[0][1].filter(f=>!['name','fileNo','phone'].includes(f.p)),R);if(dets.length)L.push(dets.join(' · '));if(R.notes)L.push('Notes: '+R.notes);
+  L.push('');L.push('PRE-OPERATIVE');L.push(summary(decide()));
+  const op=fl(REC_FORM[1][1],R);if(op.length){L.push('');L.push('OPERATION');op.forEach(x=>L.push('- '+x));if(R.op.notes)L.push('Notes: '+R.op.notes)}
+  const pp=fl(REC_FORM[2][1],R);if(pp.length){L.push('');L.push('POST-OP PROTOCOL');pp.forEach(x=>L.push('- '+x))}
+  if(R.visits.length){L.push('');L.push('FOLLOW-UP');R.visits.forEach(v=>{const w=weeksPostOp(v.date);L.push(`- ${v.date||'?'}${w!=null&&w>=0?' ('+w+' wk)':''}: `+VISIT_F.filter(f=>f.p!=='date'&&f.p!=='notes').map(f=>{const x=lab(f,v[f.p]);return x?`${f.l} ${x}`:''}).filter(Boolean).join(', ')+(v.notes?'. '+v.notes:''))})}
+  const out=fl(REC_FORM[3][1],R);if(out.length){L.push('');L.push('OUTCOME');out.forEach(x=>L.push('- '+x))}
+  return L.join('\n')}
+async function shareText(title,text){try{if(isNative&&window.Capacitor.Plugins.Share){await window.Capacitor.Plugins.Share.share({title,text});return}if(navigator.share){await navigator.share({title,text});return}await navigator.clipboard.writeText(text);toast('Copied')}catch{}}
+
+/* ---------- patient list ---------- */
+async function saveCase(fromRecord){const R=S.rec;const name=(R.name||$('#caseName').value.trim()||('Case '+new Date().toLocaleString([],{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})));
+  if(!R.name)R.name=name;S.caseId=S.caseId||('c'+Date.now());
+  try{await DB.put(caseRow());await saveNow();$('#caseName').value='';toast(`Saved “${name}”`);if(!$('#casesSheet').hidden)renderCases();if(S.tab==='rec')renderRecord()}catch{toast('Could not save on this device')}}
+function caseRow(){return{id:S.caseId,name:S.rec.name||'Unnamed',state:snap(),blobs:{...blobs},demo:isDemoImg(),date:Date.now()}}
+async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>c.id!=='__current').sort((a,b)=>b.date-a.date)}catch{}
+  const q=($('#caseSearch').value||'').trim().toLowerCase();
+  $('#caseCount').textContent=list.length?`${list.length} patient${list.length>1?'s':''}`:'';
+  if(q)list=list.filter(c=>{const r=c.state.rec||{};return[c.name,r.fileNo,r.phone,r.op&&r.op.date].join(' ').toLowerCase().includes(q)});
+  const el=$('#caseList');if(!list.length){el.innerHTML=`<div class="empty">${q?'No match.':'No patients saved yet.'}</div>`;return}
+  el.innerHTML=list.map(c=>{const r=c.state.rec||{},d=c.state.d||{};const op=r.op||{};
+    return`<div class="case ${c.id===S.caseId?'cur':''}"><div style="min-width:0"><div class="t"></div><div class="d">${[r.fileNo?'#'+esc(r.fileNo):'',esc(d.age||'?')+' y',op.date?'op '+esc(op.date):'no surgery yet',(r.visits||[]).length?(r.visits.length+' visits'):''].filter(Boolean).join(' · ')}</div></div><div class="row"><button class="btn primary" data-open="${c.id}">Open</button><button class="btn danger" data-del="${c.id}">✕</button></div></div>`}).join('');
+  $$('#caseList .t').forEach((t,i)=>t.textContent=list[i].name);
+  $$('#caseList [data-open]').forEach(b=>b.onclick=async()=>{await saveNow();const r=await DB.get(b.dataset.open);await loadRecord(r);S.caseId=r.id;$('#casesSheet').hidden=true;selectTab('rec')});
+  $$('#caseList [data-del]').forEach(b=>b.onclick=async()=>{if(b.dataset.armed){await DB.del(b.dataset.del);if(S.caseId===b.dataset.del)S.caseId=null;renderCases()}else{b.dataset.armed=1;b.textContent='Delete?'}})}
+
+/* ---------- export / backup ---------- */
+const csvCell=v=>{v=v==null?'':String(v);return/[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+const toCSV=rows=>'﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+async function allCases(){let list=[];try{list=(await DB.all()).filter(c=>c.id!=='__current')}catch{}return list.sort((a,b)=>a.date-b.date)}
+function withState(st,fn){const keep=S;S={...S,d:{...BLANK,...st.d},P:st.P||{},cal:{att:50,notch:50,...st.cal},th:{...TH_DEFAULT,...st.th},sc:st.sc||{tp:'preop',view:'ikdc',d:{}},rec:{...blankRec(),...(st.rec||{})}};try{return fn()}finally{S=keep}}
+async function exportCSV(){const list=await allCases();if(!list.length){toast('No saved patients to export');return}
+  const dKeys=['age','sex','side','sport','goal','level','tegner','job','weeks','episodes','revision','lachman','pivot','kt','effusion','extDef','flex','mcl','plc','recurv','recurvOther','pts','lts','att','telos','notch','tear','meniscus','segond','hka','mpta','kl','physes','tanner','boneAge','childInj'];
+  const recF=REC_FORM.flatMap(([,fs])=>fs).filter(f=>f.t!=='area');
+  const tps=TP.map(t=>t[0]);
+  const head=['id',...recF.map(f=>f.p),...dKeys,'beighton','recommendation','let_advice','graft_advice','slope_advice','varus_advice',...tps.flatMap(t=>['tegner_'+t,'lysholm_'+t,'ikdc_'+t,'ikdc_exam_'+t,'acl_rsi_'+t]),'visits','last_visit','op_notes','notes'];
+  const rows=[head],vrows=[['id','name','file_no','op_date','weeks_post_op',...VISIT_F.map(f=>f.p)]];
+  for(const c of list)withState(c.state,()=>{const R=decide();const r=S.rec;
+    const row=[c.id,...recF.map(f=>{const v=getP(r,f.p);return f.t==='sel'?lab(f,v):f.t==='chk'?(v?1:''):v??''}),...dKeys.map(k=>S.d[k]===true?1:S.d[k]===false?'':S.d[k]),beightonScore(S.d),
+      R.mgmt?R.mgmt.rec:'Tibial spine avulsion',STATE[R.let.state][1],R.grafts[0].n,R.slope?STATE[R.slope.st][1]:'',R.varus?STATE[R.varus.st][1]:''];
+    tps.forEach(t=>{const s=scoreRow(t);row.push(s.tegner??'',s.lys??'',s.ikdc!=null?s.ikdc.toFixed(1):'',s.obj!=null?GRADE[s.obj]:'',s.rsi!=null?s.rsi.toFixed(0):'')});
+    const vs=r.visits||[];row.push(vs.length,vs.length?vs[vs.length-1].date:'',r.op.notes||'',r.notes||'');rows.push(row);
+    vs.forEach(v=>vrows.push([c.id,r.name,r.fileNo,r.op.date||'',weeksPostOp(v.date)??'',...VISIT_F.map(f=>f.t==='sel'?lab(f,v[f.p]):v[f.p]??'')]))});
+  const day=new Date().toISOString().slice(0,10);
+  await saveFiles([[`ACL-patients-${day}.csv`,toCSV(rows),'text/csv'],[`ACL-visits-${day}.csv`,toCSV(vrows),'text/csv']]);toast(`Exported ${list.length} patients`)}
+const blobToDataURL=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b)});
+async function backup(){const list=await allCases();if(!list.length){toast('Nothing to back up yet');return}
+  const out=[];for(const c of list){const b={};for(const k in c.blobs||{}){try{b[k]=await blobToDataURL(c.blobs[k])}catch{}}out.push({...c,blobs:b})}
+  await saveFiles([[`ACL-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({app:'acl-planner',v:1,cases:out}),'application/json']]);toast(`Backed up ${list.length} patients`)}
+async function restore(file){try{const j=JSON.parse(await file.text());if(!j.cases)throw 0;let n=0;
+  for(const c of j.cases){const b={};for(const k in c.blobs||{}){try{b[k]=await (await fetch(c.blobs[k])).blob()}catch{}}await DB.put({...c,blobs:b});n++}
+  toast(`Restored ${n} patients`);renderCases()}catch{toast('That is not an ACL Planner backup file')}}
+async function saveFiles(files){
+  if(isNative&&window.Capacitor.Plugins.Filesystem&&window.Capacitor.Plugins.Share){const {Filesystem,Share}=window.Capacitor.Plugins;const uris=[];
+    for(const [name,text] of files){const w=await Filesystem.writeFile({path:name,data:text,directory:'CACHE',encoding:'utf8'});uris.push(w.uri)}
+    try{await Share.share({title:files.map(f=>f[0]).join(', '),files:uris})}catch{}return}
+  for(const [name,text,type] of files){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);await new Promise(r=>setTimeout(r,400))}}
+$('#saveCase').onclick=()=>saveCase(false);
+$('#caseSearch').addEventListener('input',renderCases);
+$('#exportCsv').onclick=exportCSV;$('#backupBtn').onclick=backup;
+$('#restoreFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)restore(f)});
+
 /* ---------- tabs ---------- */
 function update(){if(S.tab==='img'){renderImg();const meas=computeImage();$$('#imgForm input[data-k]').forEach(i=>{const f=FORMS.img[0][1].find(x=>x.k===i.dataset.k);if(f&&f.m)i.placeholder=meas[f.m]!=null?f1(meas[f.m]):''})}
   if(S.tab==='dec')renderDec();draw();autosave()}
 function layout(){const w=$('#work');const showV=S.tab==='img'&&!S.noViewer;w.classList.toggle('calc',!showV);requestAnimationFrame(()=>{resize();fit()})}
-function selectTab(t){S.tab=t;$$('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===t));['pt','ex','img','ch','sc','dec'].forEach(n=>$('#p-'+n).hidden=n!==t);
+function selectTab(t){S.tab=t;$$('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===t));['rec','pt','ex','img','ch','sc','dec'].forEach(n=>$('#p-'+n).hidden=n!==t);
   layout();renderTab(t);if(t==='dec')renderDec();$('#p-'+t).scrollTop=0;autosave()}
 $$('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.t));
 $('#grab').onclick=()=>{$('#work').classList.toggle('tall');requestAnimationFrame(()=>{resize();fit()})};
@@ -1086,26 +1264,18 @@ $('#grab').onclick=()=>{$('#work').classList.toggle('tall');requestAnimationFram
 const DB=(()=>{let p=null;const open=()=>p||(p=new Promise((res,rej)=>{try{const r=indexedDB.open('acl-planner',1);r.onupgradeneeded=()=>r.result.createObjectStore('cases',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
   const tx=async(mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('cases',mode);const out=fn(t.objectStore('cases'));t.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);t.onerror=()=>rej(t.error)})};
   return{put:v=>tx('readwrite',s=>s.put(v)),get:id=>tx('readonly',s=>s.get(id)),del:id=>tx('readwrite',s=>s.delete(id)),all:()=>tx('readonly',s=>s.getAll())}})();
-const snap=()=>JSON.parse(JSON.stringify({d:S.d,P:S.P,cal:S.cal,th:S.th,mode:S.mode,sc:S.sc}));
+const snap=()=>JSON.parse(JSON.stringify({d:S.d,P:S.P,cal:S.cal,th:S.th,mode:S.mode,sc:S.sc,rec:S.rec}));
 const isDemoImg=()=>Object.keys(imgs).length>0&&Object.keys(blobs).length===0;
-const saveNow=()=>{clearTimeout(saveT);return DB.put({id:'__current',state:snap(),tab:S.tab,blobs:{...blobs},demo:isDemoImg(),date:Date.now()}).catch(()=>{})};
+const saveNow=()=>{clearTimeout(saveT);const p=[DB.put({id:'__current',caseId:S.caseId,state:snap(),tab:S.tab,blobs:{...blobs},demo:isDemoImg(),date:Date.now()})];if(S.caseId)p.push(DB.put(caseRow()));return Promise.all(p).catch(()=>{})};
 let saveT=0;function autosave(){clearTimeout(saveT);saveT=setTimeout(saveNow,400)}
 addEventListener('pagehide',saveNow);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveNow()});
-async function loadRecord(r){const st=JSON.parse(JSON.stringify(r.state));S.d={...BLANK,...st.d};S.P=st.P||{};S.cal={att:50,notch:50,...st.cal};S.th={...TH_DEFAULT,...st.th};S.mode=st.mode||'slope';S.sc=st.sc||{tp:'preop',view:'ikdc',d:{}};
+async function loadRecord(r){const st=JSON.parse(JSON.stringify(r.state));S.d={...BLANK,...st.d};S.P=st.P||{};S.cal={att:50,notch:50,...st.cal};S.th={...TH_DEFAULT,...st.th};S.mode=st.mode||'slope';S.sc=st.sc||{tp:'preop',view:'ikdc',d:{}};{const b0=blankRec(),rr=st.rec||{};S.rec={...b0,...rr,op:{...b0.op,...(rr.op||{})},out:{...(rr.out||{})},visits:rr.visits||[]}}S.caseId=r.caseId||null;
   const ids=MODES[S.mode].pts.map(x=>x[0]);S.active=ids.find(k=>!P(S.mode,k))||ids[0];
   imgs={};blobs={...(r.blobs||{})};for(const k in blobs){try{imgs[k]=await blobToCanvas(blobs[k])}catch{}}
   if(r.demo){const c=demoImage();imgs={slope:c,att:c,notch:c}}}
-$('#casesBtn').onclick=()=>{renderCases();$('#casesSheet').hidden=false};$('#menuBtn').onclick=()=>$('#menuSheet').hidden=false;
+$('#casesBtn').onclick=()=>{$('#caseSearch').value='';renderCases();$('#casesSheet').hidden=false};$('#menuBtn').onclick=()=>$('#menuSheet').hidden=false;
 $$('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s||e.target.hasAttribute('data-close'))s.hidden=true}));
-$('#saveCase').onclick=async()=>{const name=$('#caseName').value.trim()||('Case '+new Date().toLocaleString([],{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
-  try{await DB.put({id:'c'+Date.now(),name,state:snap(),blobs:{...blobs},demo:isDemoImg(),date:Date.now()});$('#caseName').value='';toast(`Saved “${name}”`);renderCases()}catch{toast('Could not save on this device')}};
-async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>c.id!=='__current').sort((a,b)=>b.date-a.date)}catch{}
-  const el=$('#caseList');if(!list.length){el.innerHTML='<div class="empty">No saved cases yet.</div>';return}
-  el.innerHTML=list.map(c=>`<div class="case"><div style="min-width:0"><div class="t"></div><div class="d">${new Date(c.date).toLocaleDateString()} · ${esc(c.state.d.age||'?')} y${c.state.d.revision?' · revision':''}</div></div><div class="row"><button class="btn primary" data-open="${c.id}">Open</button><button class="btn danger" data-del="${c.id}">✕</button></div></div>`).join('');
-  $$('#caseList .t').forEach((t,i)=>t.textContent=list[i].name);
-  $$('#caseList [data-open]').forEach(b=>b.onclick=async()=>{const r=await DB.get(b.dataset.open);await loadRecord(r);$('#casesSheet').hidden=true;selectTab('dec')});
-  $$('#caseList [data-del]').forEach(b=>b.onclick=async()=>{if(b.dataset.armed){await DB.del(b.dataset.del);renderCases()}else{b.dataset.armed=1;b.textContent='Delete?'}})}
-$('#newCase').onclick=()=>{S={d:{...BLANK},P:{},cal:{att:50,notch:50},th:{...S.th},tab:'pt',mode:'slope',active:'A1',noViewer:false,sc:{tp:'preop',view:'ikdc',d:{}}};imgs={};blobs={};$('#menuSheet').hidden=true;selectTab('pt');toast('New case')};
+$('#newCase').onclick=()=>{S={d:{...BLANK},P:{},cal:{att:50,notch:50},th:{...S.th},tab:'pt',mode:'slope',active:'A1',noViewer:false,sc:{tp:'preop',view:'ikdc',d:{}},rec:blankRec(),caseId:null};imgs={};blobs={};$('#menuSheet').hidden=true;selectTab('rec');toast('New patient')};
 $('#demoList').innerHTML=DEMOS.map((x,i)=>`<button class="btn" data-demo="${i}">${x.t}</button>`).join('');
 $$('[data-demo]').forEach(b=>b.onclick=()=>{$('#menuSheet').hidden=true;openDemo(+b.dataset.demo)});
 let toastT=0;function toast(m){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t)}t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2200)}
