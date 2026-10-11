@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ACL Decision Planner</title>
+<meta name="description" content="Decision making in ACL tears: surgery vs rehabilitation, timing, graft choice, LET/ALL, hyperlaxity, varus, slope correction and children.">
+<meta name="theme-color" content="#05080b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ACL Planner">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+@font-face{font-family:"Archivo";font-weight:400;font-display:swap;src:url(fonts/archivo-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:500;font-display:swap;src:url(fonts/archivo-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:600;font-display:swap;src:url(fonts/archivo-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:700;font-display:swap;src:url(fonts/archivo-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-latin-600-normal.woff2) format("woff2")}
+/*END-FONTFACE*/
+
+/* Layout: dark cross-sectional viewer on top, tabbed sheet below (phone) or beside (tablet) */
+:root{
+  --bg:#ebeef3; --surface:#ffffff; --ink:#141c2b; --muted:#586579; --line:#d2d9e3;
+  --accent:#2f5fa8; --accent-ink:#ffffff; --soft:#e4ecf8;
+  --ok:#1d7f47; --warn:#a86a0f; --bad:#b8352a;
+  --view:#05080b; --chrome:#0b1018; --chrome-ink:#e6ecf2; --chrome-muted:#8e9aab; --chrome-line:#1e2836;
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1219; --surface:#151b25; --ink:#e2e7ef; --muted:#95a1b3; --line:#283243;
+  --accent:#7ea6e8; --accent-ink:#0a1426; --soft:#1a2a45;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1219; --surface:#151b25; --ink:#e2e7ef; --muted:#95a1b3; --line:#283243;
+  --accent:#7ea6e8; --accent-ink:#0a1426; --soft:#1a2a45;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}
+
+[hidden]{display:none!important}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{background:var(--chrome);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{height:100%;height:100dvh;display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--chrome);color:var(--chrome-ink)}
+.brand{display:flex;flex-direction:column;margin-right:auto;min-width:0}
+.brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand span{font-size:10.5px;color:var(--chrome-muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{border:1px solid var(--chrome-line);background:#121a26;color:var(--chrome-ink);border-radius:9px;min-height:38px;padding:0 11px;cursor:pointer;font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.ib svg{width:17px;height:17px;flex:none}
+.ib:focus-visible,.tab:focus-visible,.step:focus-visible,.chip:focus-visible,.btn:focus-visible,.sl:focus-visible{outline:2px solid #7ea6e8;outline-offset:2px}
+
+.work{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 430px}
+.viewer{position:relative;background:var(--view);overflow:hidden;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;display:block}
+.prompt{position:absolute;left:10px;right:10px;top:10px;background:rgba(8,12,16,.86);color:#e9eef2;border:1px solid rgba(255,194,71,.45);border-radius:9px;padding:7px 10px;font-size:13px;pointer-events:none;display:flex;gap:8px;align-items:baseline}
+.prompt .k{font-family:var(--f-num);color:#ffc247;font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.prompt small{color:#a9b4bd;display:block;font-size:11.5px}
+.vtools{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.vtools button{background:rgba(8,12,16,.86);color:#e9eef2;border:1px solid rgba(255,255,255,.18);border-radius:8px;min-width:40px;height:38px;padding:0 10px;font-size:13px;cursor:pointer}
+.vtools #delPt{color:#ffb4aa;border-color:rgba(255,120,100,.45)}
+.vlabel{position:absolute;left:10px;bottom:12px;color:#c9d3dd;font-size:12px;background:rgba(8,12,16,.8);padding:5px 8px;border-radius:7px;pointer-events:none;max-width:55%}
+
+.panel{background:var(--surface);display:flex;flex-direction:column;min-height:0;min-width:0;border-left:1px solid var(--line)}
+.grab{display:none}
+.tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+.tab{flex:1;background:none;border:0;padding:12px 2px;cursor:pointer;font-weight:600;font-size:12.5px;color:var(--muted);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px;min-height:0;flex:1;background:var(--surface)}
+h3{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.group{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fine{font-size:11.5px;color:var(--muted);margin:0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;min-height:38px;padding:0 12px;cursor:pointer;font-weight:600;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.form{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;font-size:13.5px}
+.form input[type=number],.form select,.mt input,.mt select,.pc input,.pc select{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.form input[type=number],.mt input{width:84px;font-family:var(--f-num)}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{flex:1;border:0;background:none;padding:9px 6px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.tog{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.tog input{width:20px;height:20px;accent-color:var(--accent)}
+/* slice chooser */
+.slices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.sl{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0}
+.sl.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--soft)}
+.sl b{font-size:12.5px}
+.sl span{font-size:11px;color:var(--muted);font-family:var(--f-num)}
+.steps{display:flex;flex-direction:column;gap:2px}
+.step{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:8px;cursor:pointer;min-height:40px}
+.step.on{border-color:var(--accent);background:var(--soft)}
+.dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--muted)}
+.step.done .dot{background:#ffc247;border-color:#ffc247}
+.step .gl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+/* tables & pills */
+.mt{width:100%;border-collapse:collapse;font-size:13px}
+.mt th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
+.mt td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.mt td.n{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt .ref{font-size:11px;color:var(--muted)}
+.src{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pill{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.03em;white-space:nowrap}
+.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.pill.acc{color:var(--accent-ink);background:var(--accent)}
+.pill.mut{color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent)}
+/* decision */
+.rec{border:1.5px solid var(--accent);background:var(--soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.rec .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700}
+.rec .h{font-size:18px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.rec ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.risk{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rk{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.rk .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.rk .v{font-family:var(--f-num);font-size:24px;font-weight:600;letter-spacing:-.02em}
+.rk .v small{font-size:12px;color:var(--muted);font-weight:500}
+.rk .s{font-size:11.5px;color:var(--muted)}
+.rk ul{margin:4px 0 0;padding-left:16px;font-size:11.5px;color:var(--muted)}
+.pc{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.pc.ind{border-color:var(--accent)}
+.pc.no{opacity:.75}
+.pc .hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.pc .hd b{font-size:14.5px}
+.pc .why{font-size:12.5px;color:var(--muted)}
+.pc .opts{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;font-size:12.5px}
+.pc .opts select{max-width:210px}
+.pc .opts input{width:76px;font-family:var(--f-num)}
+.figs{display:flex;gap:14px;flex-wrap:wrap}
+.figs div{display:flex;flex-direction:column}
+.figs .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.figs .v{font-family:var(--f-num);font-size:20px;font-weight:600;letter-spacing:-.02em}
+.figs .v small{font-size:12px;color:var(--muted);font-weight:500}
+.pc ol,.pc ul{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.notes{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.notes li{font-size:12.5px;padding:8px 10px;border-radius:7px;border-left:3px solid var(--line);background:var(--bg)}
+.notes li.warn{border-left-color:var(--warn)} .notes li.bad{border-left-color:var(--bad)} .notes li.ok{border-left-color:var(--ok)}
+.empty{font-size:13px;color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:9px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;padding:4px 0}
+details[open] summary{margin-bottom:8px}
+.sheet{position:fixed;inset:0;background:rgba(3,6,9,.55);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet-card{background:var(--surface);color:var(--ink);width:100%;max-width:520px;max-height:85%;border-radius:16px 16px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sheet-head b{font-size:16px;margin-right:auto}
+.sheet-body{overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.case{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px}
+.case .t{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.case .d{font-size:11.5px;color:var(--muted);font-family:var(--f-num)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#141c2b;color:#fff;padding:9px 14px;border-radius:9px;font-size:13px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90%}
+.work.calc{grid-template-columns:1fr!important;grid-template-rows:1fr!important}
+.work.calc .viewer{display:none}
+.work.calc .panel{margin-top:0!important;border-radius:0!important;max-width:720px;width:100%;justify-self:center;border-left:0}
+.cgrid{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center;font-size:13.5px}
+.cgrid input,.cgrid select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;width:92px;font-family:var(--f-num)}
+.cgrid select{width:auto;font-family:var(--f-ui)}
+.cgrid .u{font-size:11px;color:var(--muted);min-width:58px}
+.work.calc .grab{display:none!important}
+.cgrid .ref{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-4px}
+.cout .pc{padding:10px 12px}
+@media (max-width:820px){
+  .brand span{display:none}
+  .bar .lbl{display:none}
+  .work{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,48%)}
+  .work.tall{grid-template-rows:minmax(0,24%) minmax(0,1fr)}
+  .panel{border-left:0;border-radius:14px 14px 0 0;margin-top:-10px;position:relative;z-index:2}
+  .grab{display:block;border:0;background:none;padding:7px 0 2px;cursor:pointer}
+  .grab i{display:block;width:38px;height:4px;border-radius:4px;background:var(--line);margin:0 auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ACL app additions */
+.fgrid{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center;font-size:13.5px}
+.fgrid input[type=number],.fgrid select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.fgrid input[type=number]{width:88px;font-family:var(--f-num)}
+.fgrid select{max-width:220px;grid-column:2/4}
+.fgrid .u{font-size:11px;color:var(--muted);min-width:34px}
+.fgrid .h{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-5px}
+.fgrid .full{grid-column:1/-1;display:flex;flex-direction:column;gap:5px}
+.fgrid .full>span{font-size:13.5px}
+.fgrid .tog{grid-column:1/-1}
+.fgrid input::placeholder{color:var(--accent);opacity:.8}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.bgrid .tog{font-size:12.5px}
+.badge{font-family:var(--f-num);font-weight:600;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--accent);margin-left:6px;letter-spacing:0;text-transform:none}
+.card{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.card.ind{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.card .hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.card .hd b{font-size:14.5px}
+.card ul,.card ol{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.card .why{font-size:12.5px;color:var(--muted);margin:0}
+.lst{list-style:none;padding:0!important}
+.lst li{padding-left:18px;position:relative}
+.lst li::before{position:absolute;left:0;top:0;font-weight:700}
+.lst.pro li::before{content:"+";color:var(--ok)}
+.lst.con li::before{content:"−";color:var(--bad)}
+.lst.chk li.y::before{content:"✓";color:var(--ok)}
+.lst.chk li.n::before{content:"·";color:var(--muted)}
+.lst.chk li.n{color:var(--muted)}
+.gr{display:grid;grid-template-columns:1fr;gap:8px}
+.g{border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:4px}
+.g.top{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.g.out{opacity:.6}
+.g .t{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.g .t b{font-size:13.5px}
+.g .bar2{height:5px;border-radius:5px;background:var(--line);overflow:hidden}
+.g .bar2 i{display:block;height:100%;background:var(--accent)}
+.g.top .bar2 i{background:var(--ok)}
+.g ul{margin:0;padding-left:16px;font-size:11.5px;color:var(--muted)}
+.modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.refs{font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px;margin:0;padding-left:18px}
+.refs a{color:var(--accent)}
+.banner{font-size:12.5px;padding:9px 11px;border-radius:9px;background:var(--soft);border-left:3px solid var(--accent)}
+.thr{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;font-size:12.5px}
+.thr input{width:76px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;font-family:var(--f-num)}
+.iosHint{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;background:#0b1116;color:#e6ecf1;border:1px solid #7ea6e8;border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:13.5px}
+.iosHint div{display:flex;flex-direction:column;gap:2px}
+.iosHint svg{vertical-align:-3px}
+.iosHint button{background:none;border:0;color:#8d9aa6;font-size:16px;cursor:pointer;padding:2px 4px}
+.tab{font-size:12px}
+.mt td.n .ref{white-space:normal;font-family:var(--f-ui)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>ACL Decision Planner</b><span>Surgery vs rehab · timing · graft · LET · slope · varus · children</span></div>
+    <button class="ib" id="casesBtn" title="Saved cases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Cases</span></button>
+    <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+  </header>
+
+  <main class="work calc" id="work">
+    <section class="viewer" id="viewer">
+      <canvas id="cv" aria-label="Image viewer"></canvas>
+      <div class="prompt" id="prompt"></div>
+      <div class="vlabel" id="vlabel"></div>
+      <div class="vtools">
+        <button id="delPt" hidden>Delete point</button>
+        <button id="fit">Fit</button>
+        <button id="zin" aria-label="Zoom in">+</button>
+        <button id="zout" aria-label="Zoom out">−</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="pt" aria-selected="true">Patient</button>
+        <button class="tab" role="tab" data-t="ex" aria-selected="false">Exam</button>
+        <button class="tab" role="tab" data-t="img" aria-selected="false">Imaging</button>
+        <button class="tab" role="tab" data-t="ch" aria-selected="false">Child</button>
+        <button class="tab" role="tab" data-t="dec" aria-selected="false">Decision</button>
+      </div>
+      <div class="pane" id="p-pt"></div>
+      <div class="pane" id="p-ex" hidden></div>
+      <div class="pane" id="p-img" hidden>
+        <div class="group"><h3>Measure on an image</h3>
+          <div class="modes" id="modes"></div>
+          <div class="row"><label class="btn primary" for="file">Open image</label><input id="file" type="file" accept="image/*" hidden><button class="btn" id="hideViewer">Hide viewer</button></div>
+          <p class="fine" id="modeHint"></p>
+        </div>
+        <div class="steps" id="steps"></div>
+        <div class="row"><button class="btn danger" id="delPt2" hidden>Delete selected point</button></div>
+        <div class="group" id="calBox"><h3>Scale</h3>
+          <div class="form"><label for="calmm">Scale bar length (mm)</label><input id="calmm" type="number" min="1" step="1"></div>
+          <p class="fine" id="scaleout"></p>
+        </div>
+        <div id="imgForm"></div>
+      </div>
+      <div class="pane" id="p-ch" hidden></div>
+      <div class="pane" id="p-dec" hidden></div>
+    </aside>
+  </main>
+</div>
+
+<div class="sheet" id="casesSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Saved cases">
+    <div class="sheet-head"><b>Saved cases</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <div class="row"><input id="caseName" type="text" placeholder="Patient initials, side" style="flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px"><button class="btn primary" id="saveCase">Save</button></div>
+      <p class="fine">Cases stay on this device only. Use initials, not full names.</p>
+      <div id="caseList" class="group"></div>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="menuSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="More">
+    <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn" id="newCase">New case (clear everything)</button>
+      <h3>Demo cases</h3>
+      <div id="demoList" class="group"></div>
+      <p class="fine">Decision aid only. Thresholds come from published studies and can be edited under Decision → Thresholds. Confirm every measurement on the original images. Not a certified medical device.</p>
+      <p class="fine">Version 1.0</p>
+    </div>
+  </div>
+</div>
+<div class="iosHint" id="iosHint" hidden><div><b>Install on your iPhone</b><span>Tap <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-label="Share"><path d="M12 3v13M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Share, then <b>Add to Home Screen</b>. It then opens full-screen and works offline.</span></div><button id="iosHintX" aria-label="Dismiss">✕</button></div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const cv=$('#cv'),ctx=cv.getContext('2d');
+const isNative=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const COL={pt:'#ffc247',line:'#7fd0ff',ghost:'rgba(127,208,255,.55)',meas:'#4fe3b4',alt:'#ff9f6b'};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>v===''||v==null||isNaN(+v)?null:+v;
+
+/* ---------- measurement modes ---------- */
+const MODES={
+ slope:{name:'Tibial slope',sub:'lateral X-ray',hint:'True lateral X-ray (posterior condyles superimposed) showing as much tibia as possible. Medial plateau slope against the proximal tibial anatomical axis (midpoints of the shaft at two levels). Short films read higher than long ones.',pts:[
+  ['A1','Anterior cortex, proximal','Anterior tibial cortex about 5 cm below the joint'],
+  ['P1','Posterior cortex, proximal','Posterior tibial cortex at the same level'],
+  ['A2','Anterior cortex, distal','Anterior cortex about 15 cm below the joint, or as low as the film allows'],
+  ['P2','Posterior cortex, distal','Posterior cortex at the same level'],
+  ['PA','Medial plateau, anterior edge','Anterior edge of the medial tibial plateau'],
+  ['PP','Medial plateau, posterior edge','Posterior edge of the medial tibial plateau']]},
+ att:{name:'Anterior translation',sub:'sagittal MRI',cal:true,hint:'Sagittal MRI through the middle of the lateral femoral condyle. Translation of the lateral tibial plateau is measured parallel to the plateau, between lines tangent to the posterior femoral condyle and the posterior tibial plateau.',pts:[
+  ['cal1','Scale bar end 1','One end of the PACS scale bar'],
+  ['cal2','Scale bar end 2','Other end of the scale bar; enter its length below'],
+  ['PA','Lateral plateau, anterior edge','Anterior edge of the lateral tibial plateau'],
+  ['PP','Lateral plateau, posterior margin','Most posterior cortex of the lateral tibial plateau'],
+  ['FC','Posterior femoral condyle','Most posterior cortex of the lateral femoral condyle']]},
+ notch:{name:'Femoral notch',sub:'lateral X-ray',cal:true,hint:'Lateral condylopatellar sulcus on a true lateral X-ray. Draw the tangent across the notch, then the deepest point. Depth > 2 mm suggests an ACL tear.',pts:[
+  ['cal1','Scale bar end 1','One end of the scale bar or a calibration marker'],
+  ['cal2','Scale bar end 2','Other end; enter its length below'],
+  ['N1','Notch rim, front','Articular contour just in front of the notch'],
+  ['N2','Notch rim, back','Articular contour just behind the notch'],
+  ['ND','Deepest point','Deepest point of the notch']]}
+};
+const MODE_ORDER=['slope','att','notch'];
+
+/* ---------- thresholds ---------- */
+const TH_DEFAULT={letAge:25,beighton:4,beightonChild:6,recurvLET:10,ptsLET:12,ptsRev:12,ptsPrim:15,ptsTarget:5,recurvACWO:10,attHigh:6,notch:2,ltsMRI:8.5,kt:3,varusConsider:3,varusHTO:5,htoTarget:1,htoTargetOA:3,childDelay:12,mclWait:6};
+const TH_LABEL={letAge:['LET: STABILITY age limit','y'],beighton:['Generalised laxity: Beighton ≥','/9'],beightonChild:['Beighton cut-off, child < 12 y','/9'],recurvLET:['Recurvatum for LET (STABILITY 2)','°'],ptsLET:['Slope that favours LET','°'],ptsRev:['Slope osteotomy in revision ≥','°'],ptsPrim:['Slope osteotomy in primary ≥','°'],ptsTarget:['Target slope after ACWO','°'],recurvACWO:['ACWO caution if recurvatum ≥','°'],attHigh:['High lateral ATT on MRI ≥','mm'],notch:['Deep femoral notch >','mm'],ltsMRI:['High lateral slope on MRI ≥','°'],kt:['Abnormal side-to-side laxity ≥','mm'],varusConsider:['Varus: consider HTO ≥','°'],varusHTO:['Varus: HTO indicated ≥','°'],htoTarget:['HTO target, instability only','° valgus'],htoTargetOA:['HTO target with medial OA','° valgus'],childDelay:['Children: operate within','weeks'],mclWait:['Grade III MCL bracing before ACLR','weeks']};
+
+/* ---------- form fields ---------- */
+const BEIGHTON=['Little finger > 90°, left','Little finger > 90°, right','Thumb to forearm, left','Thumb to forearm, right','Elbow > 10° hyperextension, left','Elbow > 10° hyperextension, right','Knee > 10° hyperextension, left','Knee > 10° hyperextension, right','Palms flat on floor, knees straight'];
+const FORMS={
+ pt:[
+  ['Patient',[
+   {k:'age',l:'Age',t:'num',u:'y'},
+   {k:'sex',l:'Sex',t:'seg',o:[['M','Male'],['F','Female']]},
+   {k:'side',l:'Side',t:'seg',o:[['R','Right'],['L','Left']]}]],
+  ['Activity and goals',[
+   {k:'sport',l:'Sport level',t:'sel',o:[['I','I · jumping, cutting, pivoting (football, basketball, handball)'],['II','II · lateral movement, less pivoting (racquet, skiing)'],['III','III · straight-line (running, cycling, swimming)'],['IV','IV · no sport']]},
+   {k:'goal',l:'Goal',t:'sel',o:[['return','Return to the same sport'],['modify','Willing to change to lower-risk sport'],['adl','Daily activities only']]},
+   {k:'level',l:'Level',t:'seg',o:[['elite','Elite / pro'],['comp','Competitive'],['rec','Recreational']]},
+   {k:'tegner',l:'Tegner activity (pre-injury)',t:'num',u:'0–10'},
+   {k:'job',l:'Work',t:'sel',o:[['light','Office / light'],['heavy','Heavy manual, military, police'],['kneel','Frequent kneeling (tiling, plumbing)']]},
+   {k:'pray',l:'Prays or kneels on the knees daily',t:'chk'},
+   {k:'sprint',l:'Sprinting / hamstring-dominant sport',t:'chk'},
+   {k:'pfp',l:'Anterior knee pain, patellar tendinopathy or patella baja',t:'chk'}]],
+  ['Injury',[
+   {k:'weeks',l:'Time since injury',t:'num',u:'weeks'},
+   {k:'episodes',l:'Giving-way episodes since injury',t:'num',u:'n'},
+   {k:'contra',l:'Previous ACL tear of the other knee',t:'chk'},
+   {k:'revision',l:'Failed previous ACL reconstruction (revision)',t:'chk'},
+   {k:'revN',l:'Number of previous reconstructions',t:'num',u:'n',show:d=>d.revision},
+   {k:'prevGraft',l:'Previous graft',t:'sel',o:[['HT','Hamstring (ipsilateral)'],['BPTB','Patellar tendon (ipsilateral)'],['QT','Quadriceps tendon'],['PL','Peroneus longus'],['ALLO','Allograft'],['unk','Unknown']],show:d=>d.revision},
+   {k:'tunnel',l:'Widest tunnel on CT',t:'num',u:'mm',show:d=>d.revision},
+   {k:'tunnelBad',l:'Old tunnels overlap the ideal position',t:'chk',show:d=>d.revision}]],
+  ['Coper screening (optional)',[
+   {k:'hop',l:'Timed 6 m hop, limb symmetry',t:'num',u:'%'},
+   {k:'kos',l:'KOS – activities of daily living',t:'num',u:'%'},
+   {k:'grs',l:'Global rating of knee function',t:'num',u:'%'},
+   {k:'_h1',t:'note',l:'Potential coper: hop ≥ 80 %, KOS-ADLS ≥ 80 %, global rating ≥ 60 % and ≤ 1 giving-way episode. Test once the knee is quiet.'}]]
+ ],
+ ex:[
+  ['Anterior laxity',[
+   {k:'lachman',l:'Lachman',t:'sel',o:[['0','Normal (< 3 mm)'],['1','Grade I · 3–5 mm'],['2','Grade II · 6–10 mm'],['3','Grade III · > 10 mm']]},
+   {k:'endpoint',l:'End point',t:'seg',o:[['firm','Firm'],['soft','Soft / none']]},
+   {k:'pivot',l:'Pivot shift',t:'sel',o:[['0','0 · equal'],['1','1 · glide'],['2','2 · clunk'],['3','3 · gross / locking']]},
+   {k:'kt',l:'KT-1000/2000 side-to-side',t:'num',u:'mm'}]],
+  ['Is the knee quiet?',[
+   {k:'effusion',l:'Effusion',t:'seg',o:[['none','None'],['mild','Mild'],['mod','Moderate / tense']]},
+   {k:'extDef',l:'Extension deficit vs other knee',t:'num',u:'°'},
+   {k:'flex',l:'Flexion',t:'num',u:'°'},
+   {k:'lag',l:'Quadriceps lag on straight-leg raise',t:'chk'},
+   {k:'locked',l:'Locked knee (mechanical block to extension)',t:'chk'}]],
+  ['Associated ligaments',[
+   {k:'mcl',l:'MCL',t:'sel',o:[['0','Intact'],['1','Grade I'],['2','Grade II'],['3','Grade III (opens in extension)']]},
+   {k:'mclTib',l:'Distal (tibial-sided) or Stener-like MCL avulsion',t:'chk',show:d=>+d.mcl>=2},
+   {k:'plc',l:'Posterolateral corner',t:'sel',o:[['0','Intact'],['1','Grade I'],['2','Grade II'],['3','Grade III']]},
+   {k:'thrust',l:'Varus thrust in gait',t:'chk'}]],
+  ['Hyperlaxity',[
+   {k:'beighton',t:'beighton'},
+   {k:'recurv',l:'Passive hyperextension, injured knee',t:'num',u:'°'},
+   {k:'recurvOther',l:'Passive hyperextension, other knee',t:'num',u:'°'}]]
+ ],
+ img:[
+  ['Measurements',[
+   {k:'pts',l:'Posterior tibial slope, X-ray (medial)',t:'num',u:'°',m:'pts'},
+   {k:'lts',l:'Lateral tibial slope, MRI',t:'num',u:'°'},
+   {k:'att',l:'Anterior tibial translation, MRI (lateral)',t:'num',u:'mm',m:'att'},
+   {k:'telos',l:'Stress X-ray (Telos) side-to-side',t:'num',u:'mm'},
+   {k:'notch',l:'Lateral femoral notch depth',t:'num',u:'mm',m:'notch'},
+   {k:'_h2',t:'note',l:'Blue numbers come from your image measurements; typing a value overrides them.'}]],
+  ['MRI findings',[
+   {k:'tear',l:'ACL tear',t:'seg',o:[['complete','Complete'],['partial','Partial']]},
+   {k:'pct',l:'Partial tear size',t:'seg',o:[['lt50','≤ 50 %'],['gt50','> 50 %']],show:d=>d.tear==='partial'},
+   {k:'pl',l:'Mainly posterolateral bundle',t:'chk',show:d=>d.tear==='partial'},
+   {k:'meniscus',l:'Meniscus',t:'sel',o:[['none','No tear'],['stable','Small stable tear'],['repair','Repairable tear'],['bucket','Displaced bucket-handle'],['ramp','Medial ramp lesion'],['mroot','Medial root tear'],['lroot','Lateral posterior root tear'],['irrep','Irreparable / previous meniscectomy']]},
+   {k:'segond',l:'Segond fracture',t:'chk'},
+   {k:'cart',l:'Cartilage',t:'sel',o:[['none','Normal'],['focal','Focal defect'],['oa','Diffuse wear']]}]],
+  ['Alignment',[
+   {k:'hka',l:'HKA (varus +, valgus −)',t:'num',u:'°'},
+   {k:'mpta',l:'MPTA',t:'num',u:'°'},
+   {k:'kl',l:'Medial compartment (Kellgren–Lawrence)',t:'sel',o:[['0','0'],['1','1'],['2','2'],['3','3'],['4','4']]},
+   {k:'medMen',l:'Previous medial meniscectomy',t:'chk'},
+   {k:'width',l:'Tibial width at HTO level',t:'num',u:'mm'},
+   {k:'acwoLevel',l:'Slope osteotomy level',t:'seg',o:[['supra','Supratuberosity'],['infra','Infratuberosity']]},
+   {k:'depth',l:'AP depth to hinge at that level',t:'num',u:'mm'}]]
+ ],
+ ch:[
+  ['Skeletal maturity',[
+   {k:'physes',l:'Knee physes',t:'seg',o:[['open','Open'],['closing','Closing'],['closed','Closed']]},
+   {k:'tanner',l:'Tanner stage',t:'sel',o:[['','Not assessed'],['1','1 · prepubertal'],['2','2 · early puberty (breast bud / testicular enlargement)'],['3','3 · mid-puberty, growth spurt'],['4','4 · late puberty'],['5','5 · adult']]},
+   {k:'boneAge',l:'Bone age (hand X-ray, Greulich–Pyle)',t:'num',u:'y'},
+   {k:'menarche',l:'Menarche',t:'sel',o:[['na','Not yet'],['lt1','Less than 1 year ago'],['gt1','More than 1 year ago']],show:d=>d.sex==='F'}]],
+  ['Injury type',[
+   {k:'childInj',l:'Lesion',t:'seg',o:[['mid','Mid-substance tear'],['spine','Tibial spine avulsion']]},
+   {k:'spine',l:'Meyers–McKeever type',t:'sel',o:[['1','I · undisplaced'],['2','II · anterior third elevated, posterior hinge intact'],['3','III · completely displaced'],['4','IV · displaced and rotated / comminuted']],show:d=>d.childInj==='spine'}]]
+ ]
+};
+const BLANK={age:'',sex:'M',side:'R',sport:'I',goal:'return',level:'rec',tegner:'',job:'light',pray:false,sprint:false,pfp:false,weeks:'',episodes:'',contra:false,revision:false,revN:1,prevGraft:'HT',tunnel:'',tunnelBad:false,hop:'',kos:'',grs:'',
+ lachman:'2',endpoint:'soft',pivot:'2',kt:'',effusion:'none',extDef:'',flex:'',lag:false,locked:false,mcl:'0',mclTib:false,plc:'0',thrust:false,recurv:'',recurvOther:'',
+ pts:'',lts:'',att:'',telos:'',notch:'',tear:'complete',pct:'lt50',pl:false,meniscus:'none',segond:false,cart:'none',hka:'',mpta:'',kl:'0',medMen:false,width:'',acwoLevel:'supra',depth:'',
+ physes:'closed',tanner:'',boneAge:'',menarche:'na',childInj:'mid',spine:'1'};
+for(let i=0;i<9;i++)BLANK['b'+i]=false;
+
+let S={d:{...BLANK},P:{},cal:{att:50,notch:50},th:{...TH_DEFAULT},tab:'pt',mode:'slope',active:'A1',noViewer:false};
+let imgs={},blobs={};
+let view={s:1,tx:0,ty:0};
+
+/* ---------- geometry ---------- */
+const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y}),add=(a,b)=>({x:a.x+b.x,y:a.y+b.y}),mul=(a,k)=>({x:a.x*k,y:a.y*k}),mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+const dot=(a,b)=>a.x*b.x+a.y*b.y,len=a=>Math.hypot(a.x,a.y),norm=a=>mul(a,1/len(a));
+const D=180/Math.PI;
+const f1=v=>v==null||isNaN(v)?'—':(+v).toFixed(1),f0=v=>v==null||isNaN(v)?'—':Math.round(+v)+'';
+const P=(m,k)=>S.P[m]&&S.P[m][k];
+function mmpp(m){const a=P(m,'cal1'),b=P(m,'cal2');return a&&b&&S.cal[m]?S.cal[m]/len(sub(a,b)):null}
+function slopeGeom(s){if(!(s.A1&&s.P1&&s.A2&&s.P2&&s.PA&&s.PP))return null;const M1=mid(s.A1,s.P1),M2=mid(s.A2,s.P2);const u=norm(sub(M1,M2));
+  let a=sub(s.A1,s.P1);a=norm(sub(a,mul(u,dot(a,u))));const v=sub(s.PA,s.PP);return{M1,M2,u,a,deg:Math.atan2(dot(v,u),dot(v,a))*D}}
+function computeImage(){const r={};
+  const g=slopeGeom(S.P.slope||{});if(g)r.pts=g.deg;
+  const t=S.P.att||{};if(t.PA&&t.PP&&t.FC){const a=norm(sub(t.PA,t.PP));const d=dot(sub(t.PP,t.FC),a);const k=mmpp('att');r.attPx=d;r.att=k?d*k:null}
+  const n=S.P.notch||{};if(n.N1&&n.N2&&n.ND){const e=norm(sub(n.N2,n.N1)),w=sub(n.ND,n.N1);const d=Math.abs(w.x*e.y-w.y*e.x);const k=mmpp('notch');r.notchPx=d;r.notch=k?d*k:null}
+  return r}
+function vals(){const im=computeImage();const d=S.d;const g=k=>num(d[k])!=null?num(d[k]):(im[k]!=null?im[k]:null);
+  return{pts:g('pts'),att:g('att'),notch:g('notch'),lts:num(d.lts),telos:num(d.telos),im}}
+
+/* ---------- decision engine ---------- */
+const beightonScore=d=>{let n=0;for(let i=0;i<9;i++)if(d['b'+i])n++;return n};
+const beightonCut=d=>{const a=num(d.age);return a!=null&&a<12?S.th.beightonChild:S.th.beighton};
+const SPORT={I:'level I pivoting',II:'level II',III:'level III straight-line',IV:'no sport'};
+
+function maturity(d){const sex=d.sex;const ba=num(d.boneAge)!=null?num(d.boneAge):num(d.age);const tan=num(d.tanner);const out={ba,usedBoneAge:num(d.boneAge)!=null,notes:[]};
+  const gs=[];if(tan){out.gT=tan<=2?0:tan<=4?1:2;gs.push(out.gT)}
+  if(ba!=null){out.gB=sex==='F'?(ba<11?0:ba<14?1:2):(ba<13?0:ba<16?1:2);gs.push(out.gB)}
+  if(sex==='F'&&d.menarche==='gt1'){out.gM=2;gs.push(2)}
+  let g=gs.length?Math.min(...gs):null;
+  if(out.gT!=null&&out.gB!=null&&out.gT!==out.gB)out.notes.push('Tanner stage and bone age disagree: the less mature group is used.');
+  if(d.physes==='closed')g=3;else if(d.physes==='closing'&&(g==null||g<2)){if(g!=null&&g<2)out.notes.push('Physes reported as closing although the other markers suggest more growth: check the X-ray.');g=2}
+  out.g=g;const stop=sex==='F'?14:16;
+  if(ba!=null&&g!==3){out.years=Math.max(0,stop-ba);out.femur=out.years*10;out.tibia=out.years*6}
+  out.label=g==null?'Not enough data':['Prepubescent','Adolescent with growth remaining','Near skeletal maturity','Skeletally mature'][g];
+  return out}
+
+function decide(){const d=S.d,T=S.th,v=vals();const age=num(d.age);
+  const R={notes:[]};
+  const bg=beightonScore(d),lax=bg>=beightonCut(d);
+  const recurv=num(d.recurv),recurvO=num(d.recurvOther),recurvDiff=recurv!=null&&recurvO!=null?recurv-recurvO:null;
+  const pivotSport=d.sport==='I'||d.sport==='II',wants=d.goal==='return';
+  const child=d.physes!=='closed';const partial=d.tear==='partial';const spine=child&&d.childInj==='spine';
+  const ep=num(d.episodes),weeks=num(d.weeks),kt=num(d.kt);
+  const mcl=+d.mcl,plc=+d.plc,pivot=+d.pivot,lach=+d.lachman;
+  const mat=maturity(d);R.mat=mat;R.bg=bg;R.lax=lax;R.recurv=recurv;R.recurvDiff=recurvDiff;R.v=v;R.child=child;R.spine=spine;
+
+  /* --- children: partial tear (Kocher 2002) --- */
+  if(child&&partial){const sa=mat.ba;R.kocher=[
+    [sa!=null&&sa<=14,'Skeletal age ≤ 14 years'],[d.pct==='lt50','Tear ≤ 50 % of the ligament'],[!d.pl,'Not predominantly posterolateral'],
+    [lach<=1&&pivot<=1,'Normal or near-normal Lachman and pivot shift']];R.kocherOK=R.kocher.every(x=>x[0])}
+
+  /* --- management --- */
+  const op=[],non=[],urgent=[];
+  if(spine){R.mgmt=null}else{
+  if(d.locked||d.meniscus==='bucket')urgent.push('Locked knee or displaced bucket-handle tear: reduce and repair the meniscus within days; reconstruct the ACL in the same sitting if range of motion allows.');
+  if(['repair','ramp','mroot','lroot'].includes(d.meniscus))op.push([3,'Repairable meniscal lesion: the repair needs a stable knee (root and ramp lesions especially)']);
+  if(d.meniscus==='irrep'||d.medMen)op.push([1,'Meniscus-deficient knee: instability accelerates cartilage wear']);
+  if(plc>=2)op.push([3,`Posterolateral corner grade ${plc}: combined reconstruction`]);
+  if(mcl===3)op.push([1,'Grade III MCL: multiligament injury favours reconstruction (after MCL bracing)']);
+  if(d.revision)op.push([2,'Symptomatic failed reconstruction']);
+  if(pivotSport&&wants)op.push([3,`Wants to return to ${SPORT[d.sport]} sport`]);
+  if(d.level==='elite'&&pivotSport)op.push([1,'Elite or professional athlete']);
+  if(d.job==='heavy')op.push([2,'Heavy manual, military or police work']);
+  if(ep!=null&&ep>=2)op.push([3,`${ep} giving-way episodes: persistent instability (ACL SNNAP: reconstruction superior to continued rehabilitation)`]);
+  if(age!=null&&age<25&&pivotSport&&!partial)op.push([1,'Under 25 with a pivoting sport']);
+  if(child&&!partial)op.push([2,'Skeletally immature with a complete tear: unstable knees accumulate meniscal and cartilage damage']);
+  if(child&&partial&&R.kocherOK===false)op.push([2,'Partial tear outside the non-operative criteria (Kocher)']);
+  if(pivot>=2&&!partial)op.push([1,'Pivot shift grade 2–3']);
+  if(d.sport==='III'||d.sport==='IV')non.push([2,'No pivoting sport']);
+  if(d.goal!=='return')non.push([2,d.goal==='adl'?'Daily activities only':'Willing to change to lower-risk sport']);
+  if(ep===0)non.push([2,'No giving-way episodes so far']);
+  const hop=num(d.hop),kos=num(d.kos),grs=num(d.grs);
+  R.coper=hop!=null&&kos!=null&&grs!=null?(hop>=80&&kos>=80&&grs>=60&&(ep||0)<=1):null;
+  if(R.coper===true)non.push([2,'Passes potential-coper screening (predictive value is modest: Moksnes 2008)']);
+  if(R.coper===false)op.push([1,'Fails potential-coper screening, although most “non-copers” still cope after rehab (Moksnes 2008)']);
+  if(age!=null&&age>=40&&!(pivotSport&&wants))non.push([1,'Age 40+ with moderate demands']);
+  if(partial&&pivot<=1&&(kt==null||kt<T.kt))non.push([3,`Partial tear with stable pivot shift${kt!=null?' and < '+T.kt+' mm side-to-side':''}`]);
+  if(child&&partial&&R.kocherOK)non.push([4,'Partial tear meeting all Kocher criteria for non-operative care']);
+  if(+d.kl>=3)non.push([2,'Established medial osteoarthritis (KL ≥ 3): reconstruction alone rarely helps; think osteotomy']);
+  const so=op.reduce((a,x)=>a+x[0],0),sn=non.reduce((a,x)=>a+x[0],0);
+  let rec,cls;
+  if(urgent.length){rec='Urgent surgery: meniscus first, ACL reconstruction with it';cls='bad'}
+  else if(op.some(x=>x[0]>=3)&&so>sn){rec='ACL reconstruction recommended';cls='acc'}
+  else if(so>=3&&so>sn+1){rec='ACL reconstruction recommended';cls='acc'}
+  else if(sn>=so+2){rec='Structured rehabilitation; reconstruct only if instability persists';cls='ok'}
+  else{rec='Shared decision: early reconstruction or rehabilitation with optional delayed reconstruction';cls='warn'}
+  R.mgmt={rec,cls,op,non,urgent,so,sn};R.operate=cls==='acc'||cls==='bad'||cls==='warn'}
+
+  /* --- timing --- */
+  const tm=[];const quiet=[];
+  const ext=num(d.extDef),flex=num(d.flex);
+  quiet.push([ext!=null?ext<=2:null,'Full extension (deficit ≤ 2°)']);
+  quiet.push([flex!=null?flex>=110:null,'Flexion ≥ 110°']);
+  quiet.push([d.effusion!=='mod','No more than a mild effusion']);
+  quiet.push([!d.lag,'Straight-leg raise without lag']);
+  R.quiet=quiet;R.quietOK=quiet.every(q=>q[0]!==false);
+  if(spine){
+    const t=+d.spine;tm.push(t===1?'Type I: long-leg cast or brace in extension (0–20°) for about 4–6 weeks, X-ray weekly for the first 2 weeks.':t===2?'Type II: attempt closed reduction in extension. If the fragment does not reduce (often the intermeniscal ligament or meniscus is trapped), arthroscopic reduction and fixation within 1–2 weeks.':'Type III–IV: arthroscopic reduction and fixation within 1–2 weeks. Suture fixation, or epiphyseal screws that do not cross the physis.');
+    tm.push('Check for entrapped meniscus and associated meniscal tears at arthroscopy; residual laxity is common even after anatomical healing.')}
+  else{
+  if(d.locked||d.meniscus==='bucket')tm.push('Locked knee: arthroscopy within days. Do not wait for a quiet knee.');
+  if(plc>=2)tm.push('PLC grade '+plc+': early single-stage ACL + PLC surgery, ideally within about 3 weeks, while avulsions are still repairable. Reconstruction is more reliable than repair alone.');
+  if(mcl===3&&!d.mclTib)tm.push(`Grade III MCL: hinged brace for about ${T.mclWait} weeks, then ACL reconstruction. Re-test valgus in extension and 30° at surgery; reconstruct the MCL if it is still open.`);
+  if(mcl>=2&&d.mclTib)tm.push('Distal or Stener-like MCL avulsion heals poorly: acute MCL repair with the ACL reconstruction.');
+  if(mcl===1||mcl===2&&!d.mclTib)tm.push('Grade I–II MCL heals with bracing; reconstruct the ACL once the knee is quiet.');
+  if(child&&!partial)tm.push(`Children: if surgery is chosen, avoid delaying beyond about ${T.childDelay} weeks; longer delays were associated with more irreparable medial meniscal tears and chondral injury (Lawrence 2011, Anderson 2015), although not all series agree (Crawford 2019).`);
+  if(d.revision){const tw=num(d.tunnel);
+    if(tw!=null&&tw>=15||d.tunnelBad&&tw!=null&&tw>=12)tm.push(`Revision: tunnel ${tw} mm${d.tunnelBad?' and overlapping the ideal position':''} → two-stage: bone-graft the tunnels, reconstruct after the graft has incorporated (CT, usually 3–6 months).`);
+    else if(d.tunnelBad)tm.push('Revision: old tunnels overlap the ideal position. Single stage if they can be bypassed or filled (dowel, stacked screw); otherwise two-stage.');
+    else tm.push('Revision: single-stage if tunnels are well placed or clearly divergent and < 15 mm on CT.')}
+  if(!tm.length||!(d.locked||d.meniscus==='bucket'))tm.push('Timing follows the state of the knee, not a fixed number of days: operate once the knee is quiet (checklist below), usually 3–6 weeks after injury, with prehabilitation meanwhile.');
+  if(weeks!=null&&weeks>52)tm.push('Chronic ACL deficiency (> 1 year): expect more meniscal and cartilage damage; reconstruct without further delay if the patient is unstable.')}
+  R.timing=tm;
+
+  /* --- LET / ALL --- */
+  const crit=[];const L=(on,txt,major)=>crit.push({on:!!on,txt,major});
+  const young=age!=null&&age<=T.letAge;
+  const stab=[[pivot>=2,'Pivot shift grade 2 or more'],[pivotSport&&wants,'Returning to a pivoting sport'],[lax,`Generalised laxity (Beighton ${bg}/9)`],[recurv!=null&&recurv>=T.recurvLET,`Recurvatum ≥ ${T.recurvLET}° (STABILITY 2 criterion)`]];
+  const stabN=stab.filter(x=>x[0]).length;
+  L(d.revision,'Revision ACL reconstruction',true);
+  L(young&&stabN>=2,`Age ≤ ${T.letAge} with ≥ 2 STABILITY criteria (${stabN} present)`,true);
+  L(pivot===3,'Grade 3 (gross) pivot shift',true);
+  L(v.pts!=null&&v.pts>=T.ptsLET&&!(d.revision&&v.pts>=T.ptsRev),`Posterior tibial slope ${f1(v.pts)}° ≥ ${T.ptsLET}°`,true);
+  L(v.lts!=null&&v.lts>=T.ltsMRI,`Lateral tibial slope on MRI ${f1(v.lts)}° ≥ ${T.ltsMRI}°`,false);
+  L(v.att!=null&&v.att>=T.attHigh,`Lateral anterior translation ${f1(v.att)} mm ≥ ${T.attHigh} mm (“resting pivoted” knee)`,false);
+  L(d.segond,'Segond fracture',false);
+  L(v.notch!=null&&v.notch>T.notch,`Deep lateral femoral notch ${f1(v.notch)} mm (weak sign; linked to lateral meniscal tears)`,false);
+  L(weeks!=null&&weeks>52,'Chronic ACL deficiency > 1 year',false);
+  L(d.contra,'Contralateral ACL tear',false);
+  L(d.level==='elite'&&pivotSport,'Elite pivoting athlete',false);
+  L(!young&&lax,`Generalised laxity (Beighton ${bg}/9)`,false);
+  L(!young&&recurv!=null&&recurv>=T.recurvLET,`Recurvatum ${f0(recurv)}°`,false);
+  L(d.meniscus==='lroot','Lateral meniscal posterior root tear (repair it; LET protects the repair)',false);
+  const maj=crit.filter(c=>c.on&&c.major).length,min=crit.filter(c=>c.on&&!c.major).length;
+  let ls=maj>=1||min>=3?'ind':min>=1?'consider':'no';
+  if(spine)ls='no';
+  R.let={state:ls,crit,stab,stabN,young};
+
+  /* --- grafts --- */
+  const G={BPTB:{n:'Bone–patellar tendon–bone',s:3,p:[],c:[]},QT:{n:'Quadriceps tendon',s:3,p:[],c:[]},HT:{n:'Hamstrings (ST ± G)',s:3,p:[],c:[]},PL:{n:'Peroneus longus',s:1,p:[],c:[]},ALLO:{n:'Allograft',s:1,p:[],c:[]}};
+  const g=(k,dv,txt)=>{G[k].s+=dv;(dv>=0?G[k].p:G[k].c).push(txt)};
+  const highDemand=pivotSport&&wants&&age!=null&&age<25;
+  const physChild=child&&mat.g!=null&&mat.g<2;
+  if(highDemand&&!physChild){g('BPTB',2,'Lowest re-rupture in young pivoting athletes');g('QT',2,'Thick, strong graft for a young pivoting athlete');g('HT',-1,'Higher revision rates in young athletes unless combined with LET');g('ALLO',-6,'Avoid allograft under 25: much higher failure')}
+  else if(age!=null&&age<25&&!physChild){g('ALLO',-4,'Allograft fails more often in patients under 25')}
+  if(age!=null&&age>=40&&!(pivotSport&&wants)){g('ALLO',2,'Acceptable at 40+ with moderate demands; no harvest morbidity');g('HT',1,'Low harvest morbidity')}
+  if(d.job==='kneel'||d.pray){g('BPTB',-4,'Kneeling pain after patellar tendon harvest'+(d.pray?' (daily prayer)':''));g('HT',1,'No anterior kneeling pain');g('QT',1,'Less kneeling pain than BPTB');g('PL',1,'Spares the knee extensor and flexor mechanism')}
+  if(d.pfp){g('BPTB',-3,'Pre-existing anterior knee pain / tendinopathy / patella baja')}
+  if(d.sprint){g('HT',-2,'Sprinting or hamstring-dominant sport: flexor weakness after harvest');g('QT',1,'Preserves hamstrings for sprinting')}
+  if(lax||recurv!=null&&recurv>=T.recurvLET){g('BPTB',2,'Stiffer bone-to-bone graft for a hyperlax knee');g('QT',1,'Large-diameter graft for a hyperlax knee');g('HT',-2,'Hamstrings act as dynamic stabilisers in hyperlax knees; higher failure')}
+  if(mcl>=2){g('HT',-2,'Spare the hamstrings: they support the injured medial side');g('BPTB',1,'Leaves medial stabilisers intact');g('QT',1,'Leaves medial stabilisers intact')}
+  if(d.sex==='F'&&num(d.age)!=null&&num(d.age)<20&&pivotSport){g('HT',-1,'Small hamstring diameter is common in young females (< 8 mm grafts revise more)')}
+  if(plc>=2||mcl===3){g('ALLO',2,'Additional grafts needed for multiligament reconstruction');g('PL',1,'Extra autograft source for multiligament surgery')}
+  if(d.revision){const pg=d.prevGraft;if(G[pg]&&pg!=='ALLO'&&pg!=='QT'&&pg!=='PL'){g(pg,-8,'Already harvested at the first operation (contralateral harvest only)')}
+    g('QT',2,'Versatile revision graft, fills widened tunnels');g('BPTB',1,'Bone blocks fill moderately widened tunnels');
+    if(pg==='ALLO')g('ALLO',-2,'Previous allograft failed');if(num(d.revN)>=2)g('ALLO',1,'Multiple revisions: autograft sources may be exhausted')}
+  if(child&&!spine){
+    if(mat.g!=null&&mat.g<2){g('BPTB',-10,'Bone block and tunnel would cross the open tibial physis / tubercle apophysis');g('ALLO',-6,'Allograft not recommended in children');g('HT',2,'Soft-tissue graft suited to physeal-respecting tunnels');g('QT',1,'All-soft-tissue quadriceps graft (no bone block) is physis-friendly');g('PL',-1,'Limited paediatric data');
+      if(mat.g===0)G.ITB={n:'Iliotibial band (Kocher–Micheli)',s:7,p:['Physeal-sparing intra- and extra-articular reconstruction for prepubescent children; includes a lateral extra-articular limb'],c:[]}}
+    else{g('ALLO',-4,'Avoid allograft in adolescents')}}
+  const gl=Object.entries(G).map(([k,o])=>({k,...o})).sort((a,b)=>b.s-a.s);
+  R.grafts=gl;
+
+  /* --- slope --- */
+  if(v.pts!=null&&!spine){const corr=Math.max(0,v.pts-T.ptsTarget);let st='no',why=[];
+    if(child&&d.physes!=='closed'){st='contra';why.push('Open proximal tibial physis and tubercle apophysis: no slope osteotomy until growth is complete. Use LET to protect the graft.')}
+    else if(d.revision&&v.pts>=T.ptsRev){st='ind';why.push(`Revision with slope ${f1(v.pts)}° ≥ ${T.ptsRev}°: anterior closing-wedge osteotomy with the revision`)}
+    else if(!d.revision&&v.pts>=T.ptsPrim){st='consider';why.push(`Primary reconstruction with slope ${f1(v.pts)}° ≥ ${T.ptsPrim}°: consider ACWO (shared decision; evidence mostly from revisions). Otherwise reconstruct with LET.`)}
+    else if(v.pts>=T.ptsLET){st='let';why.push(`Slope ${f1(v.pts)}° is high but below the osteotomy threshold: add LET rather than osteotomy`)}
+    else why.push(`Slope ${f1(v.pts)}° is below ${T.ptsLET}°: no correction needed`);
+    const lvl=d.acwoLevel||'supra',per=lvl==='infra'?1.2:1.0,dep=num(d.depth);
+    const hyper=recurv!=null?recurv+corr:null;
+    if((st==='ind'||st==='consider')&&recurv!=null&&recurv>=T.recurvACWO){why.push(`Recurvatum ${f0(recurv)}°: ACWO adds roughly the correction angle to hyperextension (≈ ${f0(hyper)}° after ${f1(corr)}°). Reduce the correction or avoid osteotomy.`);if(st==='ind')st='consider'}
+    R.slope={st,why,pts:v.pts,corr,lvl,per,wRule:corr*per,wCalc:dep?dep*Math.tan(corr/D):null,dep,hyper}}
+
+  /* --- varus --- */
+  const hka=num(d.hka);
+  if(hka!=null&&hka>=T.varusConsider&&!spine){const kl=+d.kl;let st='consider',why=[];
+    const medial=kl>=1||d.medMen||d.thrust||d.revision||d.meniscus==='irrep';
+    if(child&&d.physes!=='closed'){st='contra';why.push('Open physes: no HTO. Consider guided growth (hemiepiphysiodesis) if varus is significant, and reassess at maturity.')}
+    else if(hka>=T.varusHTO&&medial){st='ind';why.push(`Varus ${f1(hka)}° with ${[kl>=1?'medial OA KL '+kl:'',d.medMen?'previous medial meniscectomy':'',d.thrust?'varus thrust':'',d.revision?'failed ACL reconstruction':'',d.meniscus==='irrep'?'meniscal deficiency':''].filter(Boolean).join(', ')}`)}
+    else if(hka>=T.varusHTO){st='consider';why.push(`Varus ${f1(hka)}° increases load on the graft and medial compartment`)}
+    else if(medial){st='consider';why.push(`Mild varus ${f1(hka)}° with medial risk factors`)}
+    else{st='no';why.push(`Mild varus ${f1(hka)}° without medial damage: ACL reconstruction alone`)}
+    const tg=kl>=2?T.htoTargetOA:T.htoTarget,corr=hka+tg,W=num(d.width)||60,post=W*Math.tan(corr/D);
+    let red=0;if(v.pts!=null&&v.pts>T.ptsTarget+3)red=Math.min(v.pts-T.ptsTarget,8);
+    const antN=post/2,antR=post/2-red/2;
+    const mpta=num(d.mpta),mptaPost=mpta!=null?mpta+corr:null;
+    const triple=d.thrust&&(plc>=2||recurvDiff!=null&&recurvDiff>5);
+    const stage=(age!=null&&age>=40&&!(pivotSport&&wants)&&(ep==null||ep<2))?'HTO first; add ACL reconstruction later only if instability persists (many patients stabilise once the varus load is removed).':'Single-stage medial opening-wedge HTO + ACL reconstruction: place the tibial tunnel above or medial to the plate and drill it after fixing the osteotomy, or before with a plan for the plate.';
+    R.varus={st,why,hka,tg,corr,W,post,antN,antR,red,mpta,mptaPost,triple,stage};
+    if(R.slope&&(st==='ind'||st==='consider')&&red>0&&R.slope.st!=='ind')R.slope.why.push('An HTO is planned: reduce the slope through the osteotomy by narrowing the anterior gap (see ACL with genu varum).')}
+
+  /* --- hyperlaxity --- */
+  R.hyper=lax||recurv!=null&&recurv>=5;
+  return R}
+
+/* ---------- demo cases ---------- */
+const SC=4;// px per mm in the demo image
+function demoImage(){const c=document.createElement('canvas');c.width=640;c.height=960;const g=c.getContext('2d');
+  g.fillStyle='#0a0a0a';g.fillRect(0,0,640,960);
+  const bone=(path,fill)=>{g.save();g.fillStyle=fill;g.strokeStyle='#d9d9d9';g.lineWidth=4;g.beginPath();path(g);g.fill();g.stroke();g.restore()};
+  // tibia: shaft axis vertical (x 291-371), medial plateau slope 13 degrees, anterior to the right
+  const t=Math.tan(13/D);const pp={x:228,y:420},pa={x:452,y:420-224*t};
+  bone(g=>{g.moveTo(291,940);g.lineTo(291,640);g.quadraticCurveTo(286,520,pp.x,pp.y+8);g.lineTo(pp.x,pp.y);g.lineTo(pa.x,pa.y);g.quadraticCurveTo(pa.x+6,pa.y+40,440,480);g.quadraticCurveTo(385,560,371,640);g.lineTo(371,940);g.closePath()},'#7d7d7d');
+  // femur: shaft + condyle (centre 282,300, r 108)
+  bone(g=>{g.rect(236,0,104,240)},'#8d8d8d');
+  bone(g=>{g.arc(282,300,108,0,7)},'#8d8d8d');
+  g.fillStyle='#8d8d8d';g.fillRect(238,200,100,60);
+  // lateral femoral notch, about 2.5 mm deep
+  g.save();g.fillStyle='#0a0a0a';g.beginPath();g.ellipse(377.9,334.9,16,8,110/D,0,7);g.fill();g.restore();
+  // patella
+  bone(g=>{g.ellipse(430,215,24,56,0.15,0,7)},'#8a8a8a');
+  // scale bar 50 mm
+  g.fillStyle='#fff';g.fillRect(40,900,50*SC,5);g.font='16px sans-serif';g.fillText('50 mm',40,890);
+  return c}
+const DEMO_P={
+ slope:{A1:{x:371,y:640},P1:{x:291,y:640},A2:{x:371,y:900},P2:{x:291,y:900},PA:{x:452,y:368.3},PP:{x:228,y:420}},
+ att:{cal1:{x:40,y:902},cal2:{x:240,y:902},PA:{x:452,y:368.3},PP:{x:228,y:420},FC:{x:176.8,y:324.3}},
+ notch:{cal1:{x:40,y:902},cal2:{x:240,y:902},N1:{x:369.4,y:363.5},N2:{x:389.7,y:307.5},ND:{x:370.3,y:332.2}}};
+const DEMOS=[
+ {t:'22 y footballer, hyperlax, high slope',d:{age:22,sex:'M',sport:'I',goal:'return',level:'comp',tegner:9,weeks:6,episodes:2,lachman:'3',endpoint:'soft',pivot:'3',kt:7,extDef:0,flex:130,effusion:'mild',recurv:12,recurvOther:11,b0:true,b1:true,b2:true,b3:true,b6:true,b7:true,pray:true,meniscus:'repair',segond:true,hka:1,kl:'0'},img:true},
+ {t:'34 y recreational runner, coper',d:{age:34,sex:'F',sport:'III',goal:'modify',level:'rec',tegner:4,weeks:8,episodes:0,lachman:'2',pivot:'1',kt:4,extDef:0,flex:135,hop:88,kos:90,grs:80,meniscus:'none'}},
+ {t:'38 y labourer, chronic ACL + varus',d:{age:38,sex:'M',sport:'II',goal:'return',level:'rec',tegner:5,job:'heavy',pray:true,weeks:150,episodes:6,lachman:'3',pivot:'2',kt:8,extDef:0,flex:125,thrust:true,pts:13,hka:7,mpta:83,kl:'2',medMen:true,width:62,meniscus:'irrep'}},
+ {t:'26 y second revision, slope 16°',d:{age:26,sex:'M',sport:'I',goal:'return',level:'comp',tegner:8,weeks:40,episodes:4,lachman:'3',pivot:'3',kt:9,extDef:0,flex:135,recurv:4,revision:true,revN:2,prevGraft:'HT',tunnel:13,pts:16,att:7.5,hka:2,acwoLevel:'supra',depth:58}},
+ {t:'11 y girl, complete tear + bucket-handle',d:{age:11,sex:'F',sport:'I',goal:'return',level:'comp',weeks:3,episodes:2,lachman:'3',pivot:'2',locked:true,meniscus:'bucket',physes:'open',tanner:'2',boneAge:10.5,menarche:'na',b6:true,b7:true}},
+ {t:'14 y boy, partial tear < 50 %',d:{age:14,sex:'M',sport:'I',goal:'return',weeks:4,episodes:0,lachman:'1',pivot:'1',kt:2,tear:'partial',pct:'lt50',physes:'open',tanner:'3',boneAge:13.5}},
+ {t:'9 y tibial spine avulsion, type III',d:{age:9,sex:'M',sport:'I',weeks:1,lachman:'2',pivot:'1',effusion:'mod',physes:'open',tanner:'1',childInj:'spine',spine:'3'}}];
+function openDemo(i){const x=DEMOS[i];S.d={...BLANK,...x.d};S.P={};S.cal={att:50,notch:50};imgs={};blobs={};
+  if(x.img){const c=demoImage();imgs={slope:c,att:c,notch:c};S.P=JSON.parse(JSON.stringify(DEMO_P))}
+  S.mode='slope';S.active='A1';selectTab('dec');toast('Demo: '+x.t)}
+
+/* ---------- forms ---------- */
+function fieldHTML(f,d,meas){
+  if(f.show&&!f.show(d))return'';
+  if(f.t==='note')return`<p class="h">${f.l}</p>`;
+  if(f.t==='chk')return`<label class="tog"><input type="checkbox" data-k="${f.k}" ${d[f.k]?'checked':''}> ${f.l}</label>`;
+  if(f.t==='seg')return`<div class="full"><span>${f.l}</span><div class="seg">${f.o.map(([v,l])=>`<button data-k="${f.k}" data-v="${v}" class="${d[f.k]===v?'on':''}">${l}</button>`).join('')}</div></div>`;
+  if(f.t==='sel')return`<label for="f_${f.k}">${f.l}</label><select id="f_${f.k}" data-k="${f.k}">${f.o.map(([v,l])=>`<option value="${v}" ${String(d[f.k])===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  if(f.t==='beighton'){const n=beightonScore(d);return`<div class="full"><span>Beighton score <span class="badge" id="bgScore">${n}/9</span></span><div class="bgrid">${BEIGHTON.map((l,i)=>`<label class="tog"><input type="checkbox" data-k="b${i}" ${d['b'+i]?'checked':''}> ${l}</label>`).join('')}</div></div>`}
+  const ph=f.m&&meas[f.m]!=null?f1(meas[f.m]):'';
+  return`<label for="f_${f.k}">${f.l}</label><input id="f_${f.k}" type="number" inputmode="decimal" step="any" data-k="${f.k}" value="${esc(d[f.k]??'')}" placeholder="${ph}"><span class="u">${f.u||''}</span>`}
+function renderForm(tab,el){const d=S.d;const meas=computeImage();
+  el.innerHTML=FORMS[tab].map(([title,fs])=>`<div class="group"><h3>${title}</h3><div class="fgrid">${fs.map(f=>fieldHTML(f,d,meas)).join('')}</div></div>`).join('')}
+function formTarget(tab){return tab==='img'?$('#imgForm'):$('#p-'+tab)}
+function renderTab(tab){if(tab==='ch'){renderChild();return}if(FORMS[tab])renderForm(tab,formTarget(tab));if(tab==='img')renderImg()}
+document.addEventListener('click',e=>{const b=e.target.closest('.seg button[data-k]');if(!b)return;S.d[b.dataset.k]=b.dataset.v;renderTab(S.tab);autosave()});
+document.addEventListener('change',e=>{const i=e.target;if(!i.dataset||!i.dataset.k)return;const k=i.dataset.k;
+  S.d[k]=i.type==='checkbox'?i.checked:i.value;
+  if(k==='physes'&&i.value)null;
+  renderTab(S.tab);autosave()});
+document.addEventListener('input',e=>{const i=e.target;if(!i.dataset||!i.dataset.k||i.type!=='number')return;S.d[i.dataset.k]=i.value;autosave();if(S.tab==='ch')renderChildOut()});
+
+/* ---------- child tab ---------- */
+function renderChild(){const el=$('#p-ch');const d=S.d;const a=num(d.age);
+  const adult=d.physes==='closed'&&(a==null||a>=16);
+  el.innerHTML=(adult?`<div class="banner">Physes are set to closed. Set them to open or closing for a child or adolescent; the Decision tab then adds the paediatric plan.</div>`:'')+
+   FORMS.ch.map(([title,fs])=>`<div class="group"><h3>${title}</h3><div class="fgrid">${fs.map(f=>fieldHTML(f,d,{})).join('')}</div></div>`).join('')+'<div id="chOut" class="group"></div>';
+  renderChildOut()}
+function renderChildOut(){const el=$('#chOut');if(!el)return;el.innerHTML=childCards(decide(),true)}
+function tannerRef(){return`<details><summary>Tanner stages</summary><table class="mt"><tr><th>Stage</th><th>Girls</th><th>Boys</th></tr>
+<tr><td class="n">1</td><td>No breast tissue; no pubic hair</td><td>Prepubertal testes (< 4 ml); no pubic hair</td></tr>
+<tr><td class="n">2</td><td>Breast bud; sparse straight hair</td><td>Testes 4 ml+, scrotal thinning; sparse hair</td></tr>
+<tr><td class="n">3</td><td>Breast beyond areola; darker curly hair; peak growth</td><td>Penis lengthens; darker curly hair</td></tr>
+<tr><td class="n">4</td><td>Areola forms secondary mound; adult-type hair, not on thighs</td><td>Penis widens; adult-type hair; peak growth</td></tr>
+<tr><td class="n">5</td><td>Adult breast; hair to thighs</td><td>Adult genitalia and hair</td></tr></table></details>`}
+function childCards(R,withRef){const d=S.d;if(!R.child)return'';const m=R.mat;let h='';
+  const tech=m.g===0?{t:'Physeal-sparing reconstruction',l:['Kocher–Micheli combined intra- and extra-articular iliotibial band reconstruction (over-the-top femur, under the intermeniscal ligament on the tibia), or','All-epiphyseal reconstruction (Anderson / Ganley–Lawrence) with hamstring graft under fluoroscopy or intraoperative CT','No tunnel, bone block or hardware across either physis']}
+   :m.g===1?{t:'Physeal-respecting transphyseal (or hybrid) reconstruction',l:['Soft-tissue graft: hamstring or all-soft-tissue quadriceps (no bone block across the physis)','Small (≤ 8 mm), central, vertical tibial and femoral tunnels, drilled once; avoid oblique femoral tunnels that cross the lateral physis eccentrically','Metaphyseal or suspensory fixation away from the physis; protect the tibial tubercle apophysis','Hybrid option: all-epiphyseal femur + transphyseal tibia when more growth remains']}
+   :m.g===2?{t:'Adult-type reconstruction',l:['Less than about 1–2 years of growth left: standard anatomical technique','Bone-block grafts are acceptable once the tibial physis is closing; still avoid hardware across open physeal remnants']}
+   :{t:'Skeletally mature',l:['Adult algorithm applies']};
+  h+=`<div class="card ind"><div class="hd"><b>Maturity: ${m.label}</b><span class="pill acc">Group ${m.g==null?'?':m.g+1}/4</span></div>
+   <table class="mt"><tr><td>Tanner stage</td><td class="n">${d.tanner||'—'}</td><td class="ref">${m.gT!=null?['pre','adol','near'][m.gT]:''}</td></tr>
+   <tr><td>${m.usedBoneAge?'Bone age':'Chronological age (no bone age)'}</td><td class="n">${m.ba!=null?f1(m.ba)+' y':'—'}</td><td class="ref">${m.gB!=null?['pre','adol','near'][m.gB]:''}</td></tr>
+   ${d.sex==='F'?`<tr><td>Menarche</td><td class="n">${{na:'not yet',lt1:'< 1 y',gt1:'> 1 y'}[d.menarche]}</td><td></td></tr>`:''}
+   <tr><td>Physes</td><td class="n">${d.physes}</td><td></td></tr>
+   ${m.years!=null?`<tr><td>Growth left (to ${d.sex==='F'?14:16} y bone age)</td><td class="n">${f1(m.years)} y</td><td class="ref">≈ ${f0(m.femur)} mm femur + ${f0(m.tibia)} mm tibia</td></tr>`:''}</table>
+   ${m.notes.map(n=>`<p class="why">${n}</p>`).join('')}
+   <p class="fine">Remaining growth uses the Menelaus rule (distal femur ≈ 10 mm/y, proximal tibia ≈ 6 mm/y, until bone age 14 in girls and 16 in boys). Use multiplier tables for limb-length planning.</p></div>`;
+  if(R.spine){const t=+d.spine;h+=`<div class="card ind"><div class="hd"><b>Tibial spine avulsion · type ${['','I','II','III','IV'][t]}</b><span class="pill ${t===1?'ok':t===2?'warn':'bad'}">${t===1?'Non-operative':t===2?'Reduce; fix if not reduced':'Arthroscopic fixation'}</span></div><ul>${R.timing.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;return h+(withRef?tannerRef():'')}
+  if(R.kocher){h+=`<div class="card ${R.kocherOK?'ind':''}"><div class="hd"><b>Partial tear score (Kocher)</b><span class="pill ${R.kocherOK?'ok':'warn'}">${R.kocher.filter(x=>x[0]).length}/4</span></div><ul class="lst chk">${R.kocher.map(([y,t])=>`<li class="${y?'y':'n'}">${t}</li>`).join('')}</ul>
+   <p class="why">${R.kocherOK?'All criteria met: structured rehabilitation, activity modification and close follow-up; reconstruct if instability develops.':'Not all criteria met: in Kocher’s cohort, larger, posterolateral or higher-grade tears in older children more often needed reconstruction.'}</p></div>`}
+  h+=`<div class="card"><div class="hd"><b>Technique: ${tech.t}</b></div><ul>${tech.l.map(x=>`<li>${x}</li>`).join('')}</ul>
+   <p class="why">Follow up with standing long-leg X-rays every 6 months until maturity to catch leg-length difference or angular deformity. Return to sport is usually delayed to 9–12 months.</p></div>`;
+  return h+(withRef?tannerRef():'')}
+
+/* ---------- decision tab ---------- */
+const STATE={ind:['acc','Indicated'],consider:['warn','Consider'],contra:['bad','Contraindicated'],no:['mut','Not needed'],let:['warn','LET instead']};
+let lastSummary='';
+function renderDec(){const R=decide();const d=S.d,T=S.th,v=R.v;let h='';
+  if(R.spine){h+=`<div class="rec"><span class="l">Recommendation</span><span class="h">Tibial spine avulsion: treat the fracture</span></div>`+childCards(R,false)}
+  else{const M=R.mgmt;
+  h+=`<div class="rec"><span class="l">Recommendation</span><span class="h">${M.rec}</span>${M.urgent.map(u=>`<span class="pill bad" style="white-space:normal">${u}</span>`).join('')}
+   <div class="figs"><div><span class="k">For surgery</span><span class="v">${M.so}</span></div><div><span class="k">For rehab</span><span class="v">${M.sn}</span></div><div><span class="k">Beighton</span><span class="v">${R.bg}<small>/9</small></span></div>${v.pts!=null?`<div><span class="k">Slope</span><span class="v">${f1(v.pts)}<small>°</small></span></div>`:''}${v.att!=null?`<div><span class="k">ATT</span><span class="v">${f1(v.att)}<small> mm</small></span></div>`:''}</div></div>`;
+  h+=`<div class="card"><div class="hd"><b>Operative or conservative</b></div>${M.op.length?`<ul class="lst pro">${M.op.map(x=>`<li>${x[1]}</li>`).join('')}</ul>`:''}${M.non.length?`<ul class="lst con">${M.non.map(x=>`<li>${x[1]}</li>`).join('')}</ul>`:''}
+   <p class="why">+ favours reconstruction, − favours rehabilitation. In young active adults, early reconstruction and rehabilitation with optional delayed reconstruction gave similar 2-year outcomes (KANON); about half of the rehabilitation patients later chose surgery (KANON, COMPARE). With persistent instability, reconstruction is superior (ACL SNNAP).</p></div>`;
+  h+=`<div class="card"><div class="hd"><b>Timing</b><span class="pill ${R.quietOK?'ok':'warn'}">${R.quietOK?'Knee quiet':'Not ready yet'}</span></div><ul>${R.timing.map(x=>`<li>${x}</li>`).join('')}</ul>
+   <ul class="lst chk">${R.quiet.map(([y,t])=>`<li class="${y===false?'n':'y'}">${t}${y==null?' (not entered)':y===false?' — not yet':''}</li>`).join('')}</ul></div>`;
+  const Lt=R.let,[lc,ll]=STATE[Lt.state];
+  h+=`<div class="card ${Lt.state==='ind'?'ind':''}"><div class="hd"><b>Lateral extra-articular procedure (LET / ALL)</b><span class="pill ${lc}">${ll}</span></div>
+   <ul class="lst chk">${Lt.crit.filter(c=>c.on).map(c=>`<li class="y">${c.txt}${c.major?' <span class="src">strong</span>':''}</li>`).join('')||'<li class="n">No criteria present</li>'}</ul>
+   <details><summary>STABILITY criteria · ${Lt.stabN}/4 ${Lt.young?'':'(age above limit)'}</summary><ul class="lst chk">${Lt.stab.map(([y,t])=>`<li class="${y?'y':'n'}">${t}</li>`).join('')}</ul>
+   <p class="why">STABILITY 1: hamstring ACLR ± modified Lemaire in patients ≤ 25 with ≥ 2 of pivot ≥ 2, return to pivoting sport, generalised laxity. Graft rupture fell from 11 % to 4 %. STABILITY 2 adds recurvatum ≥ 10°.</p></details>
+   ${Lt.state!=='no'?`<ul><li>Modified Lemaire: 1 cm × 8 cm central ITB strip, passed deep to the LCL, fixed proximal and posterior to the lateral epicondyle in neutral rotation at about 60° flexion with minimal tension.</li><li>Or ALL reconstruction with gracilis (Sonnery-Cottet technique).</li>${R.child&&R.mat.g!=null&&R.mat.g<2?'<li>Open physes: keep femoral fixation away from the distal femoral physis (fluoroscopy), or use the Kocher–Micheli ITB technique, which already includes an extra-articular limb.</li>':''}</ul>`:''}</div>`;
+  const top=R.grafts[0].s;
+  h+=`<div class="card"><div class="hd"><b>Graft choice</b></div><div class="gr">${R.grafts.map((g,i)=>`<div class="g ${i===0?'top':''} ${g.s<=-2?'out':''}"><div class="t"><b>${g.n}</b><span class="pill ${i===0?'ok':g.s<=-2?'bad':'mut'}">${i===0?'First choice':g.s<=-2?'Avoid':'#'+(i+1)}</span></div><div class="bar2"><i style="width:${Math.max(4,Math.min(100,(g.s+4)/(Math.max(top,1)+4)*100))}%"></i></div>${g.p.length||g.c.length?`<ul>${g.p.map(x=>`<li>+ ${x}</li>`).join('')}${g.c.map(x=>`<li>− ${x}</li>`).join('')}</ul>`:''}</div>`).join('')}</div>
+   <p class="why">Hamstring grafts under 8 mm revise more often: plan a 5- or 6-strand graft or switch to QT/BPTB if the tendons look small.</p></div>`;
+  if(R.hyper){const lax=R.lax;
+   h+=`<div class="card ${lax?'ind':''}"><div class="hd"><b>Hyperlax knee / recurvatum</b><span class="pill ${lax?'warn':'mut'}">Beighton ${R.bg}/9${R.recurv!=null?' · '+f0(R.recurv)+'° HE':''}</span></div><ul>
+   ${R.recurvDiff!=null&&R.recurvDiff>5?`<li><b>Hyperextension ${f0(R.recurvDiff)}° more than the other knee:</b> examine the posterolateral corner (external rotation recurvatum, dial test at 30° and 90°). Asymmetric recurvatum is not constitutional laxity.</li>`:''}
+   <li>Graft: BPTB or quadriceps tendon preferred; if hamstrings are used, make the graft ≥ 8–9 mm and add LET.</li>
+   <li>Add LET / ALL: generalised laxity and recurvatum ≥ ${T.recurvLET}° are STABILITY criteria.</li>
+   <li>Anatomical tunnels; check for roof impingement in full hyperextension and avoid an anterior tibial tunnel.</li>
+   <li>Brace with an extension stop at 0° for about 6 weeks; do not chase hyperextension in rehab; long neuromuscular programme.</li>
+   <li>Slope-reducing osteotomy increases hyperextension: use caution with recurvatum.</li>
+   ${R.bg>=7?'<li>Very high Beighton score: screen for a connective-tissue disorder (hypermobile Ehlers–Danlos, Marfan).</li>':''}</ul></div>`}
+  if(R.varus){const V=R.varus,[vc,vl]=STATE[V.st];
+   h+=`<div class="card ${V.st==='ind'?'ind':''}"><div class="hd"><b>ACL with genu varum</b><span class="pill ${vc}">${vl==='Indicated'?'HTO indicated':vl}</span></div><p class="why">${V.why.join(' ')}</p>
+   ${V.st!=='no'&&V.st!=='contra'?`<div class="figs"><div><span class="k">Correction</span><span class="v">${f1(V.corr)}<small>°</small></span></div><div><span class="k">Posteromedial gap</span><span class="v">${f1(V.post)}<small> mm</small></span></div><div><span class="k">Anterior gap</span><span class="v">${V.antR<0?'—':f1(V.antR)}<small> mm</small></span></div></div>
+   <ul><li>Target ${f1(V.tg)}° valgus (${V.tg>=3?'medial OA: weight-bearing line ≈ 55–62 %':'instability without OA: weight-bearing line ≈ 50–55 %'}); gap = tibial width ${f0(V.W)} mm × tan(${f1(V.corr)}°).</li>
+   <li>Keep the anterior gap at the tubercle about half the posteromedial gap (${f1(V.antN)} mm) to keep the slope; every 1 mm of error changes slope by about 2° (Noyes).</li>
+   ${V.red?`<li>Slope is ${f1(v.pts)}°: narrow the anterior gap to ${V.antR<0?'below zero, which is not possible: correct the slope with a separate anterior closing wedge':f1(V.antR)+' mm'} to reduce slope by ≈ ${f1(V.red)}°.</li>`:''}
+   ${V.mptaPost!=null?`<li>MPTA ${f1(V.mpta)}° → ${f1(V.mptaPost)}° after correction${V.mptaPost>95?': above 95°, plan a double-level osteotomy (use the Knee Osteotomy Planner)':''}.</li>`:''}
+   ${V.triple?'<li><b>Double/triple varus</b> (thrust with lateral or posterolateral laxity): HTO first, then ACL ± PLC reconstruction; soft-tissue grafts stretch out if varus is left uncorrected.</li>':''}
+   <li>${V.stage}</li><li>Alternative: lateral closing-wedge HTO tends to reduce slope.</li></ul>`:''}</div>`}
+  if(R.slope){const Sl=R.slope,[sc,sl]=STATE[Sl.st];
+   h+=`<div class="card ${Sl.st==='ind'?'ind':''}"><div class="hd"><b>Slope correction (anterior closing wedge)</b><span class="pill ${sc}">${sl}</span></div><p class="why">${Sl.why.join(' ')}</p>
+   ${Sl.st==='ind'||Sl.st==='consider'?`<div class="figs"><div><span class="k">Slope</span><span class="v">${f1(Sl.pts)}<small>°</small></span></div><div><span class="k">Correction</span><span class="v">${f1(Sl.corr)}<small>°</small></span></div><div><span class="k">Wedge base</span><span class="v">${f1(Sl.wCalc!=null?Sl.wCalc:Sl.wRule)}<small> mm</small></span></div></div>
+   <ul><li>Target slope ${f1(T.ptsTarget)}° → correction ${f1(Sl.corr)}°.</li>
+   <li>${Sl.wCalc!=null?`Wedge = AP depth ${f0(Sl.dep)} mm × tan(${f1(Sl.corr)}°) = ${f1(Sl.wCalc)} mm. `:''}Rule of thumb: ≈ ${Sl.per.toFixed(1)} mm per degree ${Sl.lvl==='infra'?'infratuberosity':'supratuberosity'} → ${f1(Sl.wRule)} mm (Kayaalp 2025).</li>
+   <li>${Sl.lvl==='supra'?'Supratuberosity: classic (Dejour) level, wedge apex at the PCL insertion; protect the patellar tendon insertion and check patellar height.':'Infratuberosity: below the tubercle, leaves the tubercle–plateau relationship unchanged; needs a slightly larger wedge per degree.'}</li>
+   <li>Keep the posterior cortex as hinge; fix with two staples or an anterior plate. Hyperextension increases by about the correction${Sl.hyper!=null?' (≈ '+f0(Sl.hyper)+'° expected)':''}.</li>
+   <li>${d.revision?'Usually single stage with the revision; stage it if tunnels need grafting.':'In primary surgery a high slope is more often managed with LET.'}</li></ul>`:''}</div>`}
+  if(R.child)h+=childCards(R,false);
+  }
+  h+=`<div class="card"><div class="hd"><b>Translation and laxity</b></div><table class="mt">
+   <tr><td>Lachman</td><td class="n">${['Normal','Grade I','Grade II','Grade III'][+d.lachman]}${d.endpoint==='soft'?', soft end point':''}</td></tr>
+   <tr><td>Pivot shift</td><td class="n">${d.pivot}</td></tr>
+   ${num(d.kt)!=null?`<tr><td>KT side-to-side</td><td class="n">${f1(num(d.kt))} mm ${num(d.kt)>=T.kt?'<span class="pill bad">abnormal</span>':'<span class="pill ok">normal</span>'}</td></tr>`:''}
+   ${v.telos!=null?`<tr><td>Telos side-to-side</td><td class="n">${f1(v.telos)} mm ${v.telos>=3?'<span class="pill bad">abnormal</span>':''}</td></tr>`:''}
+   ${v.att!=null?`<tr><td>MRI lateral ATT</td><td class="n">${f1(v.att)} mm ${v.att>=T.attHigh?'<span class="pill bad">resting pivoted</span>':v.att>=3?'<span class="pill warn">raised</span>':'<span class="pill ok">normal</span>'}<div class="ref">Controls ≈ 0.8 mm, acute tears ≈ 2.8, chronic ≈ 3.6, failed ACLR ≈ 4.9 mm (McDonald 2017)</div></td></tr>`:''}
+   ${v.pts!=null?`<tr><td>Posterior tibial slope</td><td class="n">${f1(v.pts)}° ${v.pts>=T.ptsLET?'<span class="pill bad">high</span>':'<span class="pill ok">normal</span>'}</td></tr>`:''}
+   ${v.lts!=null?`<tr><td>MRI lateral slope</td><td class="n">${f1(v.lts)}° ${v.lts>=T.ltsMRI?'<span class="pill bad">high</span>':''}<div class="ref">≥ 8.5° predicted failure of hamstring ACLR (Zhang 2025)</div></td></tr>`:''}
+   ${v.notch!=null?`<tr><td>Femoral notch</td><td class="n">${f1(v.notch)} mm ${v.notch>T.notch?'<span class="pill warn">deep</span>':''}</td></tr>`:''}</table></div>`;
+  h+=`<div class="row"><button class="btn" id="copy">Copy summary</button><button class="btn" id="share">Share</button></div>`;
+  h+=`<details><summary>Thresholds</summary><div class="thr">${Object.keys(TH_DEFAULT).map(k=>`<label for="th_${k}">${TH_LABEL[k][0]} <span class="src">${TH_LABEL[k][1]}</span></label><input id="th_${k}" type="number" step="any" data-th="${k}" value="${T[k]}">`).join('')}</div><div class="row" style="margin-top:8px"><button class="btn" id="thReset">Reset to defaults</button></div></details>`;
+  h+=`<details><summary>References</summary><ol class="refs">${REFS.map(([t,doi])=>`<li>${t} <a href="https://doi.org/${doi}" target="_blank" rel="noopener">doi:${doi}</a></li>`).join('')}</ol></details>`;
+  h+=`<p class="fine">Decision aid only. It does not replace clinical judgement, and thresholds are editable because the evidence behind several of them is limited.</p>`;
+  const el=$('#p-dec');const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;
+  lastSummary=summary(R);
+  $('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(lastSummary);toast('Summary copied')}catch{toast('Copy not available here')}};
+  $('#share').onclick=async()=>{try{if(isNative&&window.Capacitor.Plugins.Share){await window.Capacitor.Plugins.Share.share({title:'ACL plan',text:lastSummary});return}if(navigator.share){await navigator.share({title:'ACL plan',text:lastSummary});return}await navigator.clipboard.writeText(lastSummary);toast('Summary copied')}catch{}};
+  $$('[data-th]').forEach(i=>i.onchange=()=>{const x=num(i.value);if(x!=null){S.th[i.dataset.th]=x;renderDec();autosave()}});
+  $('#thReset').onclick=()=>{S.th={...TH_DEFAULT};renderDec();autosave()}}
+const REFS=[
+ ['Frobell 2010, KANON: early vs optional delayed ACLR. N Engl J Med.','10.1056/NEJMoa0907797'],
+ ['Reijman 2021, COMPARE trial. BMJ.','10.1136/bmj.n375'],
+ ['Beard 2022, ACL SNNAP: rehabilitation vs reconstruction for non-acute ACL injury. Lancet.','10.1016/S0140-6736(22)01424-6'],
+ ['Moksnes 2008, potential copers and non-copers. J Orthop Sports Phys Ther.','10.2519/jospt.2008.2750'],
+ ['Getgood 2020, STABILITY 1: ACLR ± lateral extra-articular tenodesis. Am J Sports Med.','10.1177/0363546519896333'],
+ ['STABILITY 2 trial protocol (recurvatum criterion). BMJ Open.','10.1136/bmjopen-2026-120915'],
+ ['Getgood 2019, International ALC Consensus. Knee Surg Sports Traumatol Arthrosc.','10.1007/s00167-018-5072-6'],
+ ['Posterior tibial slope ≥ 12° as an indication for LET in primary ACLR.','10.1002/arj.70616'],
+ ['Kayaalp 2025, wedge size in anterior closing-wedge osteotomy. Knee Surg Sports Traumatol Arthrosc.','10.1002/ksa.70003'],
+ ['Noyes 2005, opening wedge HTO: the 3-triangle method for alignment and slope. Am J Sports Med.','10.1177/0363546504269034'],
+ ['McDonald 2017, anterior tibial subluxation on MRI in ACL-deficient knees. Am J Sports Med.','10.1177/0363546516688673'],
+ ['Zhang 2025, MRI risk factors for failure of primary ACLR. J Bone Joint Surg Am.','10.2106/JBJS.23.01137'],
+ ['Kanakamedala 2018, lateral femoral notch depth and rotatory instability. Knee Surg Sports Traumatol Arthrosc.','10.1007/s00167-017-4770-9'],
+ ['Kocher 2002, partial ACL tears in children and adolescents. Am J Sports Med.','10.1177/03635465020300051201'],
+ ['Ardern 2018, IOC consensus on paediatric ACL injuries. Orthop J Sports Med.','10.1177/2325967118759953'],
+ ['Lawrence 2011, delay of ACLR in children and meniscal/chondral injury. Am J Sports Med.','10.1177/0363546511420818'],
+ ['Anderson 2015, delayed ACLR in young patients. Am J Sports Med.','10.1177/0363546514559912'],
+ ['Crawford 2019, timing of paediatric ACLR (contrary data). J Pediatr Orthop.','10.1097/BPO.0000000000000960']];
+function summary(R){const d=S.d,v=R.v,L=[];
+  L.push(`ACL plan · ${d.age||'?'} y ${d.sex}, ${d.side==='L'?'left':'right'} knee${d.revision?' · revision':''}`);
+  if(R.spine){L.push(`Tibial spine avulsion type ${d.spine}`);R.timing.forEach(t=>L.push('- '+t))}
+  else{L.push('Recommendation: '+R.mgmt.rec);R.mgmt.urgent.forEach(u=>L.push('! '+u));
+  L.push('Timing: '+R.timing[0]);
+  L.push(`LET/ALL: ${STATE[R.let.state][1]}${R.let.crit.filter(c=>c.on).length?' ('+R.let.crit.filter(c=>c.on).map(c=>c.txt).join('; ')+')':''}`);
+  L.push('Graft: '+R.grafts[0].n+(R.grafts[1]?' (alternative: '+R.grafts[1].n+')':''));
+  if(R.slope)L.push(`Slope ${f1(R.slope.pts)}°: ${STATE[R.slope.st][1]}${R.slope.st==='ind'||R.slope.st==='consider'?`, correction ${f1(R.slope.corr)}°, wedge ≈ ${f1(R.slope.wCalc!=null?R.slope.wCalc:R.slope.wRule)} mm`:''}`);
+  if(R.varus)L.push(`Varus ${f1(R.varus.hka)}°: ${STATE[R.varus.st][1]}${R.varus.st==='ind'||R.varus.st==='consider'?`, correction ${f1(R.varus.corr)}°, PM gap ${f1(R.varus.post)} mm, anterior gap ${f1(Math.max(0,R.varus.antR))} mm`:''}`);
+  if(R.hyper)L.push(`Beighton ${R.bg}/9${R.recurv!=null?', hyperextension '+f0(R.recurv)+'°':''}`);
+  if(R.child)L.push(`Maturity: ${R.mat.label}`)}
+  if(v.att!=null)L.push(`MRI lateral ATT ${f1(v.att)} mm`);
+  return L.join('\n')}
+
+/* ---------- image handling ---------- */
+function curImg(){return imgs[S.mode]||null}
+function blobToCanvas(blob){return new Promise((res,rej)=>{const url=URL.createObjectURL(blob);const im=new Image();
+  im.onload=()=>{const MAX=3000,sc=Math.min(1,MAX/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c)};
+  im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('bad'))};im.src=url})}
+$('#file').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const c=await blobToCanvas(f);imgs[S.mode]=c;blobs[S.mode]=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+    S.P[S.mode]={};S.active=MODES[S.mode].pts[MODES[S.mode].cal?2:0][0];S.noViewer=false;layout();fit();update();toast(`${MODES[S.mode].name} image loaded`)}
+  catch{toast('That file could not be opened. Export the image as JPEG or PNG.')}});
+
+/* ---------- viewer ---------- */
+function resize(){const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));draw()}
+function fit(){const im=curImg();const r=cv.getBoundingClientRect();if(!im||!r.width){draw();return}
+  const top=56,bot=50,s=Math.min(r.width/im.width,(r.height-top-bot)/im.height)*.96;view={s,tx:(r.width-im.width*s)/2,ty:top+(r.height-top-bot-im.height*s)/2};draw()}
+let lastSize='';new ResizeObserver(()=>{const r=cv.getBoundingClientRect();const k=Math.round(r.width)+'x'+Math.round(r.height);if(k===lastSize)return;lastSize=k;resize();fit()}).observe($('#viewer'));
+$('#fit').onclick=fit;
+const zoomAt=(k,x,y)=>{const ns=Math.max(.05,Math.min(40,view.s*k));const kk=ns/view.s;view.tx=x-(x-view.tx)*kk;view.ty=y-(y-view.ty)*kk;view.s=ns;draw()};
+$('#zin').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1.4,r.width/2,r.height/2)};
+$('#zout').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1/1.4,r.width/2,r.height/2)};
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top)},{passive:false});
+const toS=p=>({x:p.x*view.s+view.tx,y:p.y*view.s+view.ty}),toI=(x,y)=>({x:(x-view.tx)/view.s,y:(y-view.ty)/view.s});
+const ptrs=new Map();let G=null,dragId=null;
+const loc=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+function hit(x,y){const pts=S.P[S.mode]||{};let best=null,bd=24;for(const k in pts){const s=toS(pts[k]);const dd=Math.hypot(s.x-x,s.y-y);if(dd<bd){bd=dd;best=k}}return best}
+cv.addEventListener('pointerdown',e=>{if(!curImg())return;cv.setPointerCapture(e.pointerId);const p=loc(e);ptrs.set(e.pointerId,p);
+  if(ptrs.size===1){const h=hit(p.x,p.y);G={type:h?'drag':'tap',id:h,sx:p.x,sy:p.y,lx:p.x,ly:p.y}}
+  else if(ptrs.size===2){const [a,b]=[...ptrs.values()];G={type:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y),c0:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},v0:{...view}};dragId=null}});
+cv.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId)||!G)return;const p=loc(e);ptrs.set(e.pointerId,p);
+  if(G.type==='pinch'&&ptrs.size>=2){const [a,b]=[...ptrs.values()];const c={x:(a.x+b.x)/2,y:(a.y+b.y)/2},dd=Math.hypot(a.x-b.x,a.y-b.y);
+    const s=Math.max(.05,Math.min(40,G.v0.s*dd/G.d0));const I={x:(G.c0.x-G.v0.tx)/G.v0.s,y:(G.c0.y-G.v0.ty)/G.v0.s};view={s,tx:c.x-I.x*s,ty:c.y-I.y*s};draw();return}
+  if(G.type==='drag'){if(Math.hypot(p.x-G.sx,p.y-G.sy)>3||dragId){const q=S.P[S.mode][G.id];q.x+=(p.x-G.lx)/view.s;q.y+=(p.y-G.ly)/view.s;dragId=G.id;G.lx=p.x;G.ly=p.y;update()}return}
+  if(G.type==='tap'&&Math.hypot(p.x-G.sx,p.y-G.sy)>8)G.type='pan';
+  if(G.type==='pan'){view.tx+=p.x-G.lx;view.ty+=p.y-G.ly;G.lx=p.x;G.ly=p.y;draw()}});
+function up(e){if(!ptrs.has(e.pointerId))return;const p=loc(e);ptrs.delete(e.pointerId);
+  if(G&&G.type==='tap'&&ptrs.size===0)place(toI(p.x,p.y));
+  if(G&&G.type==='drag'&&!dragId&&ptrs.size===0){S.active=G.id;update()}
+  if(ptrs.size===0){G=null;if(dragId){dragId=null;update()}}}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+function place(p){const md=MODES[S.mode];if(!S.active)return;(S.P[S.mode]=S.P[S.mode]||{})[S.active]=p;
+  const ids=md.pts.map(x=>x[0]);const i=ids.indexOf(S.active);const next=ids.slice(i+1).find(k=>!S.P[S.mode][k])||ids.find(k=>!S.P[S.mode][k]);
+  if(next)S.active=next;update();if(navigator.vibrate)try{navigator.vibrate(8)}catch{}}
+function deletePoint(){const pts=S.P[S.mode];if(!pts||!pts[S.active])return;delete pts[S.active];toast('Point deleted. Tap the image to place it again');update()}
+$('#delPt').onclick=deletePoint;$('#delPt2').onclick=deletePoint;
+
+let raf=0;function draw(){if(!raf)raf=requestAnimationFrame(render)}
+function line(a,b,col,w=1.6,dash=null){const A=toS(a),B=toS(b);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=w;if(dash)ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore()}
+function ext(a,b,k=.4){const dd=sub(b,a);return[sub(a,mul(dd,k)),add(b,mul(dd,k))]}
+function tag(p,text,col,dx=10,dy=-10){const s=toS(p);ctx.save();ctx.font='600 11.5px "IBM Plex Mono", monospace';const w=ctx.measureText(text).width+10;let x=s.x+dx,y=s.y+dy;if(dx<0)x-=w;ctx.fillStyle='rgba(5,8,11,.86)';ctx.fillRect(x,y-13,w,18);ctx.fillStyle=col;ctx.fillText(text,x+5,y);ctx.restore()}
+function render(){raf=0;const dpr=window.devicePixelRatio||1;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#05080b';ctx.fillRect(0,0,cv.width,cv.height);
+  const im=curImg();ctx.setTransform(dpr,0,0,dpr,0,0);
+  if(!im){ctx.fillStyle='#8a98a4';ctx.font='14px Archivo, sans-serif';ctx.fillText('Open an image for this measurement',20,90);return}
+  ctx.setTransform(dpr*view.s,0,0,dpr*view.s,dpr*view.tx,dpr*view.ty);ctx.drawImage(im,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
+  overlays();if(dragId&&S.P[S.mode][dragId])loupe(S.P[S.mode][dragId],dpr,im)}
+function overlays(){const m=S.mode,pts=S.P[m]||{};const r=computeImage();
+  if(pts.cal1&&pts.cal2)line(pts.cal1,pts.cal2,'#fff',1.4);
+  if(m==='slope'){if(pts.A1&&pts.P1)line(pts.A1,pts.P1,COL.ghost,1.2,[4,4]);if(pts.A2&&pts.P2)line(pts.A2,pts.P2,COL.ghost,1.2,[4,4]);
+    const g=slopeGeom(pts);if(pts.A1&&pts.P1&&pts.A2&&pts.P2){const M1=mid(pts.A1,pts.P1),M2=mid(pts.A2,pts.P2);const [a,b]=ext(M2,M1,.6);line(a,b,COL.line,1.6)}
+    if(pts.PA&&pts.PP){const [a,b]=ext(pts.PP,pts.PA,.3);line(a,b,COL.meas,1.8)}
+    if(g){const n=mul(g.a,1);const c=pts.PP;line(sub(c,mul(n,40)),add(c,mul(n,len(sub(pts.PA,pts.PP))*1.3)),COL.ghost,1.2,[6,4]);tag(pts.PA,`Slope ${f1(g.deg)}°`,COL.meas,12,-12)}}
+  if(m==='att'&&pts.PA&&pts.PP){const [a,b]=ext(pts.PP,pts.PA,.3);line(a,b,COL.meas,1.6);const u=norm(sub(pts.PA,pts.PP)),n={x:-u.y,y:u.x};
+    line(add(pts.PP,mul(n,-90)),add(pts.PP,mul(n,90)),COL.alt,1.2,[5,4]);
+    if(pts.FC){line(add(pts.FC,mul(n,-90)),add(pts.FC,mul(n,90)),COL.ghost,1.2,[5,4]);const dd=dot(sub(pts.PP,pts.FC),u);const a0=add(pts.FC,mul(n,dot(sub(pts.PP,pts.FC),n)));line(a0,add(a0,mul(u,dd)),COL.meas,2.2);
+      tag(add(a0,mul(u,dd)),r.att!=null?`ATT ${f1(r.att)} mm`:`ATT ${f1(dd)} px (calibrate)`,COL.meas,10,22)}}
+  if(m==='notch'&&pts.N1&&pts.N2){const [a,b]=ext(pts.N1,pts.N2,.5);line(a,b,COL.line,1.4);
+    if(pts.ND){const e=norm(sub(pts.N2,pts.N1));const f=add(pts.N1,mul(e,dot(sub(pts.ND,pts.N1),e)));line(pts.ND,f,COL.meas,2);tag(pts.ND,r.notch!=null?`Notch ${f1(r.notch)} mm`:`Notch ${f1(r.notchPx)} px (calibrate)`,COL.meas,12,14)}}
+  for(const k in pts){const s=toS(pts[k]);const on=k===S.active;ctx.save();ctx.lineWidth=on?2.4:1.6;ctx.strokeStyle=on?'#fff':COL.pt;ctx.fillStyle='rgba(5,8,11,.5)';
+    ctx.beginPath();ctx.arc(s.x,s.y,on?8:6,0,7);ctx.fill();ctx.stroke();ctx.fillStyle=on?'#fff':COL.pt;ctx.beginPath();ctx.arc(s.x,s.y,1.6,0,7);ctx.fill();ctx.restore()}}
+function loupe(p,dpr,im){const r=cv.getBoundingClientRect();const s=toS(p);const R=62,Z=3;const cx=s.x<r.width/2?r.width-R-14:R+14,cy=R+60;
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.clip();ctx.fillStyle='#000';ctx.fillRect(cx-R,cy-R,2*R,2*R);const k=view.s*Z;
+  ctx.setTransform(dpr*k,0,0,dpr*k,dpr*(cx-p.x*k),dpr*(cy-p.y*k));ctx.drawImage(im,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.strokeStyle=COL.pt;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx-6,cy);ctx.moveTo(cx+6,cy);ctx.lineTo(cx+R,cy);ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy-6);ctx.moveTo(cx,cy+6);ctx.lineTo(cx,cy+R);ctx.stroke();ctx.restore();
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.stroke()}
+
+/* ---------- imaging pane ---------- */
+function renderImg(){const md=MODES[S.mode];const r=computeImage();
+  const val={slope:r.pts!=null?f1(r.pts)+'°':'',att:r.att!=null?f1(r.att)+' mm':r.attPx!=null?'needs scale':'',notch:r.notch!=null?f1(r.notch)+' mm':r.notchPx!=null?'needs scale':''};
+  $('#modes').innerHTML=MODE_ORDER.map(k=>`<button class="sl ${k===S.mode?'on':''}" data-m="${k}"><b>${MODES[k].name}</b><span>${val[k]||MODES[k].sub}</span></button>`).join('');
+  $$('#modes .sl').forEach(b=>b.onclick=()=>chooseMode(b.dataset.m));
+  $('#modeHint').textContent=md.hint;$('#hideViewer').textContent=S.noViewer?'Show viewer':'Hide viewer';
+  $('#steps').innerHTML=md.pts.map(([id,l])=>`<button class="step ${P(S.mode,id)?'done':''} ${id===S.active?'on':''}" data-id="${id}"><span class="dot"></span><span>${l}</span><span class="gl">${id.indexOf('cal')===0?'Scale':''}</span></button>`).join('');
+  $$('#steps .step').forEach(b=>b.onclick=()=>{S.active=b.dataset.id;update()});
+  const can=!!(curImg()&&P(S.mode,S.active));$('#delPt').hidden=!can;$('#delPt2').hidden=!can;
+  $('#calBox').hidden=!md.cal;if(md.cal){$('#calmm').value=S.cal[S.mode];const k=mmpp(S.mode);$('#scaleout').textContent=k?`${k.toFixed(3)} mm/px`:'No scale yet: place both ends of the scale bar.'}
+  renderPrompt()}
+$('#calmm').addEventListener('input',e=>{const x=num(e.target.value);if(x){S.cal[S.mode]=x;update()}});
+$('#hideViewer').onclick=()=>{S.noViewer=!S.noViewer;layout();update()};
+function chooseMode(m){S.mode=m;const ids=MODES[m].pts.map(x=>x[0]);S.active=ids.find(k=>!P(m,k)&&k.indexOf('cal')!==0)||ids.find(k=>k.indexOf('cal')!==0);fit();update()}
+function renderPrompt(){const md=MODES[S.mode];const st=md.pts.find(p=>p[0]===S.active)||md.pts[0];
+  $('#vlabel').textContent=md.name;
+  $('#prompt').innerHTML=!curImg()?`<span class="k">Image</span><span>Open a ${md.sub}<small>${md.hint}</small></span>`:`<span class="k">${P(S.mode,S.active)?'Adjust':'Tap'}</span><span>${st[1]}<small>${st[2]||''}</small></span>`}
+
+/* ---------- tabs ---------- */
+function update(){if(S.tab==='img'){renderImg();const meas=computeImage();$$('#imgForm input[data-k]').forEach(i=>{const f=FORMS.img[0][1].find(x=>x.k===i.dataset.k);if(f&&f.m)i.placeholder=meas[f.m]!=null?f1(meas[f.m]):''})}
+  if(S.tab==='dec')renderDec();draw();autosave()}
+function layout(){const w=$('#work');const showV=S.tab==='img'&&!S.noViewer;w.classList.toggle('calc',!showV);requestAnimationFrame(()=>{resize();fit()})}
+function selectTab(t){S.tab=t;$$('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===t));['pt','ex','img','ch','dec'].forEach(n=>$('#p-'+n).hidden=n!==t);
+  layout();renderTab(t);if(t==='dec')renderDec();$('#p-'+t).scrollTop=0;autosave()}
+$$('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.t));
+$('#grab').onclick=()=>{$('#work').classList.toggle('tall');requestAnimationFrame(()=>{resize();fit()})};
+
+/* ---------- storage ---------- */
+const DB=(()=>{let p=null;const open=()=>p||(p=new Promise((res,rej)=>{try{const r=indexedDB.open('acl-planner',1);r.onupgradeneeded=()=>r.result.createObjectStore('cases',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
+  const tx=async(mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('cases',mode);const out=fn(t.objectStore('cases'));t.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);t.onerror=()=>rej(t.error)})};
+  return{put:v=>tx('readwrite',s=>s.put(v)),get:id=>tx('readonly',s=>s.get(id)),del:id=>tx('readwrite',s=>s.delete(id)),all:()=>tx('readonly',s=>s.getAll())}})();
+const snap=()=>JSON.parse(JSON.stringify({d:S.d,P:S.P,cal:S.cal,th:S.th,mode:S.mode}));
+const isDemoImg=()=>Object.keys(imgs).length>0&&Object.keys(blobs).length===0;
+const saveNow=()=>{clearTimeout(saveT);return DB.put({id:'__current',state:snap(),tab:S.tab,blobs:{...blobs},demo:isDemoImg(),date:Date.now()}).catch(()=>{})};
+let saveT=0;function autosave(){clearTimeout(saveT);saveT=setTimeout(saveNow,400)}
+addEventListener('pagehide',saveNow);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveNow()});
+async function loadRecord(r){const st=JSON.parse(JSON.stringify(r.state));S.d={...BLANK,...st.d};S.P=st.P||{};S.cal={att:50,notch:50,...st.cal};S.th={...TH_DEFAULT,...st.th};S.mode=st.mode||'slope';
+  const ids=MODES[S.mode].pts.map(x=>x[0]);S.active=ids.find(k=>!P(S.mode,k))||ids[0];
+  imgs={};blobs={...(r.blobs||{})};for(const k in blobs){try{imgs[k]=await blobToCanvas(blobs[k])}catch{}}
+  if(r.demo){const c=demoImage();imgs={slope:c,att:c,notch:c}}}
+$('#casesBtn').onclick=()=>{renderCases();$('#casesSheet').hidden=false};$('#menuBtn').onclick=()=>$('#menuSheet').hidden=false;
+$$('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s||e.target.hasAttribute('data-close'))s.hidden=true}));
+$('#saveCase').onclick=async()=>{const name=$('#caseName').value.trim()||('Case '+new Date().toLocaleString([],{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
+  try{await DB.put({id:'c'+Date.now(),name,state:snap(),blobs:{...blobs},demo:isDemoImg(),date:Date.now()});$('#caseName').value='';toast(`Saved “${name}”`);renderCases()}catch{toast('Could not save on this device')}};
+async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>c.id!=='__current').sort((a,b)=>b.date-a.date)}catch{}
+  const el=$('#caseList');if(!list.length){el.innerHTML='<div class="empty">No saved cases yet.</div>';return}
+  el.innerHTML=list.map(c=>`<div class="case"><div style="min-width:0"><div class="t"></div><div class="d">${new Date(c.date).toLocaleDateString()} · ${esc(c.state.d.age||'?')} y${c.state.d.revision?' · revision':''}</div></div><div class="row"><button class="btn primary" data-open="${c.id}">Open</button><button class="btn danger" data-del="${c.id}">✕</button></div></div>`).join('');
+  $$('#caseList .t').forEach((t,i)=>t.textContent=list[i].name);
+  $$('#caseList [data-open]').forEach(b=>b.onclick=async()=>{const r=await DB.get(b.dataset.open);await loadRecord(r);$('#casesSheet').hidden=true;selectTab('dec')});
+  $$('#caseList [data-del]').forEach(b=>b.onclick=async()=>{if(b.dataset.armed){await DB.del(b.dataset.del);renderCases()}else{b.dataset.armed=1;b.textContent='Delete?'}})}
+$('#newCase').onclick=()=>{S={d:{...BLANK},P:{},cal:{att:50,notch:50},th:{...S.th},tab:'pt',mode:'slope',active:'A1',noViewer:false};imgs={};blobs={};$('#menuSheet').hidden=true;selectTab('pt');toast('New case')};
+$('#demoList').innerHTML=DEMOS.map((x,i)=>`<button class="btn" data-demo="${i}">${x.t}</button>`).join('');
+$$('[data-demo]').forEach(b=>b.onclick=()=>{$('#menuSheet').hidden=true;openDemo(+b.dataset.demo)});
+let toastT=0;function toast(m){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t)}t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2200)}
+
+/* ---------- iPhone install hint ---------- */
+(()=>{const ua=navigator.userAgent;const ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;let seen=false;try{seen=!!localStorage.getItem('iosHint')}catch{}
+  if(ios&&!standalone&&!isNative&&!seen){const h=$('#iosHint');setTimeout(()=>h.hidden=false,1500);$('#iosHintX').onclick=()=>{h.hidden=true;try{localStorage.setItem('iosHint','1')}catch{}}}})();
+
+/* ---------- boot ---------- */
+resize();
+(async()=>{let r=null;try{r=await DB.get('__current')}catch{}
+  if(r&&r.state){await loadRecord(r);selectTab(r.tab||'dec')}else openDemo(0)})();
+window.__acl={decide,vals,computeImage,openDemo,selectTab,S:()=>S,setMode:m=>chooseMode(m),setD:o=>{Object.assign(S.d,o);renderTab(S.tab);if(S.tab==='dec')renderDec()}};
+if('serviceWorker' in navigator&&!isNative&&/^https?:$/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+})();
+</script>
+</body>
+</html>

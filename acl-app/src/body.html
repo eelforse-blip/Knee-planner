@@ -1,0 +1,74 @@
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>ACL Decision Planner</b><span>Surgery vs rehab · timing · graft · LET · slope · varus · children</span></div>
+    <button class="ib" id="casesBtn" title="Saved cases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Cases</span></button>
+    <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+  </header>
+
+  <main class="work calc" id="work">
+    <section class="viewer" id="viewer">
+      <canvas id="cv" aria-label="Image viewer"></canvas>
+      <div class="prompt" id="prompt"></div>
+      <div class="vlabel" id="vlabel"></div>
+      <div class="vtools">
+        <button id="delPt" hidden>Delete point</button>
+        <button id="fit">Fit</button>
+        <button id="zin" aria-label="Zoom in">+</button>
+        <button id="zout" aria-label="Zoom out">−</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="pt" aria-selected="true">Patient</button>
+        <button class="tab" role="tab" data-t="ex" aria-selected="false">Exam</button>
+        <button class="tab" role="tab" data-t="img" aria-selected="false">Imaging</button>
+        <button class="tab" role="tab" data-t="ch" aria-selected="false">Child</button>
+        <button class="tab" role="tab" data-t="dec" aria-selected="false">Decision</button>
+      </div>
+      <div class="pane" id="p-pt"></div>
+      <div class="pane" id="p-ex" hidden></div>
+      <div class="pane" id="p-img" hidden>
+        <div class="group"><h3>Measure on an image</h3>
+          <div class="modes" id="modes"></div>
+          <div class="row"><label class="btn primary" for="file">Open image</label><input id="file" type="file" accept="image/*" hidden><button class="btn" id="hideViewer">Hide viewer</button></div>
+          <p class="fine" id="modeHint"></p>
+        </div>
+        <div class="steps" id="steps"></div>
+        <div class="row"><button class="btn danger" id="delPt2" hidden>Delete selected point</button></div>
+        <div class="group" id="calBox"><h3>Scale</h3>
+          <div class="form"><label for="calmm">Scale bar length (mm)</label><input id="calmm" type="number" min="1" step="1"></div>
+          <p class="fine" id="scaleout"></p>
+        </div>
+        <div id="imgForm"></div>
+      </div>
+      <div class="pane" id="p-ch" hidden></div>
+      <div class="pane" id="p-dec" hidden></div>
+    </aside>
+  </main>
+</div>
+
+<div class="sheet" id="casesSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Saved cases">
+    <div class="sheet-head"><b>Saved cases</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <div class="row"><input id="caseName" type="text" placeholder="Patient initials, side" style="flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px"><button class="btn primary" id="saveCase">Save</button></div>
+      <p class="fine">Cases stay on this device only. Use initials, not full names.</p>
+      <div id="caseList" class="group"></div>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="menuSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="More">
+    <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn" id="newCase">New case (clear everything)</button>
+      <h3>Demo cases</h3>
+      <div id="demoList" class="group"></div>
+      <p class="fine">Decision aid only. Thresholds come from published studies and can be edited under Decision → Thresholds. Confirm every measurement on the original images. Not a certified medical device.</p>
+      <p class="fine">Version 1.0</p>
+    </div>
+  </div>
+</div>
+<div class="iosHint" id="iosHint" hidden><div><b>Install on your iPhone</b><span>Tap <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-label="Share"><path d="M12 3v13M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Share, then <b>Add to Home Screen</b>. It then opens full-screen and works offline.</span></div><button id="iosHintX" aria-label="Dismiss">✕</button></div>

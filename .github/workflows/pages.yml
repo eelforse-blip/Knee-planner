@@ -31,6 +31,8 @@ jobs:
           cp -r pf-app/www/. site/pf/
           mkdir site/clinic
           cp -r clinic-app/www/. site/clinic/
+          mkdir site/acl
+          cp -r acl-app/www/. site/acl/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
