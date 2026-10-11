@@ -1057,6 +1057,8 @@ async function shareBlob(blob,name){
   const url=URL.createObjectURL(blob);const w=window.open(url,'_blank');if(w)return;const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Saved '+name)}
 function openPrintSheet(){$('#printSheet').hidden=false}
 $$('#printSheet [data-print]').forEach(b=>b.onclick=()=>{$('#printSheet').hidden=true;printReport(b.dataset.print)});
+$('#shareApp').onclick=async()=>{const url='https://eelforse-blip.github.io/Knee-planner/acl/';const text='ACL Decision Planner – surgery vs rehab, timing, graft, LET/ALL, slope, varus, children, scores and patient records. Free, works offline on iPhone, Android and PC.\n\niPhone: open in Safari → Share → Add to Home Screen.\nAndroid / PC: open in Chrome or Edge → Install app.\n\n';
+  try{if(isNative&&window.Capacitor.Plugins.Share){await window.Capacitor.Plugins.Share.share({title:'ACL Decision Planner',text:text+url});return}if(navigator.share){await navigator.share({title:'ACL Decision Planner',text,url});return}await navigator.clipboard.writeText(text+url);toast('Link copied')}catch{}};
 $('#setBtn').onclick=()=>{['doctor','title','clinic','phone','address'].forEach(k=>$('#set_'+k).value=SET[k]||'');$('#menuSheet').hidden=true;$('#setSheet').hidden=false};
 $('#setSave').onclick=async()=>{['doctor','title','clinic','phone','address'].forEach(k=>SET[k]=$('#set_'+k).value.trim());try{await DB.put({id:'__settings',set:SET})}catch{}$('#setSheet').hidden=true;toast('Letterhead saved')};
 

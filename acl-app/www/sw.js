@@ -1,4 +1,4 @@
-const VERSION='acl-v1.6.0';
+const VERSION='acl-v1.7.0';
 const FILES=['./','./index.html','./manifest.webmanifest','./pdf.bundle.js','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png','./icons/apple-touch-icon.png',
 './fonts/archivo-latin-400-normal.woff2','./fonts/archivo-latin-500-normal.woff2','./fonts/archivo-latin-600-normal.woff2','./fonts/archivo-latin-700-normal.woff2',
 './fonts/ibm-plex-mono-latin-400-normal.woff2','./fonts/ibm-plex-mono-latin-500-normal.woff2','./fonts/ibm-plex-mono-latin-600-normal.woff2'];
