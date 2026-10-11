@@ -215,7 +215,7 @@ details[open] summary{margin-bottom:8px}
 .g .bar2 i{display:block;height:100%;background:var(--accent)}
 .g.top .bar2 i{background:var(--ok)}
 .g ul{margin:0;padding-left:16px;font-size:11.5px;color:var(--muted)}
-.modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .refs{font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px;margin:0;padding-left:18px}
 .refs a{color:var(--accent)}
 .banner{font-size:12.5px;padding:9px 11px;border-radius:9px;background:var(--soft);border-left:3px solid var(--accent)}
@@ -300,6 +300,7 @@ details.visit .fgrid{margin-bottom:8px}
           <div class="form"><label for="calmm">Scale bar length (mm)</label><input id="calmm" type="number" min="1" step="1"></div>
           <p class="fine" id="scaleout"></p>
         </div>
+        <div id="handBox"></div>
         <div id="imgForm"></div>
       </div>
       <div class="pane" id="p-ch" hidden></div>
@@ -330,7 +331,7 @@ details.visit .fgrid{margin-bottom:8px}
       <h3>Demo cases</h3>
       <div id="demoList" class="group"></div>
       <p class="fine">Decision aid only. Thresholds come from published studies and can be edited under Decision → Thresholds. Confirm every measurement on the original images. Not a certified medical device.</p>
-      <p class="fine">Version 1.2</p>
+      <p class="fine">Version 1.3</p>
     </div>
   </div>
 </div>
@@ -366,7 +367,31 @@ const MODES={
   ['N2','Notch rim, back','Articular contour just behind the notch'],
   ['ND','Deepest point','Deepest point of the notch']]}
 };
-const MODE_ORDER=['slope','att','notch'];
+MODES.hand={name:'Hand X-ray',sub:'skeletal maturity',hint:'PA X-ray of the left hand and wrist. Answer the three questions below (Sanders stage). Optionally tap the edges of an epiphysis and its metaphysis (middle phalanx of the middle finger) to check whether the epiphysis covers the metaphysis.',pts:[
+  ['E1','Epiphysis, one edge','Radial edge of the middle-phalanx epiphysis (middle finger)'],
+  ['E2','Epiphysis, other edge','Ulnar edge of the same epiphysis'],
+  ['M1','Metaphysis, one edge','Radial edge of the metaphysis just below the physis'],
+  ['M2','Metaphysis, other edge','Ulnar edge of the metaphysis']]};
+const MODE_ORDER=['slope','att','notch','hand'];
+const SANDERS=[null,
+ {n:'Juvenile slow',t:'Digital epiphyses not covered: narrower than their metaphyses.',g:0,phv:'Before the growth spurt; years of growth remain.'},
+ {n:'Pre-adolescent slow',t:'All digital epiphyses covered: as wide as their metaphyses.',g:0,phv:'Growth spurt about to start.'},
+ {n:'Adolescent rapid, early',t:'Most digital epiphyses capped: their borders curve over the metaphyses.',g:1,phv:'Peak height velocity usually at this stage.'},
+ {n:'Adolescent rapid, late',t:'Any distal phalangeal physis has started to close.',g:1,phv:'Still in the rapid phase, just past the peak.'},
+ {n:'Adolescent steady, early',t:'All distal phalangeal physes closed; the others open.',g:1,phv:'Growth slowing.'},
+ {n:'Adolescent steady, late',t:'Middle or proximal phalangeal physes closing.',g:1,phv:'Growth slowing further.'},
+ {n:'Early mature',t:'All phalangeal physes closed; only the distal radial physis open.',g:2,phv:'Little growth left (on average < 2 cm per year over < 1.7 years).'},
+ {n:'Mature',t:'Distal radial physis completely closed.',g:3,phv:'Growth complete.'}];
+function sandersStage(d){if(!d.hRad)return null;if(d.hRad==='fused')return 8;if(!d.hPhal)return null;
+  if(d.hPhal==='allclosed')return 7;if(d.hPhal==='midprox')return 6;if(d.hPhal==='distalClosed')return 5;if(d.hPhal==='distalStart')return 4;
+  if(!d.hEpi)return null;return d.hEpi==='capped'?3:d.hEpi==='covered'?2:1}
+function handBoxHTML(){const d=S.d,st=sandersStage(d),r=computeImage();const seg=(k,o)=>`<div class="seg">${o.map(([v,l])=>`<button data-k="${k}" data-v="${v}" class="${d[k]===v?'on':''}">${l}</button>`).join('')}</div>`;
+  let h=`<div class="group"><h3>Sanders skeletal maturity stage</h3>
+   <p class="fine">1. Distal radial physis</p>${seg('hRad',[['open','Open'],['partial','Closing'],['fused','Fully fused']])}`;
+  if(d.hRad&&d.hRad!=='fused')h+=`<p class="fine">2. Phalangeal physes (fingers 2–5)</p><select data-k="hPhal" class="inp"><option value="">—</option>${[['allopen','All open'],['distalStart','Some distal phalangeal physes starting to close'],['distalClosed','All distal phalangeal physes closed, others open'],['midprox','Middle or proximal phalangeal physes closing'],['allclosed','All phalangeal physes closed']].map(([v,l])=>`<option value="${v}" ${d.hPhal===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  if(d.hRad&&d.hRad!=='fused'&&d.hPhal==='allopen')h+=`<p class="fine">3. Digital epiphyses compared with their metaphyses${r.capRatio!=null?` · measured width ratio <b>${r.capRatio.toFixed(2)}</b> (${r.capRatio<0.97?'narrower: not covered':'as wide or wider: covered'})`:''}</p>${seg('hEpi',[['narrow','Narrower'],['covered','As wide'],['capped','Capping']])}`;
+  if(st){const x=SANDERS[st];h+=`<div class="rec" style="padding:10px 12px"><span class="l">Result</span><span class="h">Sanders stage ${st} · ${x.n}</span><span class="fine">${x.t} ${x.phv}</span><div class="row"><button class="btn primary" data-goto="ch">See the paediatric plan</button></div></div>`}
+  return h+`<p class="fine">Sanders staging gives skeletal maturity, not bone age in years. Enter a formal Greulich–Pyle bone age, if you have one, on the Child tab.</p></div>`}
 
 /* ---------- thresholds ---------- */
 const TH_DEFAULT={letAge:25,beighton:4,beightonChild:6,recurvLET:10,ptsLET:12,ptsRev:12,ptsPrim:15,ptsTarget:5,recurvACWO:10,attHigh:6,notch:2,ltsMRI:8.5,kt:3,varusConsider:3,varusHTO:5,htoTarget:1,htoTargetOA:3,childDelay:12,mclWait:6};
@@ -465,7 +490,7 @@ const FORMS={
 const BLANK={age:'',sex:'M',side:'R',sport:'I',goal:'return',level:'rec',tegner:'',job:'light',pray:false,sprint:false,pfp:false,weeks:'',episodes:'',contra:false,revision:false,revN:1,prevGraft:'HT',tunnel:'',tunnelBad:false,hop:'',kos:'',grs:'',
  lachman:'2',endpoint:'soft',pivot:'2',kt:'',effusion:'none',extDef:'',flex:'',flexOther:'',lag:false,locked:false,mcl:'0',mclTib:false,plc:'0',thrust:false,recurv:'',recurvOther:'',
  pts:'',lts:'',att:'',telos:'',notch:'',tear:'complete',pct:'lt50',pl:false,meniscus:'none',segond:false,cart:'none',hka:'',mpta:'',kl:'0',medMen:false,width:'',acwoLevel:'supra',depth:'',
- physes:'closed',tanner:'',boneAge:'',menarche:'na',childInj:'mid',spine:'1'};
+ physes:'closed',tanner:'',boneAge:'',hRad:'',hPhal:'',hEpi:'',menarche:'na',childInj:'mid',spine:'1'};
 for(let i=0;i<9;i++)BLANK['b'+i]=false;
 
 let S={d:{...BLANK},P:{},cal:{att:50,notch:50},th:{...TH_DEFAULT},tab:'pt',mode:'slope',active:'A1',noViewer:false,sc:{tp:'preop',view:'ikdc',d:{}},rec:blankRec(),caseId:null};
@@ -485,6 +510,7 @@ function computeImage(){const r={};
   const g=slopeGeom(S.P.slope||{});if(g)r.pts=g.deg;
   const t=S.P.att||{};if(t.PA&&t.PP&&t.FC){const a=norm(sub(t.PA,t.PP));const d=dot(sub(t.PP,t.FC),a);const k=mmpp('att');r.attPx=d;r.att=k?d*k:null}
   const n=S.P.notch||{};if(n.N1&&n.N2&&n.ND){const e=norm(sub(n.N2,n.N1)),w=sub(n.ND,n.N1);const d=Math.abs(w.x*e.y-w.y*e.x);const k=mmpp('notch');r.notchPx=d;r.notch=k?d*k:null}
+  const hd=S.P.hand||{};if(hd.E1&&hd.E2&&hd.M1&&hd.M2)r.capRatio=len(sub(hd.E1,hd.E2))/len(sub(hd.M1,hd.M2));
   return r}
 function vals(){const im=computeImage();const d=S.d;const g=k=>num(d[k])!=null?num(d[k]):(im[k]!=null?im[k]:null);
   return{pts:g('pts'),att:g('att'),notch:g('notch'),lts:num(d.lts),telos:num(d.telos),im}}
@@ -498,8 +524,11 @@ function maturity(d){const sex=d.sex;const ba=num(d.boneAge)!=null?num(d.boneAge
   const gs=[];if(tan){out.gT=tan<=2?0:tan<=4?1:2;gs.push(out.gT)}
   if(ba!=null){out.gB=sex==='F'?(ba<11?0:ba<14?1:2):(ba<13?0:ba<16?1:2);gs.push(out.gB)}
   if(sex==='F'&&d.menarche==='gt1'){out.gM=2;gs.push(2)}
+  const ss=sandersStage(d);if(ss){out.sanders=ss;out.gS=SANDERS[ss].g;if(out.gS<3)gs.push(out.gS)}
   let g=gs.length?Math.min(...gs):null;
   if(out.gT!=null&&out.gB!=null&&out.gT!==out.gB)out.notes.push('Tanner stage and bone age disagree: the less mature group is used.');
+  if(out.gS!=null&&out.gS<3&&gs.some(x=>x!==out.gS))out.notes.push('Sanders stage and the other markers point to different groups: the less mature group is used.');
+  if(ss===8&&d.physes!=='closed')out.notes.push('Hand X-ray is mature (Sanders 8): knee physes are almost certainly closing or closed.');
   if(d.physes==='closed')g=3;else if(d.physes==='closing'&&(g==null||g<2)){if(g!=null&&g<2)out.notes.push('Physes reported as closing although the other markers suggest more growth: check the X-ray.');g=2}
   out.g=g;const stop=sex==='F'?14:16;
   if(ba!=null&&g!==3){out.years=Math.max(0,stop-ba);out.femur=out.years*10;out.tibia=out.years*6}
@@ -727,7 +756,8 @@ document.addEventListener('input',e=>{const i=e.target;if(!i.dataset||!i.dataset
 function renderChild(){const el=$('#p-ch');const d=S.d;const a=num(d.age);
   const adult=d.physes==='closed'&&(a==null||a>=16);
   el.innerHTML=(adult?`<div class="banner">Physes are set to closed. Set them to open or closing for a child or adolescent; the Decision tab then adds the paediatric plan.</div>`:'')+
-   FORMS.ch.map(([title,fs])=>`<div class="group"><h3>${title}</h3><div class="fgrid">${fs.map(f=>fieldHTML(f,d,{})).join('')}</div></div>`).join('')+'<div id="chOut" class="group"></div>';
+   FORMS.ch.map(([title,fs])=>`<div class="group"><h3>${title}</h3><div class="fgrid">${fs.map(f=>fieldHTML(f,d,{})).join('')}</div></div>`).join('')+`<div class="group"><h3>Hand X-ray</h3><p class="fine">${sandersStage(d)?`Sanders stage ${sandersStage(d)} · ${SANDERS[sandersStage(d)].n}`:'Stage skeletal maturity on a hand and wrist X-ray (Sanders).'}</p><div class="row"><button class="btn primary" id="handGo">${sandersStage(d)?'Review hand X-ray':'Assess hand X-ray'}</button></div></div>`+'<div id="chOut" class="group"></div>';
+  $('#handGo').onclick=()=>{S.noViewer=false;selectTab('img');chooseMode('hand')};
   renderChildOut()}
 function renderChildOut(){const el=$('#chOut');if(!el)return;el.innerHTML=childCards(decide(),true)}
 function tannerRef(){return`<details><summary>Tanner stages</summary><table class="mt"><tr><th>Stage</th><th>Girls</th><th>Boys</th></tr>
@@ -745,6 +775,7 @@ function childCards(R,withRef){const d=S.d;if(!R.child)return'';const m=R.mat;le
    <table class="mt"><tr><td>Tanner stage</td><td class="n">${d.tanner||'—'}</td><td class="ref">${m.gT!=null?['pre','adol','near'][m.gT]:''}</td></tr>
    <tr><td>${m.usedBoneAge?'Bone age':'Chronological age (no bone age)'}</td><td class="n">${m.ba!=null?f1(m.ba)+' y':'—'}</td><td class="ref">${m.gB!=null?['pre','adol','near'][m.gB]:''}</td></tr>
    ${d.sex==='F'?`<tr><td>Menarche</td><td class="n">${{na:'not yet',lt1:'< 1 y',gt1:'> 1 y'}[d.menarche]}</td><td></td></tr>`:''}
+   ${m.sanders?`<tr><td>Hand X-ray (Sanders)</td><td class="n">stage ${m.sanders}</td><td class="ref">${SANDERS[m.sanders].n}</td></tr>`:''}
    <tr><td>Physes</td><td class="n">${d.physes}</td><td></td></tr>
    ${m.years!=null?`<tr><td>Growth left (to ${d.sex==='F'?14:16} y bone age)</td><td class="n">${f1(m.years)} y</td><td class="ref">≈ ${f0(m.femur)} mm femur + ${f0(m.tibia)} mm tibia</td></tr>`:''}</table>
    ${m.notes.map(n=>`<p class="why">${n}</p>`).join('')}
@@ -847,7 +878,9 @@ const REFS=[
  ['Crawford 2019, timing of paediatric ACLR (contrary data). J Pediatr Orthop.','10.1097/BPO.0000000000000960'],
  ['Tegner & Lysholm 1985, rating systems for knee ligament injuries (Tegner, Lysholm). Clin Orthop Relat Res.','pmid:4028566'],
  ['Irrgang 2006, responsiveness of the IKDC subjective knee form (11.5 / 20.5-point change). Am J Sports Med.','10.1177/0363546506288855'],
- ['Webster 2008, ACL-RSI scale. Phys Ther Sport.','10.1016/j.ptsp.2007.09.003']];
+ ['Webster 2008, ACL-RSI scale. Phys Ther Sport.','10.1016/j.ptsp.2007.09.003'],
+ ['Sanders 2008, simplified skeletal maturity staging on hand X-rays. J Bone Joint Surg Am.','10.2106/JBJS.G.00004'],
+ ['Hung 2017, SSMS stages, peak height velocity and growth remaining. J Bone Joint Surg Am.','10.2106/JBJS.16.01078']];
 function summary(R){const d=S.d,v=R.v,L=[];
   L.push(`ACL plan · ${d.age||'?'} y ${d.sex}, ${d.side==='L'?'left':'right'} knee${d.revision?' · revision':''}`);
   if(R.spine){L.push(`Tibial spine avulsion type ${d.spine}`);R.timing.forEach(t=>L.push('- '+t))}
@@ -926,6 +959,7 @@ function overlays(){const m=S.mode,pts=S.P[m]||{};const r=computeImage();
     line(add(pts.PP,mul(n,-90)),add(pts.PP,mul(n,90)),COL.alt,1.2,[5,4]);
     if(pts.FC){line(add(pts.FC,mul(n,-90)),add(pts.FC,mul(n,90)),COL.ghost,1.2,[5,4]);const dd=dot(sub(pts.PP,pts.FC),u);const a0=add(pts.FC,mul(n,dot(sub(pts.PP,pts.FC),n)));line(a0,add(a0,mul(u,dd)),COL.meas,2.2);
       tag(add(a0,mul(u,dd)),r.att!=null?`ATT ${f1(r.att)} mm`:`ATT ${f1(dd)} px (calibrate)`,COL.meas,10,22)}}
+  if(m==='hand'){if(pts.E1&&pts.E2)line(pts.E1,pts.E2,COL.meas,2);if(pts.M1&&pts.M2)line(pts.M1,pts.M2,COL.alt,2);if(r.capRatio!=null)tag(pts.E2,`E/M ${r.capRatio.toFixed(2)}`,COL.meas,12,-12)}
   if(m==='notch'&&pts.N1&&pts.N2){const [a,b]=ext(pts.N1,pts.N2,.5);line(a,b,COL.line,1.4);
     if(pts.ND){const e=norm(sub(pts.N2,pts.N1));const f=add(pts.N1,mul(e,dot(sub(pts.ND,pts.N1),e)));line(pts.ND,f,COL.meas,2);tag(pts.ND,r.notch!=null?`Notch ${f1(r.notch)} mm`:`Notch ${f1(r.notchPx)} px (calibrate)`,COL.meas,12,14)}}
   for(const k in pts){const s=toS(pts[k]);const on=k===S.active;ctx.save();ctx.lineWidth=on?2.4:1.6;ctx.strokeStyle=on?'#fff':COL.pt;ctx.fillStyle='rgba(5,8,11,.5)';
@@ -938,7 +972,7 @@ function loupe(p,dpr,im){const r=cv.getBoundingClientRect();const s=toS(p);const
 
 /* ---------- imaging pane ---------- */
 function renderImg(){const md=MODES[S.mode];const r=computeImage();
-  const val={slope:r.pts!=null?f1(r.pts)+'°':'',att:r.att!=null?f1(r.att)+' mm':r.attPx!=null?'needs scale':'',notch:r.notch!=null?f1(r.notch)+' mm':r.notchPx!=null?'needs scale':''};
+  const val={slope:r.pts!=null?f1(r.pts)+'°':'',att:r.att!=null?f1(r.att)+' mm':r.attPx!=null?'needs scale':'',notch:r.notch!=null?f1(r.notch)+' mm':r.notchPx!=null?'needs scale':'',hand:sandersStage(S.d)?'Sanders '+sandersStage(S.d):''};
   $('#modes').innerHTML=MODE_ORDER.map(k=>`<button class="sl ${k===S.mode?'on':''}" data-m="${k}"><b>${MODES[k].name}</b><span>${val[k]||MODES[k].sub}</span></button>`).join('');
   $$('#modes .sl').forEach(b=>b.onclick=()=>chooseMode(b.dataset.m));
   $('#modeHint').textContent=md.hint;$('#hideViewer').textContent=S.noViewer?'Show viewer':'Hide viewer';
@@ -946,6 +980,7 @@ function renderImg(){const md=MODES[S.mode];const r=computeImage();
   $$('#steps .step').forEach(b=>b.onclick=()=>{S.active=b.dataset.id;update()});
   const can=!!(curImg()&&P(S.mode,S.active));$('#delPt').hidden=!can;$('#delPt2').hidden=!can;
   $('#calBox').hidden=!md.cal;if(md.cal){$('#calmm').value=S.cal[S.mode];const k=mmpp(S.mode);$('#scaleout').textContent=k?`${k.toFixed(3)} mm/px`:'No scale yet: place both ends of the scale bar.'}
+  $('#handBox').innerHTML=S.mode==='hand'?handBoxHTML():'';$$('#handBox [data-goto]').forEach(b=>b.onclick=()=>selectTab(b.dataset.goto));
   renderPrompt()}
 $('#calmm').addEventListener('input',e=>{const x=num(e.target.value);if(x){S.cal[S.mode]=x;update()}});
 $('#hideViewer').onclick=()=>{S.noViewer=!S.noViewer;layout();update()};
