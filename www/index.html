@@ -163,10 +163,15 @@ details[open] summary{margin-bottom:8px}
   .grab{display:block;border:0;background:none;padding:7px 0 2px;cursor:pointer}
   .grab i{display:block;width:38px;height:4px;border-radius:4px;background:var(--line);margin:0 auto}
 }
+.iosHint{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;background:#0b1116;color:#e6ecf1;border:1px solid #45b9c9;border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:13.5px}
+.iosHint div{display:flex;flex-direction:column;gap:2px}
+.iosHint svg{vertical-align:-3px}
+.iosHint button{background:none;border:0;color:#8d9aa6;font-size:16px;cursor:pointer;padding:2px 4px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
+<div class="iosHint" id="iosHint" hidden><div><b>Install on your iPhone</b><span>Tap <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-label="Share"><path d="M12 3v13M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Share, then <b>Add to Home Screen</b>. It then opens full-screen and works offline.</span></div><button id="iosHintX" aria-label="Dismiss">✕</button></div>
 <div class="app">
   <header class="bar">
     <div class="brand"><b>Knee Osteotomy Planner</b><span>Long-leg AP · Paley angles · single vs double level</span></div>
@@ -797,6 +802,11 @@ $('#thReset').onclick=()=>{S.th={...TH_DEFAULT};syncTh();update()};
 const adj=(id,key)=>{$(id).addEventListener('input',e=>{S[key]=+e.target.value;$(id+'o').textContent=e.target.value+'%'});$(id).addEventListener('change',()=>{buildFiltered();autosave()})};
 adj('#con','con');adj('#bri','bri');
 $('#inv').addEventListener('change',e=>{S.inv=e.target.checked;buildFiltered();autosave()});
+
+/* ---------- iPhone install hint ---------- */
+(()=>{const ua=navigator.userAgent;const ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;let seen=false;try{seen=!!localStorage.getItem('iosHint')}catch{}
+  if(ios&&!standalone&&!isNative&&!seen){const h=$('#iosHint');setTimeout(()=>h.hidden=false,1500);$('#iosHintX').onclick=()=>{h.hidden=true;try{localStorage.setItem('iosHint','1')}catch{}}}})();
 
 /* ---------- boot ---------- */
 syncTh();resize();
