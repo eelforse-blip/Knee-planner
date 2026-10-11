@@ -541,6 +541,8 @@ const REFS=[
  ['Tegner & Lysholm 1985, rating systems for knee ligament injuries (Tegner, Lysholm). Clin Orthop Relat Res.','pmid:4028566'],
  ['Irrgang 2006, responsiveness of the IKDC subjective knee form (11.5 / 20.5-point change). Am J Sports Med.','10.1177/0363546506288855'],
  ['Webster 2008, ACL-RSI scale. Phys Ther Sport.','10.1016/j.ptsp.2007.09.003'],
+ ['Irrgang 1998, Knee Outcome Survey – activities of daily living scale. J Bone Joint Surg Am.','10.2106/00004623-199808000-00006'],
+ ['Fitzgerald 2000, screening for potential copers and non-operative ACL rehabilitation. J Orthop Sports Phys Ther.','10.2519/jospt.2000.30.4.194'],
  ['Sanders 2008, simplified skeletal maturity staging on hand X-rays. J Bone Joint Surg Am.','10.2106/JBJS.G.00004'],
  ['Hung 2017, SSMS stages, peak height velocity and growth remaining. J Bone Joint Surg Am.','10.2106/JBJS.16.01078']];
 function summary(R){const d=S.d,v=R.v,L=[];
@@ -669,7 +671,19 @@ function renderPrompt(){const md=MODES[S.mode];const st=md.pts.find(p=>p[0]===S.
 /* ---------- outcome scores: Tegner, Lysholm, IKDC subjective, IKDC examination, ACL-RSI ---------- */
 const TP=[['preinj','Pre-injury'],['preop','Pre-op'],['m3','3 months'],['m6','6 months'],['m9','9 months'],['m12','12 months'],['m24','24 months']];
 const TPL=Object.fromEntries(TP);
-const SCORE_VIEWS=[['tegner','Tegner'],['lys','Lysholm'],['ikdc','IKDC'],['obj','IKDC exam'],['rsi','ACL-RSI']];
+const SCORE_VIEWS=[['tegner','Tegner'],['lys','Lysholm'],['ikdc','IKDC'],['obj','IKDC exam'],['coper','Coper / KOS'],['rsi','ACL-RSI']];
+const KOS_SYM=['Pain','Stiffness','Swelling','Giving way, buckling or shifting of the knee','Weakness','Limping'];
+const KOS_SYM_O=[[5,'I do not have the symptom'],[4,'I have it, but it does not affect my activity'],[3,'It affects my activity slightly'],[2,'It affects my activity moderately'],[1,'It affects my activity severely'],[0,'It prevents me from all daily activities']];
+const KOS_FUN=['Walk','Go up stairs','Go down stairs','Stand','Kneel on the front of the knee','Squat','Sit with the knee bent','Rise from a chair'];
+const KOS_FUN_O=[[5,'Not difficult'],[4,'Minimally difficult'],[3,'Somewhat difficult'],[2,'Fairly difficult'],[1,'Very difficult'],[0,'Unable to do']];
+const HOPS=[['s','Single hop for distance','cm',0],['t','Triple hop for distance','cm',0],['c','Crossover hop for distance','cm',0],['6','6-metre timed hop','s',1]];
+function kosScore(t){const k=t.kos||{};const a=[...Array(14).keys()].map(i=>num(k['k'+i])).filter(x=>x!=null);return a.length>=13?a.reduce((s,x)=>s+x,0)/(5*a.length)*100:null}
+function hopLSI(c,id,timed){const i=num(c[id+'_i']),u=num(c[id+'_u']);if(!i||!u)return null;return timed?u/i*100:i/u*100}
+function coperResult(t){const c=t.cop||{};const kos=kosScore(t),grs=num(c.grs),hop=hopLSI(c,'6',1);const ep=num(c.ep)!=null?num(c.ep):num(S.d.episodes);
+  const crit=[[hop==null?null:hop>=80,'Timed 6-m hop ≥ 80 % of the other leg',hop!=null?f0(hop)+' %':'—'],[kos==null?null:kos>=80,'KOS activities of daily living ≥ 80 %',kos!=null?f0(kos)+' %':'—'],
+    [grs==null?null:grs>=60,'Global rating of knee function ≥ 60 %',grs!=null?f0(grs)+' %':'—'],[ep==null?null:ep<=1,'No more than 1 giving-way episode since injury',ep!=null?String(ep):'—']];
+  const excl=[];const d=S.d;if(['repair','bucket','ramp','mroot','lroot'].includes(d.meniscus))excl.push('Repairable meniscal tear on MRI');if(+d.mcl>=2)excl.push('MCL injury grade '+d.mcl);if(+d.plc>=1)excl.push('Posterolateral corner injury');if(d.contra)excl.push('Previous ACL tear of the other knee');
+  const potential=crit.some(x=>x[0]===false)?false:crit.every(x=>x[0]===true)?true:null;return{crit,potential,excl,kos,grs,hop,ep}}
 const TEGNER=[
  [10,'Competitive sport: football, rugby – national or international elite'],
  [9,'Competitive sport: football, rugby – lower divisions; ice hockey, wrestling, gymnastics'],
@@ -722,8 +736,8 @@ const RSI=[
 const RSI_OPT=(lo,hi)=>Array.from({length:11},(_,i)=>[i*10,i===0?`0 · ${lo}`:i===10?`100 · ${hi}`:String(i*10)]);
 const GRADE='ABCD';
 
-function blankTP(){return{date:'',tegner:'',lys:{},ikdc:{},rsi:{},obj:{}}}
-function scTP(k){S.sc=S.sc||{tp:'preop',view:'ikdc',d:{}};return S.sc.d[k]=S.sc.d[k]||blankTP()}
+function blankTP(){return{date:'',tegner:'',lys:{},ikdc:{},rsi:{},obj:{},kos:{},cop:{}}}
+function scTP(k){S.sc=S.sc||{tp:'preop',view:'ikdc',d:{}};const t=S.sc.d[k]=S.sc.d[k]||blankTP();t.kos=t.kos||{};t.cop=t.cop||{};return t}
 function tegnerOf(k){return k==='preinj'?num(S.d.tegner):num(scTP(k).tegner)}
 function lysScore(t){const a=LYS.map(q=>num(t.lys[q.k]));if(a.some(x=>x==null))return null;return a.reduce((s,x)=>s+x,0)}
 function lysGrade(x){return x==null?'':x>=95?'Excellent':x>=84?'Good':x>=65?'Fair':'Poor'}
@@ -735,7 +749,7 @@ function objGrade(o){const e=num(o.eff),ext=num(o.ext),fl=num(o.flex),ap=num(o.a
   g.ap=ap==null?null:ap<=2?0:ap<=5?1:ap<=10?2:3;g.pivot=pv;g.hop=hop==null?null:hop>=90?0:hop>=76?1:hop>=50?2:3;
   const w=a=>{const x=a.filter(v=>v!=null);return x.length?Math.max(...x):null};
   g.motion=w([g.ext,g.flex]);g.lig=w([g.ap,g.pivot]);g.final=g.eff!=null&&g.motion!=null&&g.lig!=null?Math.max(g.eff,g.motion,g.lig):null;return g}
-function scoreRow(k){const t=scTP(k);return{tegner:tegnerOf(k),lys:lysScore(t),ikdc:ikdcScore(t).score,obj:objGrade(t.obj).final,rsi:rsiScore(t),date:t.date}}
+function scoreRow(k){const t=scTP(k);const cr=coperResult(t);return{tegner:tegnerOf(k),lys:lysScore(t),ikdc:ikdcScore(t).score,obj:objGrade(t.obj).final,kos:kosScore(t),coper:cr.kos!=null||cr.hop!=null||cr.grs!=null?cr.potential:null,rsi:rsiScore(t),date:t.date}}
 function hasData(k){const r=scoreRow(k);return Object.entries(r).some(([n,v])=>n!=='date'&&v!=null)}
 
 function optSel(path,opts,val,wide){return`<select data-s="${path}" ${wide?'style="max-width:none;width:100%"':''}><option value="">—</option>${opts.map(([v,l])=>`<option value="${v}" ${val!==''&&val!=null&&String(val)===String(v)?'selected':''}>${esc(l)}</option>`).join('')}</select>`}
@@ -758,6 +772,15 @@ function renderScores(){const el=$('#p-sc');S.sc=S.sc||{tp:'preop',view:'ikdc',d
      <label>Anterior translation, side-to-side (Lachman / KT)</label><input type="number" inputmode="decimal" step="any" data-s="obj.ap" value="${esc(o.ap??'')}"><span class="u">mm</span>
      <label>Pivot shift</label>${sel('pivot',[[0,'A · equal'],[1,'B · glide'],[2,'C · clunk'],[3,'D · gross']])}
      <label>Single-leg hop, % of other leg</label><input type="number" inputmode="decimal" step="any" data-s="obj.hop" value="${esc(o.hop??'')}"><span class="u">%</span></div></div>`}
+  if(view==='coper'){const c=t.cop;const ni=(key,u)=>`<input type="number" inputmode="decimal" step="any" data-s="cop.${key}" value="${esc(c[key]??'')}"><span class="u">${u}</span>`;
+    h+=`<div class="group"><h3>Before testing (knee must be ready)</h3>${[['pre_eff','Trace effusion or less'],['pre_rom','Full range of motion'],['pre_hop','Can hop on the injured leg without pain']].map(([k,l])=>`<label class="tog"><input type="checkbox" data-s="cop.${k}" ${c[k]?'checked':''}> ${l}</label>`).join('')}
+     <div class="fgrid"><label>Quadriceps strength, % of other leg</label>${ni('quad','%')}<p class="h">Testing is usually done once quadriceps strength is ≥ 70 % of the other leg.</p></div></div>
+     <div class="group"><h3>Hop tests (best of trials)</h3><table class="mt"><tr><th>Test</th><th>Injured</th><th>Other</th><th>LSI</th></tr>${HOPS.map(([id,l,u,tm])=>{const x=hopLSI(c,id,tm);return`<tr><td>${l} <span class="src">${u}</span></td><td><input type="number" inputmode="decimal" step="any" class="hopi" data-s="cop.${id}_i" value="${esc(c[id+'_i']??'')}"></td><td><input type="number" inputmode="decimal" step="any" class="hopi" data-s="cop.${id}_u" value="${esc(c[id+'_u']??'')}"></td><td class="n" id="lsi_${id}">${x!=null?f0(x)+' %':'—'}</td></tr>`}).join('')}</table>
+     <p class="fine">LSI = injured ÷ other × 100 for distance; other ÷ injured × 100 for the timed hop.</p></div>
+     <div class="group"><h3>Global rating and giving way</h3><div class="fgrid"><label>Global rating of knee function today (0 = cannot do any activity, 100 = pre-injury level)</label>${ni('grs','%')}
+     <label>Giving-way episodes since injury</label><input type="number" inputmode="decimal" step="1" data-s="cop.ep" value="${esc(c.ep??'')}" placeholder="${esc(S.d.episodes??'')}"><span class="u">n</span></div></div>
+     <div class="group"><h3>KOS – activities of daily living scale</h3><p class="fine">Symptoms: to what degree does each symptom affect your level of daily activity?</p>${KOS_SYM.map((l,i)=>qBlock('kos.k'+i,(i+1)+'. '+l,KOS_SYM_O,t.kos['k'+i])).join('')}
+     <p class="fine" style="margin-top:8px">Function: how does your knee affect your ability to…</p>${KOS_FUN.map((l,i)=>qBlock('kos.k'+(i+6),(i+7)+'. '+l,KOS_FUN_O,t.kos['k'+(i+6)])).join('')}</div>`}
   if(view==='rsi')h+=`<div class="group"><h3>ACL-RSI (return to sport after injury)</h3><p class="fine">Each item 0–100 in steps of 10; 100 is always the most positive answer. Score = mean of the items.</p>${RSI.map((q,i)=>qBlock('rsi.r'+i,(i+1)+'. '+q[0],RSI_OPT(q[1],q[2]),t.rsi['r'+i])).join('')}</div>`;
   h+=`<div class="group" id="scHist"></div>`;
   const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;renderScoreLive();renderScoreHistory();
@@ -772,6 +795,12 @@ function renderScoreLive(){const el=$('#scLive');if(!el)return;const k=S.sc.tp,t
   if(view==='lys'){const x=lysScore(t),n=LYS.filter(q=>num(t.lys[q.k])!=null).length;h=`<div class="figs"><div><span class="k">Lysholm</span><span class="v">${x??(n?'…':'—')}<small>/100</small></span></div><div><span class="k">Grade</span><span class="v" style="font-size:16px">${lysGrade(x)||n+'/8 answered'}</span></div></div>`}
   if(view==='ikdc'){const r=ikdcScore(t);h=`<div class="figs"><div><span class="k">IKDC subjective</span><span class="v">${r.score!=null?f1(r.score):'—'}<small>/100</small></span></div><div><span class="k">Answered</span><span class="v">${r.answered}<small>/18</small></span></div></div><p class="fine">${r.score==null?'Scored once at least 16 of 18 items are answered.':'Score = sum of item scores ÷ maximum possible for the answered items × 100.'}</p>`}
   if(view==='obj'){const g=objGrade(t.obj);const G=x=>x==null?'—':GRADE[x];h=`<div class="figs"><div><span class="k">IKDC grade</span><span class="v">${G(g.final)}</span></div><div><span class="k">Effusion</span><span class="v">${G(g.eff)}</span></div><div><span class="k">Motion</span><span class="v">${G(g.motion)}</span></div><div><span class="k">Ligament</span><span class="v">${G(g.lig)}</span></div><div><span class="k">Hop</span><span class="v">${G(g.hop)}</span></div></div><p class="fine">A normal · B nearly normal · C abnormal · D severely abnormal. The final grade is the worst of effusion, motion and ligament groups; the hop test is recorded but not included.</p>`}
+  if(view==='coper'){const r=coperResult(t);
+    h=`<div class="figs"><div><span class="k">KOS-ADLS</span><span class="v">${r.kos!=null?f0(r.kos):'—'}<small>%</small></span></div><div><span class="k">Global</span><span class="v">${r.grs!=null?f0(r.grs):'—'}<small>%</small></span></div><div><span class="k">Timed hop</span><span class="v">${r.hop!=null?f0(r.hop):'—'}<small>%</small></span></div><div><span class="k">Giving way</span><span class="v">${r.ep??'—'}</span></div></div>
+     <p class="big2"><span class="pill ${r.potential===true?'ok':r.potential===false?'bad':'mut'}">${r.potential===true?'Potential coper':r.potential===false?'Non-coper':'Incomplete'}</span></p>
+     <ul class="lst chk">${r.crit.map(([y,l,v])=>`<li class="${y?'y':'n'}">${l}: <b>${v}</b>${y===false?' — not met':''}</li>`).join('')}</ul>
+     ${r.excl.length?`<p class="fine" style="color:var(--bad)">Not a candidate for non-operative screening: ${r.excl.join('; ')}.</p>`:''}
+     <p class="fine">Potential copers are candidates for a trial of intensive rehabilitation (Fitzgerald 2000). The screen predicts modestly: most patients classed as non-copers still coped after rehabilitation (Moksnes 2008).${S.sc.tp==='preop'?' Pre-op values also feed the Decision tab.':''}</p>`}
   if(view==='rsi'){const x=rsiScore(t);h=`<div class="figs"><div><span class="k">ACL-RSI</span><span class="v">${x!=null?f1(x):'—'}<small>/100</small></span></div></div><p class="fine">Higher = more psychologically ready to return to sport. Scored once at least 10 of 12 items are answered.</p>`}
   el.innerHTML=`<div class="rec" style="padding:10px 12px">${h}</div>`}
 function scoreHistoryRows(){const rows=TP.filter(([k])=>hasData(k)).map(([k,l])=>({k,l,...scoreRow(k)}));return rows}
@@ -780,8 +809,8 @@ function renderScoreHistory(){const el=$('#scHist');if(!el)return;const rows=sco
   const G=x=>x==null?'—':GRADE[x];
   const base=rows.find(r=>r.k==='preop'&&r.ikdc!=null),last=[...rows].reverse().find(r=>r.k!=='preop'&&r.k!=='preinj'&&r.ikdc!=null);
   let ch='';if(base&&last){const dlt=last.ikdc-base.ikdc;ch=`<p class="fine">IKDC change pre-op → ${last.l}: <b>${dlt>=0?'+':''}${f1(dlt)}</b> points. ${dlt>=20.5?'Above 20.5: clearly improved (high specificity).':dlt>=11.5?'Above 11.5: likely a meaningful improvement.':'Below the 11.5-point threshold for meaningful improvement.'} (Irrgang 2006)</p>`}
-  el.innerHTML=`<h3>History</h3><div style="overflow-x:auto"><table class="mt"><tr><th>Time point</th><th>Tegner</th><th>Lysholm</th><th>IKDC</th><th>Exam</th><th>RSI</th></tr>
-   ${rows.map(r=>`<tr><td>${r.l}${r.date?`<div class="ref">${esc(r.date)}</div>`:''}</td><td class="n">${r.tegner??'—'}</td><td class="n">${r.lys??'—'}</td><td class="n">${r.ikdc!=null?f1(r.ikdc):'—'}</td><td class="n">${G(r.obj)}</td><td class="n">${r.rsi!=null?f0(r.rsi):'—'}</td></tr>`).join('')}</table></div>${ch}${trendSVG(rows)}`}
+  el.innerHTML=`<h3>History</h3><div style="overflow-x:auto"><table class="mt"><tr><th>Time point</th><th>Tegner</th><th>Lysholm</th><th>IKDC</th><th>Exam</th><th>KOS</th><th>RSI</th></tr>
+   ${rows.map(r=>`<tr><td>${r.l}${r.date?`<div class="ref">${esc(r.date)}</div>`:''}</td><td class="n">${r.tegner??'—'}</td><td class="n">${r.lys??'—'}</td><td class="n">${r.ikdc!=null?f1(r.ikdc):'—'}</td><td class="n">${G(r.obj)}</td><td class="n">${r.kos!=null?f0(r.kos):'—'}${r.coper!=null?(r.coper?' ✓':' ✗'):''}</td><td class="n">${r.rsi!=null?f0(r.rsi):'—'}</td></tr>`).join('')}</table></div>${ch}${trendSVG(rows)}`}
 function trendSVG(rows){const pts=rows.filter(r=>r.ikdc!=null||r.lys!=null);if(pts.length<2)return'';
   const W=320,H=130,L=30,R=10,T=12,B=26,x=i=>L+i*(W-L-R)/(pts.length-1),y=v=>T+(100-v)*(H-T-B)/100;
   const path=key=>pts.map((r,i)=>r[key]==null?null:[x(i),y(r[key])]).filter(Boolean).map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
@@ -794,14 +823,16 @@ function trendSVG(rows){const pts=rows.filter(r=>r.ikdc!=null||r.lys!=null);if(p
    </svg><p class="fine"><span style="color:var(--accent)">━ IKDC</span> · <span style="color:var(--warn)">╍ Lysholm</span></p>`}
 document.addEventListener('change',e=>{const i=e.target;if(!i.dataset||!i.dataset.s)return;const [grp,key]=i.dataset.s.split('.');const t=scTP(S.sc.tp);
   if(grp==='tegner'){if(S.sc.tp==='preinj')S.d.tegner=i.value;else t.tegner=i.value;renderScores()}
-  else{t[grp][key]=i.value;renderScoreLive();renderScoreHistory();
+  else{t[grp][key]=i.type==='checkbox'?i.checked:i.value;syncCoper();renderScoreLive();renderScoreHistory();
     if(i.type!=='number'){const opt=$('#scTp').selectedOptions[0];if(opt)opt.textContent=TPL[S.sc.tp]+(hasData(S.sc.tp)?' ✓':'')}}
   autosave()});
-document.addEventListener('input',e=>{const i=e.target;if(!i.dataset||!i.dataset.s||i.type!=='number')return;const [grp,key]=i.dataset.s.split('.');scTP(S.sc.tp)[grp][key]=i.value;renderScoreLive();autosave()});
+document.addEventListener('input',e=>{const i=e.target;if(!i.dataset||!i.dataset.s||i.type!=='number')return;const [grp,key]=i.dataset.s.split('.');const t=scTP(S.sc.tp);t[grp][key]=i.value;
+  if(grp==='cop'){HOPS.forEach(([id,,,tm])=>{const c=$('#lsi_'+id);if(c){const x=hopLSI(t.cop,id,tm);c.textContent=x!=null?f0(x)+' %':'—'}});syncCoper()}renderScoreLive();autosave()});
+function syncCoper(){if(S.sc.tp!=='preop')return;const r=coperResult(scTP('preop'));if(r.hop!=null)S.d.hop=String(Math.round(r.hop));if(r.kos!=null)S.d.kos=String(Math.round(r.kos));if(r.grs!=null)S.d.grs=String(r.grs)}
 function scoresCard(){const rows=scoreHistoryRows();if(!rows.length)return'';const G=x=>x==null?'—':GRADE[x];
-  return`<div class="card"><div class="hd"><b>Outcome scores</b><button class="btn" data-goto="sc">Open</button></div><table class="mt"><tr><th>Time point</th><th>Tegner</th><th>Lysholm</th><th>IKDC</th><th>Exam</th><th>RSI</th></tr>
-   ${rows.map(r=>`<tr><td>${r.l}</td><td class="n">${r.tegner??'—'}</td><td class="n">${r.lys??'—'}</td><td class="n">${r.ikdc!=null?f1(r.ikdc):'—'}</td><td class="n">${G(r.obj)}</td><td class="n">${r.rsi!=null?f0(r.rsi):'—'}</td></tr>`).join('')}</table></div>`}
-function scoresSummary(){const rows=scoreHistoryRows();return rows.map(r=>`${r.l}${r.date?' ('+r.date+')':''}: `+[r.tegner!=null?'Tegner '+r.tegner:'',r.lys!=null?'Lysholm '+r.lys:'',r.ikdc!=null?'IKDC '+f1(r.ikdc):'',r.obj!=null?'IKDC exam '+GRADE[r.obj]:'',r.rsi!=null?'ACL-RSI '+f0(r.rsi):''].filter(Boolean).join(', '))}
+  return`<div class="card"><div class="hd"><b>Outcome scores</b><button class="btn" data-goto="sc">Open</button></div><table class="mt"><tr><th>Time point</th><th>Tegner</th><th>Lysholm</th><th>IKDC</th><th>Exam</th><th>KOS</th><th>RSI</th></tr>
+   ${rows.map(r=>`<tr><td>${r.l}</td><td class="n">${r.tegner??'—'}</td><td class="n">${r.lys??'—'}</td><td class="n">${r.ikdc!=null?f1(r.ikdc):'—'}</td><td class="n">${G(r.obj)}</td><td class="n">${r.kos!=null?f0(r.kos):'—'}${r.coper!=null?(r.coper?' ✓':' ✗'):''}</td><td class="n">${r.rsi!=null?f0(r.rsi):'—'}</td></tr>`).join('')}</table></div>`}
+function scoresSummary(){const rows=scoreHistoryRows();return rows.map(r=>`${r.l}${r.date?' ('+r.date+')':''}: `+[r.tegner!=null?'Tegner '+r.tegner:'',r.lys!=null?'Lysholm '+r.lys:'',r.ikdc!=null?'IKDC '+f1(r.ikdc):'',r.obj!=null?'IKDC exam '+GRADE[r.obj]:'',r.kos!=null?'KOS-ADLS '+f0(r.kos)+'%':'',r.coper!=null?(r.coper?'potential coper':'non-coper'):'',r.rsi!=null?'ACL-RSI '+f0(r.rsi):''].filter(Boolean).join(', '))}
 
 /* ---------- patient record: identity, operation, follow-up visits, outcome; patient list; export ---------- */
 const O_LACH=[['0','Normal'],['1','Grade I · 3–5 mm'],['2','Grade II · 6–10 mm'],['3','Grade III · > 10 mm']];
@@ -937,12 +968,12 @@ async function exportCSV(){const list=await allCases();if(!list.length){toast('N
   const dKeys=['age','sex','side','sport','goal','level','tegner','job','weeks','episodes','revision','lachman','pivot','kt','effusion','extDef','flex','mcl','plc','recurv','recurvOther','pts','lts','att','telos','notch','tear','meniscus','segond','hka','mpta','kl','physes','tanner','boneAge','childInj'];
   const recF=REC_FORM.flatMap(([,fs])=>fs).filter(f=>f.t!=='area');
   const tps=TP.map(t=>t[0]);
-  const head=['id',...recF.map(f=>f.p),...dKeys,'beighton','recommendation','let_advice','graft_advice','slope_advice','varus_advice',...tps.flatMap(t=>['tegner_'+t,'lysholm_'+t,'ikdc_'+t,'ikdc_exam_'+t,'acl_rsi_'+t]),'visits','last_visit','op_notes','notes'];
+  const head=['id',...recF.map(f=>f.p),...dKeys,'beighton','recommendation','let_advice','graft_advice','slope_advice','varus_advice',...tps.flatMap(t=>['tegner_'+t,'lysholm_'+t,'ikdc_'+t,'ikdc_exam_'+t,'kos_adls_'+t,'coper_'+t,'acl_rsi_'+t]),'visits','last_visit','op_notes','notes'];
   const rows=[head],vrows=[['id','name','file_no','op_date','weeks_post_op',...VISIT_F.map(f=>f.p)]];
   for(const c of list)withState(c.state,()=>{const R=decide();const r=S.rec;
     const row=[c.id,...recF.map(f=>{const v=getP(r,f.p);return f.t==='sel'?lab(f,v):f.t==='chk'?(v?1:''):v??''}),...dKeys.map(k=>S.d[k]===true?1:S.d[k]===false?'':S.d[k]),beightonScore(S.d),
       R.mgmt?R.mgmt.rec:'Tibial spine avulsion',STATE[R.let.state][1],R.grafts[0].n,R.slope?STATE[R.slope.st][1]:'',R.varus?STATE[R.varus.st][1]:''];
-    tps.forEach(t=>{const s=scoreRow(t);row.push(s.tegner??'',s.lys??'',s.ikdc!=null?s.ikdc.toFixed(1):'',s.obj!=null?GRADE[s.obj]:'',s.rsi!=null?s.rsi.toFixed(0):'')});
+    tps.forEach(t=>{const s=scoreRow(t);row.push(s.tegner??'',s.lys??'',s.ikdc!=null?s.ikdc.toFixed(1):'',s.obj!=null?GRADE[s.obj]:'',s.kos!=null?s.kos.toFixed(0):'',s.coper==null?'':s.coper?'potential coper':'non-coper',s.rsi!=null?s.rsi.toFixed(0):'')});
     const vs=r.visits||[];row.push(vs.length,vs.length?vs[vs.length-1].date:'',r.op.notes||'',r.notes||'');rows.push(row);
     vs.forEach(v=>vrows.push([c.id,r.name,r.fileNo,r.op.date||'',weeksPostOp(v.date)??'',...VISIT_F.map(f=>f.t==='sel'?lab(f,v[f.p]):v[f.p]??'')]))});
   const day=new Date().toISOString().slice(0,10);
@@ -999,7 +1030,7 @@ function reportHTML(kind){const d=S.d,R=decide(),r=S.rec,v=R.v;const age=num(d.a
     h+=blk('Follow-up visits',V.length?`<table class="grid"><tr><th>Date</th><th>Wk</th><th>Ext/Flex</th><th>Effusion</th><th>Lachman · KT · Pivot</th><th>Quad / Hop</th><th>Pain</th><th>Complication</th><th>Phase · Sport</th></tr>${V.map(x=>{const w=weeksPostOp(x.date);const L=k=>lab(VISIT_F.find(f=>f.p===k),x[k]);
       return`<tr><td>${pe(x.date||'')}</td><td>${w!=null&&w>=0?Math.round(w):''}</td><td>${pe([x.extDef,x.flex].map(a=>a===''||a==null?'–':a+'°').join(' / '))}</td><td>${pe(L('effusion'))}</td><td>${pe([x.lachman!==''&&x.lachman!=null?['N','I','II','III'][+x.lachman]:'–',x.kt!==''&&x.kt!=null?x.kt+' mm':'–',x.pivot!==''&&x.pivot!=null?x.pivot:'–'].join(' · '))}</td><td>${pe([x.quad,x.hop].map(a=>a===''||a==null?'–':a+'%').join(' / '))}</td><td>${pe(x.pain??'')}</td><td>${pe(x.comp&&x.comp!=='none'?L('comp'):'')}</td><td>${pe([x.phase,L('sport')].filter(Boolean).join(' · '))}</td></tr>${x.notes?`<tr><td></td><td colspan="8" class="muted">${pe(x.notes)}</td></tr>`:''}`}).join('')}</table>`:'<p class="muted">No follow-up visits recorded.</p>');
     const rows=scoreHistoryRows();const G=x=>x==null?'—':GRADE[x];
-    let sc=rows.length?`<table class="grid"><tr><th>Time point</th><th>Date</th><th>Tegner</th><th>Lysholm</th><th>IKDC subjective</th><th>IKDC exam</th><th>ACL-RSI</th></tr>${rows.map(x=>`<tr><td>${pe(x.l)}</td><td>${pe(x.date||'')}</td><td>${x.tegner??'—'}</td><td>${x.lys!=null?x.lys+' ('+lysGrade(x.lys)+')':'—'}</td><td>${x.ikdc!=null?f1(x.ikdc):'—'}</td><td>${G(x.obj)}</td><td>${x.rsi!=null?f0(x.rsi):'—'}</td></tr>`).join('')}</table>`:'<p class="muted">No scores recorded.</p>';
+    let sc=rows.length?`<table class="grid"><tr><th>Time point</th><th>Date</th><th>Tegner</th><th>Lysholm</th><th>IKDC subjective</th><th>IKDC exam</th><th>KOS-ADLS</th><th>ACL-RSI</th></tr>${rows.map(x=>`<tr><td>${pe(x.l)}</td><td>${pe(x.date||'')}</td><td>${x.tegner??'—'}</td><td>${x.lys!=null?x.lys+' ('+lysGrade(x.lys)+')':'—'}</td><td>${x.ikdc!=null?f1(x.ikdc):'—'}</td><td>${G(x.obj)}</td><td>${x.kos!=null?f0(x.kos)+'%'+(x.coper!=null?(x.coper?' · coper':' · non-coper'):''):'—'}</td><td>${x.rsi!=null?f0(x.rsi):'—'}</td></tr>`).join('')}</table>`:'<p class="muted">No scores recorded.</p>';
     const base=rows.find(x=>x.k==='preop'&&x.ikdc!=null),last=[...rows].reverse().find(x=>x.k!=='preop'&&x.k!=='preinj'&&x.ikdc!=null);
     if(base&&last)sc+=`<p>IKDC change pre-op → ${pe(last.l)}: <b>${last.ikdc-base.ikdc>=0?'+':''}${f1(last.ikdc-base.ikdc)}</b> points.</p>`;
     h+=blk('Outcome scores',sc);h+=blk('Outcome',kvTable(recPairs(3)))};

@@ -98,3 +98,6 @@ details.visit .fgrid{margin-bottom:8px}
   .work:not(.calc){grid-template-columns:minmax(0,1fr) 520px}
 }
 @media (hover:none){.pcOnly{display:none}}
+#scView{flex-wrap:wrap}#scView button{flex:1 0 30%}
+.hopi{width:72px;padding:6px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;font-family:var(--f-num)}
+.big2{margin:4px 0}
