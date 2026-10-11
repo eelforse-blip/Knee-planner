@@ -507,12 +507,13 @@ function renderDec(){const R=decide();const d=S.d,T=S.th,v=R.v;let h='';
    ${v.pts!=null?`<tr><td>Posterior tibial slope</td><td class="n">${f1(v.pts)}° ${v.pts>=T.ptsLET?'<span class="pill bad">high</span>':'<span class="pill ok">normal</span>'}</td></tr>`:''}
    ${v.lts!=null?`<tr><td>MRI lateral slope</td><td class="n">${f1(v.lts)}° ${v.lts>=T.ltsMRI?'<span class="pill bad">high</span>':''}<div class="ref">≥ 8.5° predicted failure of hamstring ACLR (Zhang 2025)</div></td></tr>`:''}
    ${v.notch!=null?`<tr><td>Femoral notch</td><td class="n">${f1(v.notch)} mm ${v.notch>T.notch?'<span class="pill warn">deep</span>':''}</td></tr>`:''}</table></div>`;
-  h+=`<div class="row"><button class="btn" id="copy">Copy summary</button><button class="btn" id="share">Share</button></div>`;
+  h+=`<div class="row"><button class="btn primary" id="decPrint">Print / PDF</button><button class="btn" id="copy">Copy summary</button><button class="btn" id="share">Share</button></div>`;
   h+=`<details><summary>Thresholds</summary><div class="thr">${Object.keys(TH_DEFAULT).map(k=>`<label for="th_${k}">${TH_LABEL[k][0]} <span class="src">${TH_LABEL[k][1]}</span></label><input id="th_${k}" type="number" step="any" data-th="${k}" value="${T[k]}">`).join('')}</div><div class="row" style="margin-top:8px"><button class="btn" id="thReset">Reset to defaults</button></div></details>`;
   h+=`<details><summary>References</summary><ol class="refs">${REFS.map(([t,doi])=>doi.startsWith('pmid:')?`<li>${t} <a href="https://pubmed.ncbi.nlm.nih.gov/${doi.slice(5)}/" target="_blank" rel="noopener">PMID ${doi.slice(5)}</a></li>`:`<li>${t} <a href="https://doi.org/${doi}" target="_blank" rel="noopener">doi:${doi}</a></li>`).join('')}</ol></details>`;
   h+=`<p class="fine">Decision aid only. It does not replace clinical judgement, and thresholds are editable because the evidence behind several of them is limited.</p>`;
   const el=$('#p-dec');const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;
   lastSummary=summary(R);
+  $('#decPrint').onclick=openPrintSheet;
   $('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(lastSummary);toast('Summary copied')}catch{toast('Copy not available here')}};
   $('#share').onclick=async()=>{try{if(isNative&&window.Capacitor.Plugins.Share){await window.Capacitor.Plugins.Share.share({title:'ACL plan',text:lastSummary});return}if(navigator.share){await navigator.share({title:'ACL plan',text:lastSummary});return}await navigator.clipboard.writeText(lastSummary);toast('Summary copied')}catch{}};
   $$('#p-dec [data-goto]').forEach(b=>b.onclick=()=>selectTab(b.dataset.goto));
@@ -859,7 +860,7 @@ function rField(f,val,attr){const id='r_'+Math.random().toString(36).slice(2,8);
 function renderRecord(){const el=$('#p-rec');const R=S.rec;let h='';
   h+=`<div class="rec" style="padding:10px 12px"><span class="l">Patient record</span><span class="h" style="font-size:16px" id="recHead">${esc(R.name||'Unnamed patient')}${R.fileNo?' · #'+esc(R.fileNo):''}</span>
    <span class="fine">${S.caseId?'Saved in the patient list; changes save automatically.':'Not in the patient list yet.'}${R.op.date?' · Surgery '+esc(R.op.date):''}${R.visits.length?' · '+R.visits.length+' follow-up visit'+(R.visits.length>1?'s':''):''}</span>
-   <div class="row">${S.caseId?'':'<button class="btn primary" id="recSave">Add to patient list</button>'}<button class="btn" id="recShare">Share report</button></div></div>`;
+   <div class="row">${S.caseId?'':'<button class="btn primary" id="recSave">Add to patient list</button>'}<button class="btn" id="recPrint">Print / PDF</button><button class="btn" id="recShare">Share as text</button></div></div>`;
   h+=`<p class="fine">Pre-operative findings come from the History, Exam, Imaging and Child tabs; scores from the Scores tab.</p>`;
   REC_FORM.forEach(([title,fs],gi)=>{h+=`<details class="sec" ${gi<2?'open':''}><summary>${title}</summary><div class="fgrid">${fs.map(f=>rField(f,getP(R,f.p),`data-r="${f.p}"`)).join('')}</div></details>`;
     if(gi===2){h+=`<details class="sec" open><summary>Follow-up visits · ${R.visits.length}</summary><div class="group" id="visits">${visitsHTML()}</div><div class="row"><button class="btn primary" id="addVisit">Add visit</button></div></details>`}});
@@ -871,6 +872,7 @@ function visitSummary(v,i){const w=weeksPostOp(v.date);return`<b>${v.date?esc(v.
 function recHeader(){const R=S.rec,h=$('#recHead');if(h)h.textContent=(R.name||'Unnamed patient')+(R.fileNo?' · #'+R.fileNo:'')}
 function bindRecord(){const el=$('#p-rec');
   const sv=$('#recSave');if(sv)sv.onclick=()=>saveCase(true);
+  $('#recPrint').onclick=openPrintSheet;
   $('#recShare').onclick=()=>shareText('ACL patient report',recordReport());
   $('#addVisit').onclick=()=>{S.rec.visits.forEach(v=>v._open=false);S.rec.visits.push({date:new Date().toISOString().slice(0,10),comp:'none',_open:true});renderRecord();autosave();
     const last=[...$$('#visits .visit')].pop();if(last)last.scrollIntoView({block:'start'})};
@@ -900,7 +902,7 @@ async function saveCase(fromRecord){const R=S.rec;const name=(R.name||$('#caseNa
   if(!R.name)R.name=name;S.caseId=S.caseId||('c'+Date.now());
   try{await DB.put(caseRow());await saveNow();$('#caseName').value='';toast(`Saved “${name}”`);if(!$('#casesSheet').hidden)renderCases();if(S.tab==='rec')renderRecord()}catch{toast('Could not save on this device')}}
 function caseRow(){return{id:S.caseId,name:S.rec.name||'Unnamed',state:snap(),blobs:{...blobs},demo:isDemoImg(),date:Date.now()}}
-async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>c.id!=='__current').sort((a,b)=>b.date-a.date)}catch{}
+async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>!String(c.id).startsWith('__')).sort((a,b)=>b.date-a.date)}catch{}
   const q=($('#caseSearch').value||'').trim().toLowerCase();
   $('#caseCount').textContent=list.length?`${list.length} patient${list.length>1?'s':''}`:'';
   if(q)list=list.filter(c=>{const r=c.state.rec||{};return[c.name,r.fileNo,r.phone,r.op&&r.op.date].join(' ').toLowerCase().includes(q)});
@@ -914,7 +916,7 @@ async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>c.i
 /* ---------- export / backup ---------- */
 const csvCell=v=>{v=v==null?'':String(v);return/[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 const toCSV=rows=>'﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
-async function allCases(){let list=[];try{list=(await DB.all()).filter(c=>c.id!=='__current')}catch{}return list.sort((a,b)=>a.date-b.date)}
+async function allCases(){let list=[];try{list=(await DB.all()).filter(c=>!String(c.id).startsWith('__'))}catch{}return list.sort((a,b)=>a.date-b.date)}
 function withState(st,fn){const keep=S;S={...S,d:{...BLANK,...st.d},P:st.P||{},cal:{att:50,notch:50,...st.cal},th:{...TH_DEFAULT,...st.th},sc:st.sc||{tp:'preop',view:'ikdc',d:{}},rec:{...blankRec(),...(st.rec||{})}};try{return fn()}finally{S=keep}}
 async function exportCSV(){const list=await allCases();if(!list.length){toast('No saved patients to export');return}
   const dKeys=['age','sex','side','sport','goal','level','tegner','job','weeks','episodes','revision','lachman','pivot','kt','effusion','extDef','flex','mcl','plc','recurv','recurvOther','pts','lts','att','telos','notch','tear','meniscus','segond','hka','mpta','kl','physes','tanner','boneAge','childInj'];
@@ -946,6 +948,71 @@ $('#saveCase').onclick=()=>saveCase(false);
 $('#caseSearch').addEventListener('input',renderCases);
 $('#exportCsv').onclick=exportCSV;$('#backupBtn').onclick=backup;
 $('#restoreFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)restore(f)});
+
+/* ---------- printing: PDF reports ---------- */
+let SET={doctor:'',title:'Consultant Orthopaedic Surgeon · Knee & Shoulder Arthroscopy',clinic:'',phone:'',address:''};
+function loadPdfLib(){if(window.jsPDF)return Promise.resolve();return new Promise((res,rej)=>{const s=document.createElement('script');s.src='pdf.bundle.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+const pe=s=>esc(s==null?'':s);
+function fLabel(f,v){if(v===''||v==null||v===false)return'';if(f.t==='chk')return v?'Yes':'';if(f.t==='seg'||f.t==='sel'){const o=f.o.find(x=>String(x[0])===String(v));return o?o[1]:String(v)}return String(v)+(f.u&&!['n','0–10'].includes(f.u)?' '+f.u:'')}
+function kvTable(pairs){pairs=pairs.filter(p=>p[1]!==''&&p[1]!=null);if(!pairs.length)return'<p class="muted">Not recorded.</p>';
+  const rows=[];for(let i=0;i<pairs.length;i+=2)rows.push(`<tr><th>${pe(pairs[i][0])}</th><td>${pe(pairs[i][1])}</td>${pairs[i+1]?`<th>${pe(pairs[i+1][0])}</th><td>${pe(pairs[i+1][1])}</td>`:'<th></th><td></td>'}</tr>`);
+  return`<table class="kv">${rows.join('')}</table>`}
+function formPairs(tab,skip=[]){const d=S.d;const out=[];FORMS[tab].forEach(([,fs])=>fs.forEach(f=>{if(!f.k||f.t==='note'||f.t==='beighton'||skip.includes(f.k))return;if(f.show&&!f.show(d))return;
+  let v=d[f.k];if(f.m&&num(v)==null){const m=computeImage()[f.m];if(m!=null)v=f1(m)}out.push([f.l,fLabel(f,v)])}));return out}
+function recPairs(gi){const R=S.rec;return REC_FORM[gi][1].filter(f=>f.t!=='area').map(f=>[f.l,lab(f,getP(R,f.p))])}
+function blk(title,html){return`<div class="blk"><h2>${pe(title)}</h2>${html}</div>`}
+function reportHTML(kind){const d=S.d,R=decide(),r=S.rec,v=R.v;const age=num(d.age);
+  const head=`<div class="blk lh"><div><b>${pe(SET.doctor||'')}</b><span>${pe(SET.title||'')}</span><span>${pe([SET.clinic,SET.address,SET.phone].filter(Boolean).join(' · '))}</span></div><div class="lt">${pe({full:'ACL patient record',preop:'Pre-operative assessment and plan',op:'Operative note',fu:'Follow-up summary'}[kind])}</div></div>
+   <div class="blk pt"><span><b>Patient:</b> ${pe(r.name||'—')}</span><span><b>File:</b> ${pe(r.fileNo||'—')}</span><span><b>Age/Sex:</b> ${age??'—'} / ${d.sex}</span><span><b>Knee:</b> ${d.side==='L'?'Left':'Right'}</span>${r.phone?`<span><b>Phone:</b> ${pe(r.phone)}</span>`:''}<span><b>Printed:</b> ${new Date().toISOString().slice(0,10)}</span></div>`;
+  let h='';
+  const preop=()=>{
+    h+=blk('History',kvTable([...recPairs(0).filter(p=>!['Name','File number','Phone'].includes(p[0])),...formPairs('pt',['age','sex','side'])])+(r.notes?`<p>${pe(r.notes)}</p>`:''));
+    h+=blk('Examination',kvTable([...formPairs('ex'),['Beighton score',R.bg+'/9']]));
+    h+=blk('Imaging',kvTable(formPairs('img')));
+    if(R.child)h+=blk('Skeletal maturity',kvTable([...formPairs('ch'),['Maturity group',R.mat.label],['Hand X-ray (Sanders)',R.mat.sanders?`Stage ${R.mat.sanders} · ${SANDERS[R.mat.sanders].n}`:''],['Growth remaining',R.mat.years!=null?`${f1(R.mat.years)} y (≈ ${f0(R.mat.femur)} mm femur + ${f0(R.mat.tibia)} mm tibia)`:'']]));
+    let plan='';
+    if(R.mgmt){plan+=`<p class="big">${pe(R.mgmt.rec)}</p>${R.mgmt.urgent.map(u=>`<p class="warn">${pe(u)}</p>`).join('')}<ul>${R.mgmt.op.map(x=>`<li>+ ${pe(x[1])}</li>`).join('')}${R.mgmt.non.map(x=>`<li>− ${pe(x[1])}</li>`).join('')}</ul>`}
+    plan+=`<h3>Timing</h3><ul>${R.timing.map(t=>`<li>${pe(t.replace(' (checklist below)',''))}</li>`).join('')}</ul>`;
+    if(!R.spine){plan+=`<h3>Lateral extra-articular procedure: ${pe(STATE[R.let.state][1])}</h3>${R.let.crit.filter(c=>c.on).length?`<ul>${R.let.crit.filter(c=>c.on).map(c=>`<li>${pe(c.txt)}</li>`).join('')}</ul>`:''}`;
+      plan+=`<h3>Graft</h3><p>First choice: <b>${pe(R.grafts[0].n)}</b>${R.grafts[1]?` · alternative: ${pe(R.grafts[1].n)}`:''}</p><ul>${R.grafts[0].p.map(x=>`<li>${pe(x)}</li>`).join('')}</ul>`;
+      if(R.slope)plan+=`<h3>Slope correction: ${pe(STATE[R.slope.st][1])}</h3><p>${pe(R.slope.why.map(x=>/[.:]$/.test(x)?x:x+'.').join(' '))}${R.slope.st==='ind'||R.slope.st==='consider'?` Correction ${f1(R.slope.corr)}°, wedge ≈ ${f1(R.slope.wCalc!=null?R.slope.wCalc:R.slope.wRule)} mm (${R.slope.lvl==='infra'?'infratuberosity':'supratuberosity'}).`:''}</p>`;
+      if(R.varus)plan+=`<h3>Genu varum: ${pe(STATE[R.varus.st][1])}</h3><p>${pe(R.varus.why.map(x=>/[.:]$/.test(x)?x:x+'.').join(' '))}${R.varus.st==='ind'||R.varus.st==='consider'?` Correction ${f1(R.varus.corr)}° to ${f1(R.varus.tg)}° valgus; posteromedial gap ${f1(R.varus.post)} mm, anterior gap ${f1(Math.max(0,R.varus.antR))} mm.`:''}</p>`}
+    if(R.child&&!R.spine&&R.kocher)plan+=`<h3>Partial tear (Kocher): ${R.kocher.filter(x=>x[0]).length}/4 criteria</h3>`;
+    h+=blk('Assessment and plan',plan)};
+  const op=()=>{h+=blk('Operation',kvTable(recPairs(1))+(r.op.notes?`<h3>Operative notes</h3><p class="pre">${pe(r.op.notes)}</p>`:''));h+=blk('Post-operative protocol',kvTable(recPairs(2)))};
+  const fu=()=>{const V=r.visits||[];
+    h+=blk('Follow-up visits',V.length?`<table class="grid"><tr><th>Date</th><th>Wk</th><th>Ext/Flex</th><th>Effusion</th><th>Lachman · KT · Pivot</th><th>Quad / Hop</th><th>Pain</th><th>Complication</th><th>Phase · Sport</th></tr>${V.map(x=>{const w=weeksPostOp(x.date);const L=k=>lab(VISIT_F.find(f=>f.p===k),x[k]);
+      return`<tr><td>${pe(x.date||'')}</td><td>${w!=null&&w>=0?Math.round(w):''}</td><td>${pe([x.extDef,x.flex].map(a=>a===''||a==null?'–':a+'°').join(' / '))}</td><td>${pe(L('effusion'))}</td><td>${pe([x.lachman!==''&&x.lachman!=null?['N','I','II','III'][+x.lachman]:'–',x.kt!==''&&x.kt!=null?x.kt+' mm':'–',x.pivot!==''&&x.pivot!=null?x.pivot:'–'].join(' · '))}</td><td>${pe([x.quad,x.hop].map(a=>a===''||a==null?'–':a+'%').join(' / '))}</td><td>${pe(x.pain??'')}</td><td>${pe(x.comp&&x.comp!=='none'?L('comp'):'')}</td><td>${pe([x.phase,L('sport')].filter(Boolean).join(' · '))}</td></tr>${x.notes?`<tr><td></td><td colspan="8" class="muted">${pe(x.notes)}</td></tr>`:''}`}).join('')}</table>`:'<p class="muted">No follow-up visits recorded.</p>');
+    const rows=scoreHistoryRows();const G=x=>x==null?'—':GRADE[x];
+    let sc=rows.length?`<table class="grid"><tr><th>Time point</th><th>Date</th><th>Tegner</th><th>Lysholm</th><th>IKDC subjective</th><th>IKDC exam</th><th>ACL-RSI</th></tr>${rows.map(x=>`<tr><td>${pe(x.l)}</td><td>${pe(x.date||'')}</td><td>${x.tegner??'—'}</td><td>${x.lys!=null?x.lys+' ('+lysGrade(x.lys)+')':'—'}</td><td>${x.ikdc!=null?f1(x.ikdc):'—'}</td><td>${G(x.obj)}</td><td>${x.rsi!=null?f0(x.rsi):'—'}</td></tr>`).join('')}</table>`:'<p class="muted">No scores recorded.</p>';
+    const base=rows.find(x=>x.k==='preop'&&x.ikdc!=null),last=[...rows].reverse().find(x=>x.k!=='preop'&&x.k!=='preinj'&&x.ikdc!=null);
+    if(base&&last)sc+=`<p>IKDC change pre-op → ${pe(last.l)}: <b>${last.ikdc-base.ikdc>=0?'+':''}${f1(last.ikdc-base.ikdc)}</b> points.</p>`;
+    h+=blk('Outcome scores',sc);h+=blk('Outcome',kvTable(recPairs(3)))};
+  if(kind==='full'){preop();op();fu()}else if(kind==='preop')preop();else if(kind==='op'){h+=blk('Diagnosis',`<p>${pe(d.revision?'Failed ACL reconstruction':'ACL tear')} – ${d.side==='L'?'left':'right'} knee${d.meniscus&&d.meniscus!=='none'?' · '+pe(fLabel(FORMS.img[1][1].find(f=>f.k==='meniscus'),d.meniscus))+' (MRI)':''}${r.injuryDate?' · injured '+pe(r.injuryDate):''}</p>`);op()}else fu();
+  h+=`<div class="blk sig"><span>Signature: ______________________</span><span>${pe(SET.doctor||'')}</span></div>`;
+  return`<div class="page">${head}${h}<div class="foot">${pe(SET.clinic||'ACL Decision Planner')} · ${pe(r.name||'')} ${r.fileNo?'#'+pe(r.fileNo):''}</div></div>`}
+async function printReport(kind){toast('Preparing PDF…');try{await loadPdfLib();const html=reportHTML(kind);const blob=await htmlToPdf(html);
+  const nm=(S.rec.name||'patient').replace(/[^\w؀-ۿ]+/g,'_');await shareBlob(blob,`${nm}_${kind}_${new Date().toISOString().slice(0,10)}.pdf`)}catch(e){console.error(e);toast('Could not create the PDF')}}
+async function htmlToPdf(html){const root=$('#printRoot');root.innerHTML=html;try{await document.fonts.ready}catch{}const el=root.firstElementChild;
+  const scale=2;const canvas=await window.html2canvas(el,{scale,backgroundColor:'#ffffff'});
+  const top=el.getBoundingClientRect().top;const breaks=[...el.querySelectorAll('.blk, .kv tr, .grid tr, li, p')].map(b=>Math.round((b.getBoundingClientRect().bottom-top)*scale)).sort((a,b)=>a-b);
+  root.innerHTML='';
+  const pdf=new window.jsPDF({unit:'pt',format:'a4'});const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+  const margin=28,usable=Math.floor((ph-2*margin)*canvas.width/pw);let y=0,first=true;
+  while(y<canvas.height-4){let end=Math.min(y+usable,canvas.height);if(end<canvas.height){const cand=breaks.filter(b=>b>y+usable*0.5&&b<=end);if(cand.length)end=cand[cand.length-1]+2}
+    const h=end-y;const c=document.createElement('canvas');c.width=canvas.width;c.height=h;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,h);g.drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);
+    if(!first)pdf.addPage();pdf.addImage(c.toDataURL('image/jpeg',.92),'JPEG',0,margin,pw,h*pw/canvas.width);first=false;y=end}
+  const n=pdf.getNumberOfPages();for(let i=1;i<=n;i++){pdf.setPage(i);pdf.setFontSize(8);pdf.setTextColor(120);pdf.text(`Page ${i} of ${n}`,pw-margin,ph-12,{align:'right'})}
+  return pdf.output('blob')}
+const blobToB64=b=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(b)});
+async function shareBlob(blob,name){
+  if(isNative&&window.Capacitor.Plugins.Filesystem){try{const {Filesystem,Share}=window.Capacitor.Plugins;const w=await Filesystem.writeFile({path:name,data:await blobToB64(blob),directory:'CACHE'});await Share.share({title:name,files:[w.uri]});return}catch(e){if(String(e).includes('cancel'))return;console.error(e)}}
+  const file=new File([blob],name,{type:'application/pdf'});if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});return}catch(e){if(e.name==='AbortError')return}}
+  const url=URL.createObjectURL(blob);const w=window.open(url,'_blank');if(w)return;const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Saved '+name)}
+function openPrintSheet(){$('#printSheet').hidden=false}
+$$('#printSheet [data-print]').forEach(b=>b.onclick=()=>{$('#printSheet').hidden=true;printReport(b.dataset.print)});
+$('#setBtn').onclick=()=>{['doctor','title','clinic','phone','address'].forEach(k=>$('#set_'+k).value=SET[k]||'');$('#menuSheet').hidden=true;$('#setSheet').hidden=false};
+$('#setSave').onclick=async()=>{['doctor','title','clinic','phone','address'].forEach(k=>SET[k]=$('#set_'+k).value.trim());try{await DB.put({id:'__settings',set:SET})}catch{}$('#setSheet').hidden=true;toast('Letterhead saved')};
 
 /* ---------- tabs ---------- */
 function update(){if(S.tab==='img'){renderImg();const meas=computeImage();$$('#imgForm input[data-k]').forEach(i=>{const f=FORMS.img[0][1].find(x=>x.k===i.dataset.k);if(f&&f.m)i.placeholder=meas[f.m]!=null?f1(meas[f.m]):''})}
@@ -982,9 +1049,10 @@ let toastT=0;function toast(m){let t=$('.toast');if(!t){t=document.createElement
   if(ios&&!standalone&&!isNative&&!seen){const h=$('#iosHint');setTimeout(()=>h.hidden=false,1500);$('#iosHintX').onclick=()=>{h.hidden=true;try{localStorage.setItem('iosHint','1')}catch{}}}})();
 
 /* ---------- boot ---------- */
+DB.get('__settings').then(r=>{if(r&&r.set)SET={...SET,...r.set}}).catch(()=>{});
 resize();
 (async()=>{let r=null;try{r=await DB.get('__current')}catch{}
   if(r&&r.state){await loadRecord(r);selectTab(r.tab||'dec')}else openDemo(0)})();
-window.__acl={decide,vals,computeImage,openDemo,selectTab,S:()=>S,setMode:m=>chooseMode(m),setD:o=>{Object.assign(S.d,o);renderTab(S.tab);if(S.tab==='dec')renderDec()}};
+window.__acl={pdf:k=>loadPdfLib().then(()=>htmlToPdf(reportHTML(k))).then(blobToB64),decide,vals,computeImage,openDemo,selectTab,S:()=>S,setMode:m=>chooseMode(m),setD:o=>{Object.assign(S.d,o);renderTab(S.tab);if(S.tab==='dec')renderDec()}};
 if('serviceWorker' in navigator&&!isNative&&/^https?:$/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 })();

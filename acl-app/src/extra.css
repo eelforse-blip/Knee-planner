@@ -72,3 +72,19 @@ details.visit summary{display:flex;gap:6px;align-items:center;flex-wrap:wrap;tex
 details.visit{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 details.visit[open]>summary{margin-bottom:8px}
 details.visit .fgrid{margin-bottom:8px}
+#printRoot{position:fixed;left:-10000px;top:0;width:794px;background:#fff;color:#111;font-family:var(--f-ui);font-size:12.5px;line-height:1.45}
+#printRoot .page{padding:10px 40px 20px;background:#fff}
+#printRoot .lh{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1e3a66;padding-bottom:8px;margin-bottom:10px}
+#printRoot .lh div{display:flex;flex-direction:column}#printRoot .lh b{font-size:17px;color:#1e3a66}#printRoot .lh span{color:#444;font-size:11.5px}
+#printRoot .lt{font-size:15px;font-weight:700;color:#1e3a66;text-align:right}
+#printRoot .pt{display:flex;flex-wrap:wrap;gap:4px 18px;background:#eef2f8;border-radius:6px;padding:7px 10px;margin-bottom:10px;font-size:12px}
+#printRoot h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#1e3a66;margin:14px 0 6px;border-bottom:1px solid #c9d3e3;padding-bottom:3px}
+#printRoot h3{font-size:12.5px;margin:8px 0 3px}
+#printRoot p{margin:3px 0}#printRoot ul{margin:3px 0;padding-left:18px}
+#printRoot .big{font-size:15px;font-weight:700}#printRoot .warn{color:#a3271c;font-weight:600}#printRoot .muted{color:#666}#printRoot .pre{white-space:pre-line}
+#printRoot table{width:100%;border-collapse:collapse}
+#printRoot .kv th{text-align:left;font-weight:600;color:#444;width:23%;padding:3px 6px;border-bottom:1px solid #e3e7ee;vertical-align:top}
+#printRoot .kv td{width:27%;padding:3px 6px;border-bottom:1px solid #e3e7ee;vertical-align:top}
+#printRoot .grid th{background:#eef2f8;text-align:left;font-size:11px;padding:4px 5px}#printRoot .grid td{padding:4px 5px;border-bottom:1px solid #e3e7ee;font-size:11.5px;vertical-align:top}
+#printRoot .sig{display:flex;justify-content:space-between;margin-top:40px}
+#printRoot .foot{margin-top:14px;font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:4px}
