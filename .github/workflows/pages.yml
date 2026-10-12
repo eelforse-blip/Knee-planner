@@ -33,6 +33,8 @@ jobs:
           cp -r clinic-app/www/. site/clinic/
           mkdir site/acl
           cp -r acl-app/www/. site/acl/
+          mkdir site/meniscus
+          cp -r meniscus-app/www/. site/meniscus/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

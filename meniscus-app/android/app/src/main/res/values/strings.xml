@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Meniscus Planner</string>
+    <string name="title_activity_main">Meniscus Planner</string>
+    <string name="package_name">com.elforse.meniscusplanner</string>
+    <string name="custom_url_scheme">com.elforse.meniscusplanner</string>
+</resources>
