@@ -1,0 +1,107 @@
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>Bone Tumour Planner</b><span>X-ray · MRI · differential · work-up · decision</span></div>
+    <button class="ib" id="installBtn" hidden title="Install on this computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Install app</span></button>
+    <button class="ib" id="casesBtn" title="Patients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Patients</span></button>
+    <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+  </header>
+
+  <main class="work calc" id="work">
+    <section class="viewer" id="viewer">
+      <canvas id="cv" aria-label="Image viewer"></canvas>
+      <div class="prompt" id="prompt"></div>
+      <div class="vlabel" id="vlabel"></div>
+      <div class="vtools">
+        <button id="delPt" hidden>Delete point</button>
+        <button id="fit">Fit</button>
+        <button id="zin" aria-label="Zoom in">+</button>
+        <button id="zout" aria-label="Zoom out">−</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="rec" aria-selected="false">Record</button>
+        <button class="tab" role="tab" data-t="pt" aria-selected="true">Clinical</button>
+                <button class="tab" role="tab" data-t="img" aria-selected="false">Imaging</button>
+                        <button class="tab" role="tab" data-t="dec" aria-selected="false">Diagnosis</button>
+      </div>
+      <div class="pane" id="p-rec" hidden></div>
+      <div class="pane" id="p-pt"></div>
+            <div class="pane" id="p-img" hidden>
+        <div class="group"><h3>Measure on an image</h3>
+          <div class="modes" id="modes"></div>
+          <div class="row"><label class="btn primary" for="file">Open image</label><input id="file" type="file" accept="image/*" hidden><button class="btn" id="hideViewer">Hide viewer</button></div>
+          <p class="fine" id="modeHint"></p>
+        </div>
+        <div class="steps" id="steps"></div>
+        <div class="row"><button class="btn danger" id="delPt2" hidden>Delete selected point</button></div>
+        <div class="group" id="calBox"><h3>Scale</h3>
+          <div class="form"><label for="calmm">Scale bar length (mm)</label><input id="calmm" type="number" min="1" step="1"></div>
+          <p class="fine" id="scaleout"></p>
+        </div>
+        <div id="handBox"></div>
+        <div id="imgForm"></div>
+      </div>
+                  <div class="pane" id="p-dec" hidden></div>
+    </aside>
+  </main>
+</div>
+
+<div class="sheet" id="casesSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Patients">
+    <div class="sheet-head"><b>Patients</b><span class="fine" id="caseCount"></span><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <div class="row"><input id="caseName" type="text" placeholder="Name for the current case" class="inp"><button class="btn primary" id="saveCase">Save current</button></div>
+      <input id="caseSearch" type="search" placeholder="Search name, file number, phone, surgery date" class="inp">
+      <div id="caseList" class="group"></div>
+      <h3>Export and backup</h3>
+      <div class="row"><button class="btn" id="exportCsv">Export all to Excel (CSV)</button><button class="btn" id="backupBtn">Back up</button><label class="btn" for="restoreFile">Restore</label><input id="restoreFile" type="file" accept=".json,application/json" hidden></div>
+      <p class="fine">Records are stored only on this device. Back up regularly and keep the file somewhere safe; it contains patient-identifiable data.</p>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="menuSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="More">
+    <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn" id="newCase">New patient (clear the screen)</button>
+      <button class="btn primary" id="shareApp">Share this app with colleagues</button>
+      <button class="btn" id="setBtn">Letterhead for printing</button>
+      <button class="btn" id="installMenu" hidden>Install on this computer / phone</button>
+      <p class="fine pcOnly">On a computer: drag an X-ray onto the window or paste it (Ctrl+V) from PACS · Delete removes the selected point · Ctrl+S saves the patient · Ctrl+P prints · Esc closes panels.</p>
+      <h3>Demo cases</h3>
+      <div id="demoList" class="group"></div>
+      <p class="fine">Decision aid only. Thresholds come from published studies and can be edited under Decision → Thresholds. Confirm every measurement on the original images. Not a certified medical device.</p>
+      <p class="fine">Version 1.0</p>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="printSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Print">
+    <div class="sheet-head"><b>Print / PDF</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn primary" data-print="full">Full patient record</button>
+      <button class="btn" data-print="preop">Pre-operative assessment and plan</button>
+      <button class="btn" data-print="op">Operative note</button>
+      <button class="btn" data-print="fu">Follow-up and outcome scores</button>
+      <p class="fine">Creates an A4 PDF you can print, save or send. Set your name and clinic under ⋮ → Letterhead for printing.</p>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="setSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Letterhead">
+    <div class="sheet-head"><b>Letterhead</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <input id="set_doctor" class="inp" placeholder="Doctor name (e.g. Dr. Elsayed Elforse)">
+      <input id="set_title" class="inp" placeholder="Title">
+      <input id="set_clinic" class="inp" placeholder="Clinic or hospital">
+      <input id="set_address" class="inp" placeholder="Address">
+      <input id="set_phone" class="inp" placeholder="Phone">
+      <button class="btn primary" id="setSave">Save</button>
+    </div>
+  </div>
+</div>
+<div id="printRoot" aria-hidden="true"></div>
+<div class="iosHint" id="iosHint" hidden><div><b>Install on your iPhone</b><span>Tap <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-label="Share"><path d="M12 3v13M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Share, then <b>Add to Home Screen</b>. It then opens full-screen and works offline.</span></div><button id="iosHintX" aria-label="Dismiss">✕</button></div>

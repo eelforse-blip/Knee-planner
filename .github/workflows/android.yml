@@ -3,7 +3,7 @@ name: Build Android app
 on:
   push:
     branches: [main]
-    paths-ignore: ['pf-app/**', 'clinic-app/**', 'acl-app/**', 'meniscus-app/**', 'docs/**']
+    paths-ignore: ['pf-app/**', 'clinic-app/**', 'acl-app/**', 'meniscus-app/**', 'tumour-app/**', 'docs/**']
   workflow_dispatch:
 
 permissions:
