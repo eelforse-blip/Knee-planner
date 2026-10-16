@@ -37,6 +37,8 @@ jobs:
           cp -r meniscus-app/www/. site/meniscus/
           mkdir site/tumour
           cp -r tumour-app/www/. site/tumour/
+          mkdir site/shoulder
+          cp -r shoulder-app/www/. site/shoulder/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

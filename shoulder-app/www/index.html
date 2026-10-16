@@ -1,0 +1,1372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Shoulder Instability Planner</title>
+<meta name="description" content="Shoulder instability decision making: glenoid bone loss, glenoid track, ISIS/GTIMS, outcome scores, Bankart, remplissage, Latarjet, posterior instability and MDI.">
+<meta name="theme-color" content="#05080b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shoulder">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+@font-face{font-family:"Archivo";font-weight:400;font-display:swap;src:url(fonts/archivo-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:500;font-display:swap;src:url(fonts/archivo-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:600;font-display:swap;src:url(fonts/archivo-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:700;font-display:swap;src:url(fonts/archivo-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-latin-600-normal.woff2) format("woff2")}
+/*END-FONTFACE*/
+
+/* Layout: dark cross-sectional viewer on top, tabbed sheet below (phone) or beside (tablet) */
+:root{
+  --bg:#ebeef3; --surface:#ffffff; --ink:#141c2b; --muted:#586579; --line:#d2d9e3;
+  --accent:#2f5fa8; --accent-ink:#ffffff; --soft:#e4ecf8;
+  --ok:#1d7f47; --warn:#a86a0f; --bad:#b8352a;
+  --view:#05080b; --chrome:#0b1018; --chrome-ink:#e6ecf2; --chrome-muted:#8e9aab; --chrome-line:#1e2836;
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1219; --surface:#151b25; --ink:#e2e7ef; --muted:#95a1b3; --line:#283243;
+  --accent:#7ea6e8; --accent-ink:#0a1426; --soft:#1a2a45;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1219; --surface:#151b25; --ink:#e2e7ef; --muted:#95a1b3; --line:#283243;
+  --accent:#7ea6e8; --accent-ink:#0a1426; --soft:#1a2a45;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}
+
+[hidden]{display:none!important}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{background:var(--chrome);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{height:100%;height:100dvh;display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--chrome);color:var(--chrome-ink)}
+.brand{display:flex;flex-direction:column;margin-right:auto;min-width:0}
+.brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand span{font-size:10.5px;color:var(--chrome-muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{border:1px solid var(--chrome-line);background:#121a26;color:var(--chrome-ink);border-radius:9px;min-height:38px;padding:0 11px;cursor:pointer;font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.ib svg{width:17px;height:17px;flex:none}
+.ib:focus-visible,.tab:focus-visible,.step:focus-visible,.chip:focus-visible,.btn:focus-visible,.sl:focus-visible{outline:2px solid #7ea6e8;outline-offset:2px}
+
+.work{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 430px}
+.viewer{position:relative;background:var(--view);overflow:hidden;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;display:block}
+.prompt{position:absolute;left:10px;right:10px;top:10px;background:rgba(8,12,16,.86);color:#e9eef2;border:1px solid rgba(255,194,71,.45);border-radius:9px;padding:7px 10px;font-size:13px;pointer-events:none;display:flex;gap:8px;align-items:baseline}
+.prompt .k{font-family:var(--f-num);color:#ffc247;font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.prompt small{color:#a9b4bd;display:block;font-size:11.5px}
+.vtools{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.vtools button{background:rgba(8,12,16,.86);color:#e9eef2;border:1px solid rgba(255,255,255,.18);border-radius:8px;min-width:40px;height:38px;padding:0 10px;font-size:13px;cursor:pointer}
+.vtools #delPt{color:#ffb4aa;border-color:rgba(255,120,100,.45)}
+.vlabel{position:absolute;left:10px;bottom:12px;color:#c9d3dd;font-size:12px;background:rgba(8,12,16,.8);padding:5px 8px;border-radius:7px;pointer-events:none;max-width:55%}
+
+.panel{background:var(--surface);display:flex;flex-direction:column;min-height:0;min-width:0;border-left:1px solid var(--line)}
+.grab{display:none}
+.tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+.tab{flex:1;background:none;border:0;padding:12px 2px;cursor:pointer;font-weight:600;font-size:12.5px;color:var(--muted);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px;min-height:0;flex:1;background:var(--surface)}
+h3{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.group{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fine{font-size:11.5px;color:var(--muted);margin:0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;min-height:38px;padding:0 12px;cursor:pointer;font-weight:600;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.form{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;font-size:13.5px}
+.form input[type=number],.form select,.mt input,.mt select,.pc input,.pc select{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.form input[type=number],.mt input{width:84px;font-family:var(--f-num)}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{flex:1;border:0;background:none;padding:9px 6px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.tog{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.tog input{width:20px;height:20px;accent-color:var(--accent)}
+/* slice chooser */
+.slices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.sl{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0}
+.sl.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--soft)}
+.sl b{font-size:12.5px}
+.sl span{font-size:11px;color:var(--muted);font-family:var(--f-num)}
+.steps{display:flex;flex-direction:column;gap:2px}
+.step{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:8px;cursor:pointer;min-height:40px}
+.step.on{border-color:var(--accent);background:var(--soft)}
+.dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--muted)}
+.step.done .dot{background:#ffc247;border-color:#ffc247}
+.step .gl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+/* tables & pills */
+.mt{width:100%;border-collapse:collapse;font-size:13px}
+.mt th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
+.mt td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.mt td.n{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt .ref{font-size:11px;color:var(--muted)}
+.src{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pill{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.03em;white-space:nowrap}
+.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.pill.acc{color:var(--accent-ink);background:var(--accent)}
+.pill.mut{color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent)}
+/* decision */
+.rec{border:1.5px solid var(--accent);background:var(--soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.rec .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700}
+.rec .h{font-size:18px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.rec ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.risk{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rk{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.rk .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.rk .v{font-family:var(--f-num);font-size:24px;font-weight:600;letter-spacing:-.02em}
+.rk .v small{font-size:12px;color:var(--muted);font-weight:500}
+.rk .s{font-size:11.5px;color:var(--muted)}
+.rk ul{margin:4px 0 0;padding-left:16px;font-size:11.5px;color:var(--muted)}
+.pc{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.pc.ind{border-color:var(--accent)}
+.pc.no{opacity:.75}
+.pc .hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.pc .hd b{font-size:14.5px}
+.pc .why{font-size:12.5px;color:var(--muted)}
+.pc .opts{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;font-size:12.5px}
+.pc .opts select{max-width:210px}
+.pc .opts input{width:76px;font-family:var(--f-num)}
+.figs{display:flex;gap:14px;flex-wrap:wrap}
+.figs div{display:flex;flex-direction:column}
+.figs .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.figs .v{font-family:var(--f-num);font-size:20px;font-weight:600;letter-spacing:-.02em}
+.figs .v small{font-size:12px;color:var(--muted);font-weight:500}
+.pc ol,.pc ul{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.notes{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.notes li{font-size:12.5px;padding:8px 10px;border-radius:7px;border-left:3px solid var(--line);background:var(--bg)}
+.notes li.warn{border-left-color:var(--warn)} .notes li.bad{border-left-color:var(--bad)} .notes li.ok{border-left-color:var(--ok)}
+.empty{font-size:13px;color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:9px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;padding:4px 0}
+details[open] summary{margin-bottom:8px}
+.sheet{position:fixed;inset:0;background:rgba(3,6,9,.55);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet-card{background:var(--surface);color:var(--ink);width:100%;max-width:520px;max-height:85%;border-radius:16px 16px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sheet-head b{font-size:16px;margin-right:auto}
+.sheet-body{overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.case{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px}
+.case .t{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.case .d{font-size:11.5px;color:var(--muted);font-family:var(--f-num)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#141c2b;color:#fff;padding:9px 14px;border-radius:9px;font-size:13px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90%}
+.work.calc{grid-template-columns:1fr!important;grid-template-rows:1fr!important}
+.work.calc .viewer{display:none}
+.work.calc .panel{margin-top:0!important;border-radius:0!important;max-width:720px;width:100%;justify-self:center;border-left:0}
+.cgrid{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center;font-size:13.5px}
+.cgrid input,.cgrid select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;width:92px;font-family:var(--f-num)}
+.cgrid select{width:auto;font-family:var(--f-ui)}
+.cgrid .u{font-size:11px;color:var(--muted);min-width:58px}
+.work.calc .grab{display:none!important}
+.cgrid .ref{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-4px}
+.cout .pc{padding:10px 12px}
+@media (max-width:820px){
+  .brand span{display:none}
+  .bar .lbl{display:none}
+  .work{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,48%)}
+  .work.tall{grid-template-rows:minmax(0,24%) minmax(0,1fr)}
+  .panel{border-left:0;border-radius:14px 14px 0 0;margin-top:-10px;position:relative;z-index:2}
+  .grab{display:block;border:0;background:none;padding:7px 0 2px;cursor:pointer}
+  .grab i{display:block;width:38px;height:4px;border-radius:4px;background:var(--line);margin:0 auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ACL app additions */
+.fgrid{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center;font-size:13.5px}
+.fgrid input[type=number],.fgrid select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.fgrid input[type=number]{width:88px;font-family:var(--f-num)}
+.fgrid select{max-width:220px;grid-column:2/4}
+.fgrid .u{font-size:11px;color:var(--muted);min-width:34px}
+.fgrid .h{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-5px}
+.fgrid .full{grid-column:1/-1;display:flex;flex-direction:column;gap:5px}
+.fgrid .full>span{font-size:13.5px}
+.fgrid .tog{grid-column:1/-1}
+.fgrid input::placeholder{color:var(--accent);opacity:.8}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.bgrid .tog{font-size:12.5px}
+.badge{font-family:var(--f-num);font-weight:600;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--accent);margin-left:6px;letter-spacing:0;text-transform:none}
+.card{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.card.ind{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.card .hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.card .hd b{font-size:14.5px}
+.card ul,.card ol{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.card .why{font-size:12.5px;color:var(--muted);margin:0}
+.lst{list-style:none;padding:0!important}
+.lst li{padding-left:18px;position:relative}
+.lst li::before{position:absolute;left:0;top:0;font-weight:700}
+.lst.pro li::before{content:"+";color:var(--ok)}
+.lst.con li::before{content:"−";color:var(--bad)}
+.lst.chk li.y::before{content:"✓";color:var(--ok)}
+.lst.chk li.n::before{content:"·";color:var(--muted)}
+.lst.chk li.n{color:var(--muted)}
+.gr{display:grid;grid-template-columns:1fr;gap:8px}
+.g{border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:4px}
+.g.top{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.g.out{opacity:.6}
+.g .t{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.g .t b{font-size:13.5px}
+.g .bar2{height:5px;border-radius:5px;background:var(--line);overflow:hidden}
+.g .bar2 i{display:block;height:100%;background:var(--accent)}
+.g.top .bar2 i{background:var(--ok)}
+.g ul{margin:0;padding-left:16px;font-size:11.5px;color:var(--muted)}
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.refs{font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px;margin:0;padding-left:18px}
+.refs a{color:var(--accent)}
+.banner{font-size:12.5px;padding:9px 11px;border-radius:9px;background:var(--soft);border-left:3px solid var(--accent)}
+.thr{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;font-size:12.5px}
+.thr input{width:76px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;font-family:var(--f-num)}
+.iosHint{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;background:#0b1116;color:#e6ecf1;border:1px solid #7ea6e8;border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:13.5px}
+.iosHint div{display:flex;flex-direction:column;gap:2px}
+.iosHint svg{vertical-align:-3px}
+.iosHint button{background:none;border:0;color:#8d9aa6;font-size:16px;cursor:pointer;padding:2px 4px}
+.tab{font-size:12px}
+.mt td.n .ref{white-space:normal;font-family:var(--f-ui)}
+.q{display:flex;flex-direction:column;gap:5px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}
+.q.sub{padding-top:2px}
+.q select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.tg{display:flex;flex-direction:column;gap:4px}
+.tg .tog{align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px;gap:10px}
+.tg .tog.on{border-color:var(--accent);background:var(--soft)}
+.tg .tog b{font-family:var(--f-num);font-size:16px;min-width:20px}
+.tg .tog input{margin-top:2px}
+#scView button{padding:9px 2px;font-size:12px}
+.tab{font-size:11.5px;padding:12px 0}
+.pane>*{flex-shrink:0}
+.tabs{overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;padding:12px 10px;font-size:12.5px}
+.inp{flex:1;min-width:0;width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px}
+.fgrid input.wide,.fgrid input[type=date],.fgrid input[type=tel]{grid-column:2/4;padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;min-width:0;width:100%;max-width:220px}
+.ta{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px;font-family:var(--f-ui);resize:vertical}
+details.sec{border:1px solid var(--line);border-radius:12px;padding:6px 12px 10px}
+details.sec>summary{font-size:12px;padding:8px 0}
+details.visit summary{display:flex;gap:6px;align-items:center;flex-wrap:wrap;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--ink)}
+.case.cur{border-color:var(--accent)}
+.sheet-head .fine{margin-right:8px}
+details.visit{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+details.visit[open]>summary{margin-bottom:8px}
+details.visit .fgrid{margin-bottom:8px}
+#printRoot{position:fixed;left:-10000px;top:0;width:794px;background:#fff;color:#111;font-family:var(--f-ui);font-size:12.5px;line-height:1.45}
+#printRoot .page{padding:10px 40px 20px;background:#fff}
+#printRoot .lh{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1e3a66;padding-bottom:8px;margin-bottom:10px}
+#printRoot .lh div{display:flex;flex-direction:column}#printRoot .lh b{font-size:17px;color:#1e3a66}#printRoot .lh span{color:#444;font-size:11.5px}
+#printRoot .lt{font-size:15px;font-weight:700;color:#1e3a66;text-align:right}
+#printRoot .pt{display:flex;flex-wrap:wrap;gap:4px 18px;background:#eef2f8;border-radius:6px;padding:7px 10px;margin-bottom:10px;font-size:12px}
+#printRoot h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#1e3a66;margin:14px 0 6px;border-bottom:1px solid #c9d3e3;padding-bottom:3px}
+#printRoot h3{font-size:12.5px;margin:8px 0 3px}
+#printRoot p{margin:3px 0}#printRoot ul{margin:3px 0;padding-left:18px}
+#printRoot .big{font-size:15px;font-weight:700}#printRoot .warn{color:#a3271c;font-weight:600}#printRoot .muted{color:#666}#printRoot .pre{white-space:pre-line}
+#printRoot table{width:100%;border-collapse:collapse}
+#printRoot .kv th{text-align:left;font-weight:600;color:#444;width:23%;padding:3px 6px;border-bottom:1px solid #e3e7ee;vertical-align:top}
+#printRoot .kv td{width:27%;padding:3px 6px;border-bottom:1px solid #e3e7ee;vertical-align:top}
+#printRoot .grid th{background:#eef2f8;text-align:left;font-size:11px;padding:4px 5px}#printRoot .grid td{padding:4px 5px;border-bottom:1px solid #e3e7ee;font-size:11.5px;vertical-align:top}
+#printRoot .sig{display:flex;justify-content:space-between;margin-top:40px}
+#printRoot .foot{margin-top:14px;font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:4px}
+@media (min-width:1100px){
+  .work.calc .panel{max-width:1200px}
+  #p-dec,#p-pt,#p-ex,#p-ch{display:block;column-count:2;column-gap:18px}
+  #p-dec>*,#p-pt>*,#p-ex>*,#p-ch>*{break-inside:avoid;margin-bottom:14px}
+  #p-dec>.rec,#p-dec>.row,#p-dec>details,#p-dec>p,#p-ch>.banner{column-span:all}
+  #p-rec{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start;align-items:start}
+  #p-rec>.rec,#p-rec>p{grid-column:1/-1}
+  .work:not(.calc){grid-template-columns:minmax(0,1fr) 520px}
+}
+@media (hover:none){.pcOnly{display:none}}
+#scView{flex-wrap:wrap}#scView button{flex:1 0 30%}
+.hopi{width:72px;padding:6px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;font-family:var(--f-num)}
+.big2{margin:4px 0}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>Shoulder Instability Planner</b><span>Bone loss · glenoid track · scores · Bankart / remplissage / Latarjet</span></div>
+    <button class="ib" id="installBtn" hidden title="Install on this computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Install app</span></button>
+    <button class="ib" id="casesBtn" title="Patients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Patients</span></button>
+    <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+  </header>
+
+  <main class="work calc" id="work">
+    <section class="viewer" id="viewer">
+      <canvas id="cv" aria-label="Image viewer"></canvas>
+      <div class="prompt" id="prompt"></div>
+      <div class="vlabel" id="vlabel"></div>
+      <div class="vtools">
+        <button id="delPt" hidden>Delete point</button>
+        <button id="fit">Fit</button>
+        <button id="zin" aria-label="Zoom in">+</button>
+        <button id="zout" aria-label="Zoom out">−</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="rec" aria-selected="false">Record</button>
+        <button class="tab" role="tab" data-t="pt" aria-selected="true">History</button>
+        <button class="tab" role="tab" data-t="ex" aria-selected="false">Exam</button>
+        <button class="tab" role="tab" data-t="img" aria-selected="false">Imaging</button>
+        <button class="tab" role="tab" data-t="sc" aria-selected="false">Scores</button>
+        <button class="tab" role="tab" data-t="dec" aria-selected="false">Decision</button>
+      </div>
+      <div class="pane" id="p-rec" hidden></div>
+      <div class="pane" id="p-pt"></div>
+      <div class="pane" id="p-ex" hidden></div>
+            <div class="pane" id="p-img" hidden>
+        <div class="group"><h3>Measure on an image</h3>
+          <div class="modes" id="modes"></div>
+          <div class="row"><label class="btn primary" for="file">Open image</label><input id="file" type="file" accept="image/*" hidden><button class="btn" id="hideViewer">Hide viewer</button></div>
+          <p class="fine" id="modeHint"></p>
+        </div>
+        <div class="steps" id="steps"></div>
+        <div class="row"><button class="btn danger" id="delPt2" hidden>Delete selected point</button></div>
+        <div class="group" id="calBox"><h3>Scale</h3>
+          <div class="form"><label for="calmm">Scale bar length (mm)</label><input id="calmm" type="number" min="1" step="1"></div>
+          <p class="fine" id="scaleout"></p>
+        </div>
+        <div class="group" id="measOut"></div>
+        <div id="imgForm"></div>
+      </div>
+                  <div class="pane" id="p-sc" hidden></div>
+      <div class="pane" id="p-dec" hidden></div>
+    </aside>
+  </main>
+</div>
+
+<div class="sheet" id="casesSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Patients">
+    <div class="sheet-head"><b>Patients</b><span class="fine" id="caseCount"></span><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <div class="row"><input id="caseName" type="text" placeholder="Name for the current case" class="inp"><button class="btn primary" id="saveCase">Save current</button></div>
+      <input id="caseSearch" type="search" placeholder="Search name, file number, phone, surgery date" class="inp">
+      <div id="caseList" class="group"></div>
+      <h3>Export and backup</h3>
+      <div class="row"><button class="btn" id="exportCsv">Export all to Excel (CSV)</button><button class="btn" id="backupBtn">Back up</button><label class="btn" for="restoreFile">Restore</label><input id="restoreFile" type="file" accept=".json,application/json" hidden></div>
+      <p class="fine">Records are stored only on this device. Back up regularly and keep the file somewhere safe; it contains patient-identifiable data.</p>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="menuSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="More">
+    <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn" id="newCase">New patient (clear the screen)</button>
+      <button class="btn primary" id="shareApp">Share this app with colleagues</button>
+      <button class="btn" id="setBtn">Letterhead for printing</button>
+      <button class="btn" id="installMenu" hidden>Install on this computer / phone</button>
+      <p class="fine pcOnly">On a computer: drag a CT / MRI image onto the window or paste it (Ctrl+V) from PACS · Delete removes the selected point · Ctrl+S saves the patient · Ctrl+P prints · Esc closes panels.</p>
+      <h3>Demo cases</h3>
+      <div id="demoList" class="group"></div>
+      <p class="fine">Decision aid only. Thresholds come from published studies and can be edited under Decision → Thresholds. Confirm every measurement on the original images. Not a certified medical device.</p>
+      <p class="fine">Version 1.0</p>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="printSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Print">
+    <div class="sheet-head"><b>Print / PDF</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn primary" data-print="full">Full patient record</button>
+      <button class="btn" data-print="preop">Pre-operative assessment and plan</button>
+      <button class="btn" data-print="op">Operative note</button>
+      <button class="btn" data-print="fu">Follow-up and outcome scores</button>
+      <p class="fine">Creates an A4 PDF you can print, save or send. Set your name and clinic under ⋮ → Letterhead for printing.</p>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="setSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Letterhead">
+    <div class="sheet-head"><b>Letterhead</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <input id="set_doctor" class="inp" placeholder="Doctor name (e.g. Dr. Elsayed Elforse)">
+      <input id="set_title" class="inp" placeholder="Title">
+      <input id="set_clinic" class="inp" placeholder="Clinic or hospital">
+      <input id="set_address" class="inp" placeholder="Address">
+      <input id="set_phone" class="inp" placeholder="Phone">
+      <button class="btn primary" id="setSave">Save</button>
+    </div>
+  </div>
+</div>
+<div id="printRoot" aria-hidden="true"></div>
+<div class="iosHint" id="iosHint" hidden><div><b>Install on your iPhone</b><span>Tap <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-label="Share"><path d="M12 3v13M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Share, then <b>Add to Home Screen</b>. It then opens full-screen and works offline.</span></div><button id="iosHintX" aria-label="Dismiss">✕</button></div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const cv=$('#cv'),ctx=cv.getContext('2d');
+const isNative=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const COL={pt:'#ffc247',line:'#7fd0ff',ghost:'rgba(127,208,255,.55)',meas:'#4fe3b4',alt:'#ff9f6b',bad:'#ff7a7a'};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>v===''||v==null||isNaN(+v)?null:+v;
+
+/* ---------- measurement modes ---------- */
+const CAL=[['cal1','Scale bar end 1','One end of the scale bar or a known length'],['cal2','Scale bar end 2','Other end; enter its length below']];
+const MODES={
+ glen:{name:'Glenoid en face',sub:'bone loss % · diameter',cal:true,hint:'3D CT en-face view of the glenoid with the humeral head removed (or sagittal oblique MRI). Calibrate, mark the superior pole, then three points on the intact inferior rim for the best-fit circle, then the anterior rim at the deepest part of the defect. The posterior rim point is only needed for posterior bone loss.',pts:[...CAL,
+  ['S','Superior pole of the glenoid','Top of the glenoid – sets the long axis'],
+  ['C1','Circle: posterior-inferior rim','Intact posterior-inferior rim of the lower glenoid'],
+  ['C2','Circle: inferior rim','Lowest point of the glenoid'],
+  ['C3','Circle: anterior-inferior rim','Intact rim just below the defect'],
+  ['A','Anterior rim at the defect','Deepest point of the anterior defect'],
+  ['Pr','Posterior rim (optional)','Posterior rim – only for posterior bone loss']]},
+ hs:{name:'Hill-Sachs',sub:'HSI · bone bridge',cal:true,hint:'3D CT posterior view of the humeral head (or axial MRI). Calibrate, then mark the medial edge of the rotator cuff footprint, the edge of the Hill-Sachs lesion nearest the footprint, and its medial (articular) edge. Hill-Sachs interval (HSI) = bone bridge + Hill-Sachs width.',pts:[...CAL,
+  ['F','Medial edge of the cuff footprint','Start of the bone bridge'],
+  ['H1','Hill-Sachs edge, footprint side','End of the bone bridge'],
+  ['H2','Hill-Sachs medial edge','Edge of the lesion nearest the articular surface']]},
+ ax:{name:'Axial CT / MRI',sub:'version · subluxation · reverse HS',cal:false,hint:'Axial slice through the middle of the glenoid. Version by the Friedman method; three points on the humeral head give its circle for the Walch subluxation index; the defect edges and articular margins give the reverse Hill-Sachs size as % of the articular arc.',pts:[
+  ['M','Medial tip of the scapula','The scapular axis runs from here to the glenoid centre'],
+  ['GA','Anterior glenoid rim',''],['GP','Posterior glenoid rim',''],
+  ['H1','Humeral head contour 1','Three points on the articular contour → best-fit circle'],['H2','Humeral head contour 2',''],['H3','Humeral head contour 3',''],
+  ['R1','Reverse Hill-Sachs edge 1','Optional – edge of the anterior head defect'],['R2','Reverse Hill-Sachs edge 2',''],
+  ['A1','Articular margin, anterior','Optional – edge of the articular cartilage'],['A2','Articular margin, posterior','']]}
+};
+const MODE_ORDER=['glen','hs','ax'];
+
+/* ---------- thresholds ---------- */
+const TH_DEFAULT={crit:20,subcrit:13.5,gtk:0.83,dtd:8,isis:6,gtims:4,erHyper:85,gagey:105,beighton:5,retro:10,osteo:15,pcrit:15,walch:65,rhsLow:25,rhsHigh:40,oldAge:40};
+const TH_LABEL={crit:['Critical glenoid bone loss (bone block) ≥','%'],subcrit:['Subcritical glenoid bone loss ≥','%'],gtk:['Glenoid track factor: GT = factor × D − d',''],dtd:['Near-track: distance to dislocation <','mm'],
+ isis:['ISIS above which Latarjet is advised >',''],gtims:['GTIMS for Latarjet ≥',''],erHyper:['Hyperlaxity: external rotation at the side >','°'],gagey:['Inferior hyperlaxity: Gagey hyperabduction >','°'],beighton:['Generalised hypermobility: Beighton ≥','/9'],
+ retro:['Glenoid retroversion risk factor ≥','°'],osteo:['Retroversion to consider glenoid osteotomy ≥','°'],pcrit:['Posterior glenoid bone loss for bone block ≥','%'],walch:['Static posterior subluxation (Walch) >','%'],
+ rhsLow:['Reverse Hill-Sachs: non-operative below','%'],rhsHigh:['Reverse Hill-Sachs: arthroplasty considered above','%'],oldAge:['Screen for cuff tear / nerve injury from age','y']};
+
+/* ---------- form fields ---------- */
+const BEIGHTON=['Little finger extends > 90° – right','Little finger > 90° – left','Thumb touches forearm – right','Thumb touches forearm – left','Elbow hyperextends > 10° – right','Elbow > 10° – left','Knee hyperextends > 10° – right','Knee > 10° – left','Palms flat on the floor, knees straight'];
+const beightonScore=d=>BEIGHTON.reduce((s,_,i)=>s+(d['b'+i]?1:0),0);
+const LOAD=[['0','0'],['1','1 · to rim'],['2','2 · over rim'],['3','3 · locks']];
+const FORMS={
+ pt:[
+  ['Patient',[
+   {k:'age',l:'Age',t:'num',u:'y'},
+   {k:'sex',l:'Sex',t:'seg',o:[['M','Male'],['F','Female']]},
+   {k:'side',l:'Side',t:'seg',o:[['R','Right'],['L','Left']]},
+   {k:'dom',l:'Dominant arm',t:'chk'}]],
+  ['Instability',[
+   {k:'dir',l:'Main direction',t:'seg',o:[['ant','Anterior'],['post','Posterior'],['mdi','Multidirectional']]},
+   {k:'etiol',l:'Onset',t:'sel',o:[['trauma','Traumatic dislocation'],['traumaSub','Traumatic subluxation'],['atraum','Atraumatic / minor trauma'],['vol','Voluntary / habitual']]},
+   {k:'nDisl',l:'Dislocations (total)',t:'num',u:'n'},
+   {k:'nSub',l:'Subluxations (total)',t:'num',u:'n'},
+   {k:'firstAge',l:'Age at first episode',t:'num',u:'y'},
+   {k:'months',l:'Time since the first episode',t:'num',u:'months'},
+   {k:'easy',l:'Dislocates with minimal force or in sleep, or reduces easily',t:'chk'},
+   {k:'rehabDone',l:'Failed ≥ 6 months of structured rehabilitation',t:'chk'},
+   {k:'pain',l:'Pain rather than instability is the main complaint',t:'chk'}]],
+  ['Sport and work',[
+   {k:'sport',l:'Sport level',t:'sel',o:[['none','None'],['rec','Recreational'],['comp','Competitive'],['pro','Professional / elite']]},
+   {k:'stype',l:'Sport type',t:'sel',o:[['none','—'],['contact','Contact / collision (rugby, football, judo, wrestling)'],['overhead','Forced overhead (handball, volleyball, basketball, climbing, throwing)'],['other','Other / non-contact']],show:d=>d.sport!=='none'},
+   {k:'season',l:'In season – wants to finish the season',t:'chk',show:d=>d.sport!=='none'},
+   {k:'work',l:'Work',t:'sel',o:[['light','Sedentary / light'],['manual','Manual / heavy'],['overhead','Overhead work'],['military','Military / police']]}]],
+  ['Background',[
+   {k:'seizure',l:'Epilepsy',t:'sel',o:[['none','None'],['controlled','Controlled'],['uncontrolled','Uncontrolled seizures']]},
+   {k:'ctd',l:'Connective-tissue disorder (Ehlers–Danlos, Marfan)',t:'chk'},
+   {k:'physis',l:'Open physes (skeletally immature)',t:'chk'},
+   {k:'smoker',l:'Smoker',t:'chk'}]],
+  ['Previous surgery',[
+   {k:'prior',l:'Previous stabilisation',t:'sel',o:[['none','None'],['bankart','Arthroscopic Bankart'],['bankartRemp','Arthroscopic Bankart + remplissage'],['open','Open Bankart / capsular shift'],['latarjet','Latarjet / Bristow'],['bone','Free bone block (iliac crest / allograft)'],['post','Posterior labral repair'],['postBone','Posterior bone block / glenoid osteotomy'],['thermal','Thermal capsulorrhaphy']]},
+   {k:'nPrior',l:'Number of previous stabilisations',t:'num',u:'n',show:d=>d.prior!=='none'},
+   {k:'anchors',l:'Anchors used',t:'num',u:'n',show:d=>['bankart','bankartRemp','post'].includes(d.prior)},
+   {k:'reinj',l:'Recurrence after',t:'sel',o:[['','—'],['major','A significant new injury'],['minor','Minor or no trauma'],['early','Early (< 6 months), no trauma']],show:d=>d.prior!=='none'}]],
+  ['After the dislocation',[
+   {k:'weak',l:'Cannot actively raise the arm',t:'chk'},
+   {k:'nerve',l:'Axillary nerve deficit (deltoid weakness, numb regimental badge area)',t:'chk'}]]],
+ ex:[
+  ['Anterior',[
+   {k:'appr',l:'Apprehension test',t:'chk'},{k:'reloc',l:'Relocation test',t:'chk'},{k:'surprise',l:'Surprise (release) test',t:'chk'},
+   {k:'loadA',l:'Anterior load-and-shift',t:'seg',o:LOAD}]],
+  ['Posterior',[
+   {k:'jerk',l:'Jerk test',t:'chk'},{k:'kim',l:'Kim test',t:'chk'},{k:'pAppr',l:'Pain or apprehension on posterior load',t:'chk'},
+   {k:'loadP',l:'Posterior load-and-shift',t:'seg',o:LOAD}]],
+  ['Laxity',[
+   {k:'sulcus',l:'Sulcus sign',t:'seg',o:[['0','< 1 cm'],['1','1–2 cm'],['2','> 2 cm']]},
+   {k:'sulcusER',l:'Sulcus persists in external rotation',t:'chk'},
+   {k:'erSide',l:'External rotation at the side',t:'num',u:'°'},
+   {k:'gagey',l:'Gagey hyperabduction (scapula fixed)',t:'num',u:'°'},
+   {k:'_bg',t:'beighton'}]],
+  ['Muscle control',[
+   {k:'volDemo',l:'Can sublux or dislocate the shoulder at will',t:'chk'},
+   {k:'musclePat',l:'Instability driven by abnormal muscle pull (muscle patterning)',t:'chk'},
+   {k:'dysk',l:'Scapular dyskinesis',t:'chk'}]],
+  ['Rotator cuff and nerve',[
+   {k:'ffActive',l:'Active forward flexion',t:'num',u:'°'},
+   {k:'erLag',l:'External rotation lag / drop-arm sign',t:'chk'},
+   {k:'belly',l:'Belly-press / lift-off / bear-hug positive',t:'chk'},
+   {k:'weakAbd',l:'Weak abduction or external rotation',t:'chk'}]]],
+ img:[
+  ['Bone loss and glenoid track',[
+   {k:'gbl',l:'Anterior glenoid bone loss',t:'num',u:'%',m:'gbl'},
+   {k:'D',l:'Glenoid diameter (inferior circle)',t:'num',u:'mm',m:'D'},
+   {k:'hsi',l:'Hill-Sachs interval (HSI)',t:'num',u:'mm',m:'hsi'},
+   {k:'engage',l:'Hill-Sachs engages on dynamic testing (EUA / arthroscopy)',t:'chk'},
+   {k:'_h1',t:'note',l:'Blue numbers come from your measurements; typing a value overrides them. With large bone loss, measure D on the other shoulder.'}]],
+  ['Posterior',[
+   {k:'pgbl',l:'Posterior glenoid bone loss',t:'num',u:'%',m:'pgbl'},
+   {k:'version',l:'Glenoid version (+ = retroversion)',t:'num',u:'°',m:'version'},
+   {k:'walch',l:'Humeral head behind the scapular axis (Walch)',t:'num',u:'%',m:'walch'},
+   {k:'rhs',l:'Reverse Hill-Sachs, % of the articular arc',t:'num',u:'%',m:'rhs'},
+   {k:'locked',l:'Locked (unreduced) dislocation',t:'chk'},
+   {k:'weeksLocked',l:'Weeks since the dislocation',t:'num',u:'wk',show:d=>d.locked},
+   {k:'dysplasia',l:'Glenoid dysplasia (posteroinferior deficiency)',t:'chk'}]],
+  ['X-ray (ISIS items)',[
+   {k:'xrHS',l:'Hill-Sachs visible on AP X-ray in external rotation',t:'chk'},
+   {k:'xrGlen',l:'Loss of the sclerotic inferior glenoid contour on AP X-ray',t:'chk'},
+   {k:'gtFx',l:'Greater tuberosity fracture',t:'chk'},
+   {k:'arth',l:'Instability arthropathy (Samilson–Prieto)',t:'sel',o:[['0','None'],['1','Mild – osteophyte < 3 mm'],['2','Moderate – osteophyte 3–7 mm'],['3','Severe – osteophyte > 7 mm, joint narrowing']]}]],
+  ['MRI / MR arthrogram',[
+   {k:'labrum',l:'Labral lesion',t:'sel',o:[['none','None'],['bankart','Bankart (soft tissue)'],['bony','Bony Bankart (fragment)'],['alpsa','ALPSA (medialised)'],['perthes','Perthes'],['glad','GLAD'],['post','Posterior labral tear (reverse Bankart)'],['kim','Kim lesion (incomplete posterior)'],['pan','Pan-labral (270–360°)']]},
+   {k:'frag',l:'Bony fragment size (% of glenoid)',t:'num',u:'%',show:d=>d.labrum==='bony'},
+   {k:'hagl',l:'HAGL / reverse HAGL',t:'chk'},
+   {k:'slap',l:'SLAP extension',t:'chk'},
+   {k:'capsule',l:'Patulous capsule / large capsular volume',t:'chk'},
+   {k:'cuff',l:'Rotator cuff',t:'sel',o:[['none','Intact'],['partial','Partial-thickness tear'],['ssp','Full-thickness supraspinatus / infraspinatus'],['subsc','Subscapularis tear'],['massive','Massive, possibly irreparable']]}]]]
+};
+const BLANK={age:'',sex:'M',side:'R',dom:false,dir:'ant',etiol:'trauma',nDisl:'',nSub:'',firstAge:'',months:'',easy:false,rehabDone:false,pain:false,
+ sport:'none',stype:'none',season:false,work:'light',seizure:'none',ctd:false,physis:false,smoker:false,prior:'none',nPrior:'',anchors:'',reinj:'',weak:false,nerve:false,
+ appr:false,reloc:false,surprise:false,loadA:'0',jerk:false,kim:false,pAppr:false,loadP:'0',sulcus:'0',sulcusER:false,erSide:'',gagey:'',volDemo:false,musclePat:false,dysk:false,ffActive:'',erLag:false,belly:false,weakAbd:false,
+ gbl:'',D:'',hsi:'',engage:false,pgbl:'',version:'',walch:'',rhs:'',locked:false,weeksLocked:'',dysplasia:false,xrHS:false,xrGlen:false,gtFx:false,arth:'0',labrum:'none',frag:'',hagl:false,slap:false,capsule:false,cuff:'none'};
+BEIGHTON.forEach((_,i)=>BLANK['b'+i]=false);
+let S={d:{...BLANK},P:{},cal:{glen:10,hs:10},th:{...TH_DEFAULT},tab:'pt',mode:'glen',active:'cal1',noViewer:false,sc:{tp:'preop',view:'risk',d:{}},rec:blankRec(),caseId:null};
+let imgs={},blobs={};
+let view={s:1,tx:0,ty:0};
+
+/* ---------- geometry ---------- */
+const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y}),add=(a,b)=>({x:a.x+b.x,y:a.y+b.y}),mul=(a,k)=>({x:a.x*k,y:a.y*k}),mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+const dot=(a,b)=>a.x*b.x+a.y*b.y,len=a=>Math.hypot(a.x,a.y),norm=a=>mul(a,1/(len(a)||1)),perp=a=>({x:-a.y,y:a.x});
+const D=180/Math.PI;
+const f1=v=>v==null||isNaN(v)?'—':(+v).toFixed(1),f0=v=>v==null||isNaN(v)?'—':Math.round(+v)+'';
+const P=(m,k)=>S.P[m]&&S.P[m][k];
+function mmpp(m){const a=P(m,'cal1'),b=P(m,'cal2');return a&&b&&S.cal[m]?S.cal[m]/len(sub(a,b)):null}
+function circ3(a,b,c){const d=2*(a.x*(b.y-c.y)+b.x*(c.y-a.y)+c.x*(a.y-b.y));if(Math.abs(d)<1e-9)return null;
+  const A=a.x*a.x+a.y*a.y,B=b.x*b.x+b.y*b.y,C=c.x*c.x+c.y*c.y;
+  const x=(A*(b.y-c.y)+B*(c.y-a.y)+C*(a.y-b.y))/d,y=(A*(c.x-b.x)+B*(a.x-c.x)+C*(b.x-a.x))/d;return{c:{x,y},r:Math.hypot(a.x-x,a.y-y)}}
+function segPct(R,dd){if(!(dd>0))return 0;const h=Math.max(-R,R-dd);return(R*R*Math.acos(h/R)-h*Math.sqrt(Math.max(0,R*R-h*h)))/(Math.PI*R*R)*100}
+const angBetween=(a,b)=>Math.acos(Math.max(-1,Math.min(1,dot(a,b)/(len(a)*len(b)||1))))*D;
+function glenGeo(){const q=S.P.glen||{};if(!(q.C1&&q.C2&&q.C3))return null;const ci=circ3(q.C1,q.C2,q.C3);if(!ci)return null;
+  const u=q.S?norm(sub(ci.c,q.S)):{x:0,y:1};const h=perp(u);const g={...ci,u,h};
+  if(q.A){const s=dot(sub(q.A,ci.c),h);g.sA=Math.sign(s)||1;g.dA=Math.max(0,ci.r-Math.abs(s))}
+  if(q.Pr){const s=dot(sub(q.Pr,ci.c),h);if(g.sA==null||Math.sign(s)!==g.sA){g.sP=Math.sign(s)||-1;g.dP=Math.max(0,ci.r-Math.abs(s))}else g.pSame=true}
+  return g}
+function axGeo(){const a=S.P.ax||{};const r={};
+  if(a.M&&a.GA&&a.GP){const G0=mid(a.GA,a.GP);const ax=norm(sub(G0,a.M));let pd=sub(a.GP,G0);pd=norm(sub(pd,mul(ax,dot(pd,ax))));
+    let n=norm(perp(sub(a.GP,a.GA)));if(dot(n,ax)<0)n=mul(n,-1);r.G0=G0;r.ax=ax;r.pd=pd;r.n=n;r.version=Math.atan2(dot(n,pd),dot(n,ax))*D}
+  if(a.H1&&a.H2&&a.H3){const hc=circ3(a.H1,a.H2,a.H3);if(hc){r.head=hc;if(r.pd){const s=dot(sub(hc.c,a.M),r.pd);r.walch=(hc.r+s)/(2*hc.r)*100}}}
+  if(r.head&&a.R1&&a.R2&&a.A1&&a.A2){const c=r.head.c;const arc=angBetween(sub(a.A1,c),sub(a.A2,c));if(arc>1)r.rhs=angBetween(sub(a.R1,c),sub(a.R2,c))/arc*100}
+  return r}
+function computeImage(){const r={};const g=glenGeo();const k=mmpp('glen');
+  if(g){if(k)r.D=2*g.r*k;if(g.dA!=null){r.gbl=g.dA/(2*g.r)*100;r.gblArea=segPct(g.r,g.dA);if(k)r.dmm=g.dA*k}
+    if(g.dP!=null){r.pgbl=g.dP/(2*g.r)*100;r.pgblArea=segPct(g.r,g.dP)}if(g.pSame)r.pSame=true}
+  const q=S.P.hs||{},kh=mmpp('hs');
+  if(kh&&q.F&&q.H1)r.bb=len(sub(q.H1,q.F))*kh;if(kh&&q.H1&&q.H2)r.hsw=len(sub(q.H2,q.H1))*kh;if(r.bb!=null&&r.hsw!=null)r.hsi=r.bb+r.hsw;
+  const a=axGeo();if(a.version!=null)r.version=a.version;if(a.walch!=null)r.walch=a.walch;if(a.rhs!=null)r.rhs=a.rhs;
+  return r}
+function vals(){const im=computeImage(),d=S.d,T=S.th;const g=k=>num(d[k])!=null?num(d[k]):(im[k]!=null?im[k]:null);
+  const v={gbl:g('gbl'),D:g('D'),hsi:g('hsi'),pgbl:g('pgbl'),version:g('version'),walch:g('walch'),rhs:g('rhs'),im};
+  if(v.D!=null&&v.gbl!=null){v.dmm=v.gbl/100*v.D;v.gt=T.gtk*v.D-v.dmm;v.gtGraft=T.gtk*v.D}
+  if(v.gt!=null&&v.hsi!=null){v.dtd=v.gt-v.hsi;v.off=v.hsi>v.gt;v.offSrc='measured'}
+  else if(d.engage){v.off=true;v.offSrc='dynamic'}
+  v.near=v.off===false&&v.dtd!=null&&v.dtd<T.dtd;
+  return v}
+
+/* ---------- risk scores ---------- */
+function hyperOf(){const d=S.d,T=S.th;const er=num(d.erSide),gg=num(d.gagey),bg=beightonScore(d);
+  const r={ant:er!=null&&er>T.erHyper,inf:gg!=null&&gg>T.gagey,gen:bg>=T.beighton,bg,er,gg};r.sh=r.ant||r.inf;r.any=r.sh||r.gen||+d.sulcus>=2;return r}
+function riskBase(){const d=S.d,age=num(d.age),T=S.th;const hx=hyperOf();const sp=d.sport!=='none';
+  return[[`Age ≤ 20 at surgery`,age!=null&&age<=20?2:0,2],['Competitive or professional sport',['comp','pro'].includes(d.sport)?2:0,2],
+   ['Contact or forced-overhead sport',sp&&['contact','overhead'].includes(d.stype)?1:0,1],[`Shoulder hyperlaxity (ER > ${T.erHyper}° or Gagey > ${T.gagey}°)`,hx.sh?1:0,1]]}
+function isisItems(){const d=S.d;return[...riskBase(),['Hill-Sachs on AP X-ray in external rotation',d.xrHS?2:0,2],['Loss of the inferior glenoid contour on AP X-ray',d.xrGlen?2:0,2]]}
+function gtimsItems(v){return[...riskBase(),['Off-track Hill-Sachs (3D CT)',v.off?4:0,4]]}
+const sumIt=a=>a.reduce((s,x)=>s+x[1],0);
+
+/* ---------- decision engine ---------- */
+const OPT={closed:'Reduction (closed or open)',rehab:'Structured rehabilitation',bankart:'Arthroscopic Bankart repair',remp:'Remplissage',latarjet:'Latarjet (open or arthroscopic)',freebb:'Free bone block (iliac crest / distal tibia allograft)',bony:'Bony Bankart fragment fixation',hagl:'HAGL repair',
+ shift:'Capsular shift / plication ± rotator interval closure',prepair:'Posterior capsulolabral repair',pbb:'Posterior bone block',osteot:'Posterior opening-wedge glenoid osteotomy',humeral:'Humeral head reconstruction (McLaughlin / graft / disimpaction)',cuff:'Rotator cuff repair',arthro:'Shoulder arthroplasty',gtfix:'Greater tuberosity fixation'};
+const OPT_ORDER=['closed','latarjet','freebb','bony','bankart','remp','hagl','shift','prepair','pbb','osteot','humeral','cuff','gtfix','arthro','rehab'];
+const RANK={no:0,consider:1,contra:1,ind:2};
+function decide(){const d=S.d,T=S.th,v=vals();const age=num(d.age);const hx=hyperOf();
+  const R={v,hx,steps:[],notes:[],rts:[]};const O={};for(const k in OPT)O[k]={st:'no',why:'',pro:[],con:[]};R.O=O;
+  const set=(k,st,why)=>{const o=O[k];if(st==='contra'||RANK[st]>=RANK[o.st]||o.st==='no'){o.st=st;if(why)o.why=why}else if(why&&!o.why)o.why=why};
+  const pro=(k,t)=>O[k].pro.push(t),con=(k,t)=>O[k].con.push(t);
+  const step=t=>R.steps.push(t),note=t=>R.notes.push(t);
+  const nEp=(num(d.nDisl)||0)+(num(d.nSub)||0);const first=nEp<=1&&d.prior==='none';
+  const sp=d.sport!=='none',contact=sp&&d.stype==='contact',overhead=sp&&d.stype==='overhead',compet=['comp','pro'].includes(d.sport);
+  const vol=d.etiol==='vol'||d.volDemo||d.musclePat;const months=num(d.months);
+  /* classification */
+  const trauma=['trauma','traumaSub'].includes(d.etiol);const structural=d.labrum!=='none'||(v.gbl!=null&&v.gbl>=5)||(v.hsi!=null)||d.xrHS||d.xrGlen||d.hagl||(v.pgbl!=null&&v.pgbl>=5);
+  R.stanmore=d.musclePat||d.etiol==='vol'?{t:'III',l:'Polar type III – muscle patterning (non-structural)'}:trauma?{t:'I',l:'Polar type I – traumatic structural'}:{t:'II',l:'Polar type II – atraumatic structural'};
+  if(R.stanmore.t!=='III'&&!trauma&&d.musclePat)R.stanmore={t:'II/III',l:'Between type II and III'};
+  const fr=nEp<=1?'Solitary':nEp<=5?'Occasional (2–5)':'Frequent (> 5)';
+  R.feds=`${fr} · ${trauma?'Traumatic':'Atraumatic'} · ${{ant:'Anterior',post:'Posterior',mdi:'Inferior / multidirectional'}[d.dir]} · ${(num(d.nDisl)||0)>0?'Dislocation':'Subluxation'}`;
+  R.isis=isisItems();R.isisT=sumIt(R.isis);R.gtims=gtimsItems(v);R.gtimsT=v.off!=null?sumIt(R.gtims):null;
+  /* universal: rotator cuff, nerve, tuberosity */
+  const cuffTear=['ssp','subsc','massive'].includes(d.cuff);const old=age!=null&&age>=T.oldAge;
+  if(cuffTear){set('cuff',d.cuff==='massive'?'consider':'ind',d.cuff==='subsc'?'Subscapularis tears remove the anterior restraint – repair them with any stabilisation.':'A full-thickness tear after dislocation (especially over '+T.oldAge+') is the usual cause of weakness and pain; early repair gives the best function.');
+    pro('cuff','Restores strength; cuff repair alone may restore stability in older patients');if(d.cuff==='massive')con('cuff','Massive / retracted tear may be irreparable – check fatty infiltration and acromiohumeral distance');
+    if(d.cuff==='massive'&&age!=null&&age>=65&&(d.weak||num(d.ffActive)!=null&&num(d.ffActive)<90)){set('arthro','consider','Massive cuff tear with pseudoparalysis and instability in an older patient: reverse shoulder arthroplasty.')}}
+  else if(old&&(d.weak||d.erLag||d.weakAbd||d.belly)&&d.dir!=='mdi')step(`Ultrasound or MRI now: weakness after dislocation over ${T.oldAge} is more often a rotator cuff tear than a nerve palsy`);
+  else if(old&&d.dir==='ant')step(`Over ${T.oldAge}: check the rotator cuff (ultrasound / MRI) if the arm is not rising well by 2–3 weeks`);
+  if(d.nerve)step('Axillary nerve deficit: most recover; EMG / nerve conduction at 3–4 weeks if not improving, refer if no recovery by 3–6 months');
+  if(d.gtFx){set('gtfix','consider','Displaced greater tuberosity fractures (> 5 mm, or > 3 mm in overhead athletes) need fixation; recurrent instability is uncommon after this injury.')}
+  const arth=+d.arth;
+  /* voluntary / muscle patterning first */
+  if(vol&&!trauma){set('rehab','ind','Muscle-patterning instability: specialist rehabilitation with biofeedback and motor-control retraining; address psychological factors.');
+    pro('rehab','Treats the cause (abnormal muscle activation)');
+    ['bankart','latarjet','shift','prepair','remp'].forEach(k=>set(k,'contra','Stabilisation fails when instability is driven by muscle patterning.'));
+    R.head='Muscle-patterning instability: rehabilitation, no surgery';R.cls='warn'}
+  else if(d.dir==='ant')anterior();
+  else if(d.dir==='post')posterior();
+  else mdi();
+  if(vol&&trauma)note('Voluntary / muscle-patterning component in a traumatic shoulder: treat the muscle patterning first; surgery only if a structural lesion remains symptomatic after rehabilitation.');
+  /* special situations */
+  if(d.seizure==='uncontrolled')note('Uncontrolled epilepsy: optimise seizure control with neurology before stabilisation – recurrence is high after any procedure. Bony procedures are preferred; the consensus favours glenoid bone-grafting over the Latarjet in epilepsy.');
+  else if(d.seizure==='controlled')note('Controlled epilepsy: recurrent seizures still threaten soft-tissue repairs; favour a bony procedure if there is bone loss.');
+  if(d.ctd)note('Connective-tissue disorder: soft-tissue repairs stretch out; rehabilitation first, and if surgery is needed favour bony or combined procedures. Consider genetics / rheumatology review.');
+  if(d.physis&&d.dir==='ant'){if(O.latarjet.st!=='no')con('latarjet','Open physes: the coracoid physis closes around 16–18 y; Latarjet is usually deferred');note('Skeletally immature: recurrence is very high in adolescents; arthroscopic Bankart ± remplissage is usual, bony procedures after physeal closure.')}
+  if(d.smoker&&(O.latarjet.st!=='no'||O.freebb.st!=='no')){con('latarjet','Smoking increases graft non-union');note('Smoker: advise stopping before a bone-block procedure (graft union).')}
+  if(arth>=2){if(O.latarjet.st!=='no')con('latarjet','Moderate–severe instability arthropathy: outcomes are poorer; a lateral graft accelerates arthritis');if(arth===3&&age!=null&&age>=50)set('arthro','consider','Severe instability arthropathy in an older patient: arthroplasty may treat both pain and instability.')}
+  if(d.pain&&!vol)note('Pain is the main complaint: look for other causes (SLAP, cuff, biceps, arthropathy, cervical spine) before attributing it to instability.');
+  if(d.slap&&(O.bankart.st!=='no'||O.prepair.st!=='no'))note('SLAP extension: include the superior labrum in the repair if unstable; consider biceps tenodesis in patients over 35.');
+  /* headline */
+  if(!R.head){const ind=OPT_ORDER.filter(k=>O[k].st==='ind');let surg=ind.filter(k=>k!=='rehab');if(surg.length>1)surg=surg.filter(k=>k!=='closed');
+    let h;if(surg.includes('bankart')&&surg.includes('remp'))h=['Arthroscopic Bankart + remplissage',...surg.filter(k=>!['bankart','remp'].includes(k)).map(k=>OPT[k])];
+    else h=surg.map(k=>OPT[k]);
+    if(!h.length){const cons=OPT_ORDER.filter(k=>O[k].st==='consider'&&k!=='rehab');R.head=ind.includes('rehab')?'Rehabilitation first'+(cons.length?'; consider '+cons.map(k=>OPT[k].split(' (')[0].toLowerCase()).slice(0,2).join(' or '):''):'Complete the assessment';R.cls=ind.includes('rehab')?'ok':'mut'}
+    else{R.head=h.slice(0,3).join(' + ');R.cls='acc'}}
+  /* return to sport */
+  R.rts=['Return to sport on criteria, not time: full painless range, symmetric strength, proprioception and sport-specific skills, no apprehension (consensus).','Typical: ~4–6 months after Bankart or Latarjet; collision athletes and military personnel may need longer.'];
+  if(O.remp.st==='ind')R.rts.push('Remplissage: expect a small loss of external rotation (a few degrees); warn throwing athletes.');
+  R.steps=[...new Set(R.steps)];
+  return R;
+
+  function anterior(){const G=v.gbl;const bigFrag=d.labrum==='bony'&&num(d.frag)!=null;const acute=months!=null&&months<=3;
+    step('X-rays: true AP (Grashey), axillary lateral, AP in external rotation, Bernageau / West Point glenoid profile');
+    if(G==null||v.hsi==null)step('3D CT with humeral-head subtraction (ideally both shoulders) to measure glenoid bone loss and the Hill-Sachs interval');
+    if(d.labrum==='none'&&!first)step('MR arthrogram: labrum, capsule (HAGL, ALPSA), rotator cuff');
+    step('Examination under anaesthesia and dynamic arthroscopic assessment of engagement');
+    if(d.hagl){set('hagl','ind','HAGL / reverse HAGL must be repaired – an unrecognised HAGL is a classic cause of failure.')}
+    if(d.labrum==='alpsa'){con('bankart','ALPSA: medialised labrum – mobilise fully; higher recurrence after Bankart');note('ALPSA lesion: convert to a Bankart lesion by full mobilisation; recurrence is higher, so lower the threshold for remplissage or Latarjet.')}
+    if(bigFrag){if(acute||first){set('bony','ind','Acute bony Bankart: fixing the fragment restores the glenoid arc, even with a large defect.');pro('bony','Anatomic, preserves the coracoid')}
+      else note('Chronic bony Bankart: the fragment may be resorbed or malunited; measure the true missing bone on 3D CT (fragment included and excluded).')}
+    if(d.prior!=='none'&&!['post','postBone'].includes(d.prior))return failed();
+    if(first&&!(G!=null&&G>=T.subcrit)&&v.off!==true){firstTime();return}
+    recurrent()}
+
+  function firstTime(){const young=age!=null&&age<=25;const highDemand=contact||compet||overhead||d.work==='military';
+    set('closed','ind','Reduce, check the axillary nerve and cuff, sling for comfort (1–3 weeks); no consensus on the immobilisation position.');
+    if(young&&highDemand&&!d.season){set('bankart','ind','First dislocation in a young, high-demand patient: recurrence after rehabilitation alone is high (often > 50 % under 20–25 y, highest in contact sport); primary arthroscopic stabilisation lowers it substantially.');
+      pro('bankart','Prevents further episodes and cumulative bone loss');set('rehab','consider','Acceptable after informed discussion – about half of young patients still re-dislocate.');con('rehab','High recurrence; each episode can add bone loss')}
+    else if(d.season&&highDemand){set('rehab','ind','In-season athlete: accelerated rehabilitation ± brace to finish the season, then stabilise – provided there is no significant bone loss.');con('rehab','Recurrence during the season is common; each episode adds bone loss');set('bankart','consider','Planned after the season (or now if bone loss or recurrence).')}
+    else if(old){set('rehab','ind',`First dislocation over ${T.oldAge}: recurrence is low; the priority is the cuff and nerve.`);}
+    else{set('rehab','ind','First dislocation with lower risk: rehabilitation; stabilise if instability recurs.');set('bankart','consider','If symptoms recur, or the patient prefers to avoid a second episode.')}
+    if(hx.any&&O.bankart.st!=='no')con('bankart','Hyperlaxity: tension the capsule with the repair (capsular shift)')}
+
+  function recurrent(){const G=v.gbl;const iT=R.isisT,gT=R.gtimsT;
+    if(G==null&&v.off==null){
+      if(iT>T.isis){set('latarjet','ind',`ISIS ${iT} > ${T.isis}: high recurrence after Bankart (about 70 % in the original series).`);set('bankart','contra','ISIS too high for a soft-tissue repair alone.')}
+      else{set('bankart','ind',`Provisional (no CT measurement yet): ISIS ${iT} ≤ ${T.isis}.`);if(iT>=4)set('latarjet','consider','ISIS ≥ 4: recurrence after Bankart rises; many surgeons now use 4 as the threshold.')}
+      R.prov=true}
+    else if(G!=null&&G>=T.crit){
+      set('latarjet','ind',`Critical glenoid bone loss (${f1(G)} % ≥ ${T.crit} %): restore the glenoid arc with a bone block.`);pro('latarjet','Bone block + sling effect of the conjoint tendon + capsular repair');con('latarjet','Complications ~ 15 % (graft non-union or lysis, screw problems, nerve injury), later arthritis if the graft is lateral');
+      set('bankart','contra','Soft-tissue repair alone fails with critical bone loss.');
+      set('freebb','consider','Free iliac-crest or distal-tibia allograft when the defect is larger than a coracoid graft can restore, the coracoid is unsuitable, or in epilepsy.');
+      if(G>=30)set('freebb','ind',`Very large defect (${f1(G)} %): a coracoid graft may not restore the arc – iliac crest or distal tibia allograft.`)}
+    else if(G!=null&&G>=T.subcrit){
+      const hi=v.off||contact||(gT!=null&&gT>=T.gtims)||hx.sh||iT>T.isis;
+      set('latarjet',hi?'ind':'consider',`Subcritical bone loss (${f1(G)} %): Bankart outcomes worsen above ~13.5 % (Shaha 2015)${hi?' and risk factors are present':''}.`);
+      set('bankart','consider','Only with remplissage and in a lower-risk patient.');con('bankart',`Glenoid bone loss ${f1(G)} % (subcritical)`);
+      set('remp',v.off&&!hi?'ind':'consider',v.off?'Off-track: fill the Hill-Sachs if a Bankart is chosen.':'Adds stability to a Bankart in subcritical bone loss.');if(contact)con('remp','Contact athletes: Latarjet preferred')}
+    else{
+      if(v.off){set('bankart','ind','Off-track Hill-Sachs with glenoid bone loss below '+T.subcrit+' %: Bankart repair with remplissage (glenoid track algorithm).');set('remp','ind',`Off-track: HSI ${f1(v.hsi)} mm > glenoid track ${f1(v.gt)} mm${v.offSrc==='dynamic'?' (engages on dynamic testing)':''}.`);
+        pro('remp','Rare complications; converts the lesion to extra-articular');con('remp','Small loss of external rotation');
+        set('latarjet',contact&&compet?'ind':'consider',contact&&compet?'Off-track lesion in a competitive contact athlete: Latarjet is a strong alternative.':`GTIMS ${gT} ≥ ${T.gtims} favours Latarjet; Bankart + remplissage is the alternative.`)}
+      else{
+        set('bankart','ind',v.off===false?`On-track: HSI ${f1(v.hsi)} mm < glenoid track ${f1(v.gt)} mm (distance to dislocation ${f1(v.dtd)} mm).`:'Glenoid bone loss below the subcritical level.');pro('bankart','Anatomic, arthroscopic, low complication rate');
+        if(v.near){set('remp','consider',`Near-track: distance to dislocation ${f1(v.dtd)} mm < ${T.dtd} mm – failure after Bankart rises (Li 2021); add remplissage.`);con('bankart','Near-track lesion')}
+        if(gT!=null&&gT>=T.gtims){set('latarjet','ind',`GTIMS ${gT} ≥ ${T.gtims} (age, competitive / contact sport, hyperlaxity).`);O.bankart.st='consider';con('bankart',`GTIMS ${gT}`)}
+        else if(iT>T.isis){set('latarjet','consider',`ISIS ${iT} > ${T.isis}.`)}
+        else if(contact&&compet)set('latarjet','consider','Competitive contact athlete: some surgeons prefer Latarjet even without bone loss.')}}
+    if(hx.sh&&O.bankart.st!=='no'){con('bankart','Hyperlaxity: bone loss + inferior hyperlaxity gave 75 % recurrence (Boileau 2006)');set('shift','consider','Add capsular shift / plication to the Bankart in the hyperlax shoulder.')}
+    if(d.capsule&&O.bankart.st!=='no')con('bankart','Patulous capsule: plicate / shift the capsule');
+    if(v.off&&O.latarjet.st!=='no'&&v.gtGraft!=null&&v.hsi>v.gtGraft){note(`HSI ${f1(v.hsi)} mm exceeds even the restored track (${f1(v.gtGraft)} mm): the Hill-Sachs may stay off-track after the graft – consider adding remplissage.`);if(O.remp.st==='no')set('remp','consider','Residual off-track after bone block.')}
+    if(d.easy)note('Dislocation in sleep or with minimal force suggests large bipolar bone loss – measure it on 3D CT.')}
+
+  function failed(){const G=v.gbl;const nP=num(d.nPrior)||1;const anc=num(d.anchors);
+    const F=[[G!=null&&G>=T.subcrit,`Glenoid bone loss ≥ ${T.subcrit} %`+(G!=null?` (${f1(G)} %)`:'')],[v.off===true||v.near,'Off-track or near-track Hill-Sachs'],[hx.any,'Hyperlaxity'],[contact,'Contact / collision sport'],[nP>=2,'Two or more previous stabilisations'],
+      [anc!=null&&anc<4,'Fewer than 4 anchors used (Boileau 2006)'],[d.reinj==='minor'||d.reinj==='early','Recurrence with little or no trauma'],[d.capsule||d.labrum==='alpsa','Poor capsulolabral tissue / ALPSA']];
+    R.failed={F,prior:d.prior};
+    step('3D CT: bone loss, previous anchors / tunnels, graft position and union (if bone block)');step('MR arthrogram: labrum, capsule, HAGL, cuff');
+    if(['latarjet','bone'].includes(d.prior)){set('freebb','ind','Failed Latarjet / bone block: revise with a free bone block (iliac crest – e.g. Eden–Hybinette – or distal tibia allograft).');pro('freebb','Restores the arc when the coracoid is gone');con('freebb','Graft resorption; technically demanding');
+      set('latarjet','contra','Coracoid already used.');note('Check the cause: graft malposition (too medial → recurrence; too lateral → arthritis), non-union, lysis, screw failure, or an off-track Hill-Sachs that was not addressed.');
+      if(v.off)set('remp','consider','Hill-Sachs still off-track.');if(arth>=2&&age!=null&&age>=50)set('arthro','consider','Painful arthropathy after failed bone block.');
+      R.head='Revision with free bone block';R.cls='bad';return}
+    if(d.prior==='thermal'){set('latarjet','ind','After thermal capsulorrhaphy the capsule is often deficient – a bony procedure is more reliable.');set('freebb','consider','');set('bankart','contra','Deficient capsule.');note('Thermal capsulorrhaphy: check for chondrolysis (joint-space narrowing) before any revision.');return}
+    const revOK=(G==null||G<T.subcrit)&&v.off!==true&&!v.near&&!hx.any&&!contact&&nP<2&&(d.reinj==='major'||(anc!=null&&anc<4));
+    if(revOK){set('bankart','consider','Revision arthroscopic Bankart is reasonable: little bone loss, on-track, no hyperlaxity, non-contact, and a clear reason for failure (new injury or too few anchors).');
+      set('latarjet','consider','Lower recurrence than revision Bankart in most series.');set('remp','consider','Add to a revision Bankart for extra security.');R.head='Revision Bankart (± remplissage) or Latarjet';R.cls='acc'}
+    else{set('latarjet','ind','Failed soft-tissue stabilisation with risk factors: Latarjet gives lower recurrence than revision Bankart.');pro('latarjet','Does not rely on the damaged capsulolabral tissue');
+      set('bankart','contra','Revision Bankart failure risk is high with these factors.');if(G!=null&&G>=30)set('freebb','consider','Bone loss larger than the coracoid can restore.')}
+    if(v.off&&v.gtGraft!=null&&v.hsi>v.gtGraft)set('remp','consider','Hill-Sachs may stay off-track after the graft.')}
+
+  function posterior(){const PG=v.pgbl,V=v.version,RH=v.rhs;const wk=num(d.weeksLocked);
+    step('X-rays: AP and axillary lateral (mandatory – posterior dislocations are missed on the AP alone)');
+    step('Axial CT: posterior glenoid bone loss, version (Friedman), humeral-head subluxation, reverse Hill-Sachs size');
+    step('MR arthrogram: posterior labrum (reverse Bankart, Kim lesion), capsule, RHAGL');
+    if(V!=null&&V>=T.retro)note(`Glenoid retroversion ${f1(V)}° (≥ ${T.retro}°) is associated with failure of posterior labral repair.`);
+    if(v.walch!=null&&v.walch>T.walch)note(`Humeral head ${f0(v.walch)} % behind the scapular axis: static posterior subluxation – this is a pre-arthritic deformity rather than classic instability; treat differently.`);
+    if(d.locked){set('closed','ind',wk!=null&&wk<3?'Locked posterior dislocation < 3 weeks: closed reduction under anaesthesia if the head defect is small; otherwise open reduction.':'Chronic locked posterior dislocation: open reduction.');
+      if(wk!=null&&wk>=26&&RH!=null&&RH>=T.rhsLow)set('arthro','consider','Locked > 6 months with a significant head defect: cartilage is usually damaged – arthroplasty.')}
+    if(RH!=null){if(RH<T.rhsLow){set('rehab','ind',`Reverse Hill-Sachs ${f0(RH)} % (< ${T.rhsLow} %): stable after reduction – immobilise in neutral / slight external rotation for 4–6 weeks, then rehabilitate.`)}
+      else if(RH<=T.rhsHigh){set('humeral','ind',`Reverse Hill-Sachs ${f0(RH)} % (${T.rhsLow}–${T.rhsHigh} %): fill or elevate the defect – McLaughlin / modified McLaughlin (lesser tuberosity transfer), allograft, or disimpaction with bone graft if acute (< 3 weeks).`);pro('humeral','Prevents engagement and re-dislocation')}
+      else{set('arthro',age!=null&&age<50?'consider':'ind',`Reverse Hill-Sachs ${f0(RH)} % (> ${T.rhsHigh} %): arthroplasty, especially if older or chronic.`);set('humeral','consider','Younger patient: osteochondral allograft reconstruction of the head.')}}
+    else if(d.etiol==='trauma'&&first)step('Measure the reverse Hill-Sachs size (% of the articular arc) on axial CT to choose treatment');
+    if(PG!=null&&PG>=T.pcrit){set('pbb','ind',`Posterior glenoid bone loss ${f1(PG)} % (≥ ${T.pcrit} %): posterior bone block (iliac crest or distal tibia allograft).`);pro('pbb','Restores the posterior arc');con('pbb','Hardware irritation, graft resorption; suprascapular nerve at risk')}
+    if(V!=null&&V>=T.osteo){set('osteot','consider',`Glenoid retroversion ${f1(V)}° (≥ ${T.osteo}°): posterior opening-wedge osteotomy corrects the bony cause (no consensus on exact indications).`);con('osteot','Technically demanding; risk of intra-articular fracture and arthritis')}
+    if(d.dysplasia){set('pbb','consider','Posteroinferior glenoid dysplasia: a bone block deepens the deficient rim.')}
+    const structuralP=['post','kim','pan'].includes(d.labrum)||d.hagl||trauma;function structuralP0(){return['post','kim','pan'].includes(d.labrum)||d.hagl}
+    if(first&&d.etiol==='trauma'){if(structuralP0())set('prepair','consider','Repair the posterior labrum at the same time if the joint stays unstable after reduction / head reconstruction.')}
+    else{
+      if(d.prior==='post'){set('pbb','ind','Failed posterior labral repair: posterior bone block'+(V!=null&&V>=T.osteo?' or glenoid osteotomy':'')+'.');set('prepair','consider','Revision repair only if no bony risk factors.')}
+      else if(structuralP&&(d.rehabDone||compet||!first)){set('prepair','ind','Symptomatic recurrent posterior instability with a structural labral / capsular lesion: arthroscopic posterior capsulolabral repair (small anchors, inferior placement, multiple fixation points).');
+        pro('prepair','Good return to sport in most athletes');if(V!=null&&V>=T.retro)con('prepair',`Retroversion ${f1(V)}°`);if(PG!=null&&PG>=T.pcrit)con('prepair','Bone loss not addressed');
+        if(!d.rehabDone)set('rehab','consider','A trial of rehabilitation is reasonable first in non-elite patients.')}
+      else{set('rehab','ind','Posterior instability without a clear structural lesion, or before 3–6 months of rehabilitation: rehabilitate first (scapular control, posterior cuff strengthening).');set('prepair','consider','If symptoms persist after rehabilitation and a structural lesion is present.')}}
+    if(d.hagl)set('hagl','ind','Reverse HAGL: repair it.')}
+
+  function mdi(){const bg=hx.bg;
+    step('Beighton score and a hypermobility history; consider hypermobile Ehlers–Danlos (2017 criteria) and refer if suspected');
+    step('MR arthrogram: capsular volume, labral lesions; exclude a structural lesion that is the true cause');
+    set('rehab',d.rehabDone?'consider':'ind','Multidirectional instability: at least 6 months of a structured programme (scapular control, rotator cuff, proprioception – e.g. the Watson programme) before any surgery.');pro('rehab','Most patients improve; avoids surgery in lax tissue');
+    if(d.rehabDone&&!d.musclePat){set('shift','ind','Failed ≥ 6 months of rehabilitation: arthroscopic pancapsular plication or open inferior capsular shift'+(d.sulcusER?'; close the rotator interval (sulcus persists in external rotation).':'.'));
+      con('shift','Avoid thermal capsulorrhaphy (capsular necrosis, chondrolysis)');if(d.ctd||bg>=T.beighton)con('shift',`Generalised hypermobility (Beighton ${bg}/9) / connective-tissue disorder: higher failure`)}
+    else set('shift','consider','Only after failed structured rehabilitation.');
+    if(['bankart','bony','post','kim'].includes(d.labrum)||(v.gbl!=null&&v.gbl>=T.subcrit))note('A structural lesion is present: treat the dominant direction and its lesion together with the capsular laxity.')}
+}
+
+/* ---------- demo cases ---------- */
+const SB=127; // demo scale bar: 10 mm
+function demoGlen(){const c=document.createElement('canvas');c.width=700;c.height=900;const g=c.getContext('2d');g.fillStyle='#070707';g.fillRect(0,0,700,900);
+  g.fillStyle='#8f8f8f';g.beginPath();g.arc(350,560,165,0,7);g.fill();g.beginPath();g.ellipse(350,330,110,170,0,0,7);g.fill();
+  g.fillStyle='#070707';g.fillRect(455,380,260,260);
+  g.fillStyle='#fff';g.fillRect(40,860,SB,5);g.font='16px sans-serif';g.fillText('10 mm',40,850);g.fillStyle='#bbb';g.fillText('Demo: en-face glenoid (anterior = right)',40,40);return c}
+function demoHS(){const c=document.createElement('canvas');c.width=700;c.height=700;const g=c.getContext('2d');g.fillStyle='#070707';g.fillRect(0,0,700,700);
+  g.fillStyle='#8f8f8f';g.beginPath();g.arc(350,360,250,0,7);g.fill();g.fillStyle='#454545';g.beginPath();g.ellipse(300,330,68,120,-0.2,0,7);g.fill();
+  g.fillStyle='#b5b5b5';g.fillRect(470,160,30,360);g.fillStyle='#fff';g.fillRect(40,660,SB,5);g.font='16px sans-serif';g.fillText('10 mm',40,650);g.fillStyle='#bbb';g.fillText('Demo: posterior view of the humeral head',40,40);return c}
+function demoAx(){const c=document.createElement('canvas');c.width=820;c.height=600;const g=c.getContext('2d');g.fillStyle='#070707';g.fillRect(0,0,820,600);
+  g.strokeStyle='#8f8f8f';g.lineWidth=14;g.beginPath();g.moveTo(80,330);g.lineTo(440,302);g.stroke();
+  g.fillStyle='#8f8f8f';g.beginPath();g.moveTo(430,260);g.lineTo(500,215);g.lineTo(470,390);g.lineTo(430,340);g.fill();
+  g.beginPath();g.arc(640,330,120,0,7);g.fill();g.fillStyle='#303030';g.beginPath();g.ellipse(556,246,40,22,-0.8,0,7);g.fill();
+  g.fillStyle='#bbb';g.font='16px sans-serif';g.fillText('Demo: axial slice (anterior = up)',30,40);return c}
+const DEMO_P={
+ glen:{cal1:{x:40,y:862},cal2:{x:40+SB,y:862},S:{x:350,y:162},C1:{x:212,y:650},C2:{x:350,y:725},C3:{x:452,y:690},A:{x:455,y:560}},
+ hs:{cal1:{x:40,y:662},cal2:{x:40+SB,y:662},F:{x:470,y:330},H1:{x:368,y:330},H2:{x:232,y:330}},
+ ax:{M:{x:80,y:330},GA:{x:500,y:215},GP:{x:470,y:390},H1:{x:640,y:210},H2:{x:760,y:330},H3:{x:640,y:450},R1:{x:531,y:279},R2:{x:593,y:220},A1:{x:599,y:217},A2:{x:599,y:443}}};
+const DEMOS=[
+ {t:'19 y rugby player, 4 dislocations, 3D CT done',d:{age:19,sex:'M',dir:'ant',etiol:'trauma',nDisl:4,months:20,sport:'comp',stype:'contact',appr:true,reloc:true,erSide:70,xrHS:true,xrGlen:true,labrum:'bankart'},img:['glen','hs']},
+ {t:'24 y recreational, recurrent anterior, small bone loss',d:{age:24,sex:'M',dir:'ant',etiol:'trauma',nDisl:3,sport:'rec',stype:'other',appr:true,erSide:70,gbl:6,D:27,hsi:14,labrum:'bankart'}},
+ {t:'28 y handball player, off-track, 9 % bone loss',d:{age:28,sex:'F',dir:'ant',etiol:'trauma',nDisl:5,sport:'comp',stype:'overhead',appr:true,erSide:80,gbl:9,D:25,hsi:22,xrHS:true,labrum:'bankart'}},
+ {t:'17 y footballer, first dislocation',d:{age:17,sex:'M',dir:'ant',etiol:'trauma',nDisl:1,months:1,sport:'comp',stype:'contact',appr:true,labrum:'bankart',physis:true}},
+ {t:'58 y woman, first dislocation, cannot lift the arm',d:{age:58,sex:'F',dir:'ant',etiol:'trauma',nDisl:1,months:1,weak:true,erLag:true,weakAbd:true,ffActive:60,cuff:'ssp'}},
+ {t:'23 y, failed arthroscopic Bankart (3 anchors), 15 % bone loss',d:{age:23,sex:'M',dir:'ant',etiol:'trauma',nDisl:6,sport:'comp',stype:'contact',prior:'bankart',nPrior:1,anchors:3,reinj:'minor',gbl:15,D:26,hsi:18,labrum:'bankart'}},
+ {t:'31 y, failed Latarjet with graft lysis',d:{age:31,sex:'M',dir:'ant',etiol:'trauma',nDisl:8,prior:'latarjet',nPrior:2,reinj:'minor',gbl:24,D:26,hsi:20,arth:'1'}},
+ {t:'34 y epileptic, posterior dislocation, reverse Hill-Sachs',d:{age:34,sex:'M',dir:'post',etiol:'trauma',nDisl:1,months:0.5,seizure:'uncontrolled',labrum:'post'},img:['ax']},
+ {t:'21 y weightlifter, recurrent posterior subluxation',d:{age:21,sex:'M',dir:'post',etiol:'traumaSub',nSub:10,sport:'comp',stype:'other',jerk:true,kim:true,pAppr:true,loadP:'2',version:17,pgbl:8,labrum:'post',rehabDone:true}},
+ {t:'17 y swimmer, multidirectional, hypermobile',d:{age:17,sex:'F',dir:'mdi',etiol:'atraum',nSub:20,sport:'comp',stype:'other',sulcus:'2',sulcusER:true,gagey:115,erSide:95,b0:true,b1:true,b2:true,b3:true,b4:true,b5:true,b8:true,capsule:true}},
+ {t:'15 y, dislocates at will (muscle patterning)',d:{age:15,sex:'F',dir:'post',etiol:'vol',nSub:30,volDemo:true,musclePat:true,dysk:true}}];
+function openDemo(i){const x=DEMOS[i];S.d={...BLANK,...x.d};S.sc={tp:'preop',view:'risk',d:{}};S.rec=blankRec();S.caseId=null;S.P={};S.cal={glen:10,hs:10};imgs={};blobs={};
+  if(x.img){for(const m of x.img){imgs[m]={glen:demoGlen,hs:demoHS,ax:demoAx}[m]();S.P[m]=JSON.parse(JSON.stringify(DEMO_P[m]))}S.mode=x.img[0]}else S.mode='glen';
+  S.active=MODES[S.mode].pts[0][0];selectTab('dec');toast('Demo: '+x.t)}
+
+/* ---------- forms ---------- */
+function fieldHTML(f,d,meas){
+  if(f.show&&!f.show(d))return'';
+  if(f.t==='note')return`<p class="h">${f.l}</p>`;
+  if(f.t==='chk')return`<label class="tog"><input type="checkbox" data-k="${f.k}" ${d[f.k]?'checked':''}> ${f.l}</label>`;
+  if(f.t==='seg')return`<div class="full"><span>${f.l}</span><div class="seg">${f.o.map(([v,l])=>`<button data-k="${f.k}" data-v="${v}" class="${String(d[f.k])===v?'on':''}">${l}</button>`).join('')}</div></div>`;
+  if(f.t==='sel')return`<label for="f_${f.k}">${f.l}</label><select id="f_${f.k}" data-k="${f.k}">${f.o.map(([v,l])=>`<option value="${v}" ${String(d[f.k])===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  if(f.t==='beighton'){const n=beightonScore(d);return`<div class="full"><span>Beighton score <span class="badge" id="bgScore">${n}/9</span></span><div class="bgrid">${BEIGHTON.map((l,i)=>`<label class="tog"><input type="checkbox" data-k="b${i}" ${d['b'+i]?'checked':''}> ${l}</label>`).join('')}</div></div>`}
+  const ph=f.m&&meas[f.m]!=null?f1(meas[f.m]):'';
+  return`<label for="f_${f.k}">${f.l}</label><input id="f_${f.k}" type="number" inputmode="decimal" step="any" data-k="${f.k}" value="${esc(d[f.k]??'')}" placeholder="${ph}"><span class="u">${f.u||''}</span>`}
+function renderForm(tab,el){const d=S.d;const meas=computeImage();
+  el.innerHTML=FORMS[tab].map(([title,fs])=>{const body=fs.map(f=>fieldHTML(f,d,meas)).join('');return body?`<div class="group"><h3>${title}</h3><div class="fgrid">${body}</div></div>`:''}).join('')+(tab==='pt'||tab==='ex'?liveBox():'')}
+function liveBox(){const R=decide();return`<div class="banner" id="liveBox"><b>${esc(R.head)}</b><br><span class="fine">${esc(R.feds)} · Stanmore ${esc(R.stanmore.t)} · ISIS ${R.isisT}/10${R.gtimsT!=null?' · GTIMS '+R.gtimsT:''}</span> <button class="btn" data-goto="dec" style="margin-top:6px">Open decision</button></div>`}
+function formTarget(tab){return tab==='img'?$('#imgForm'):$('#p-'+tab)}
+function renderTab(tab){if(tab==='rec'){renderRecord();return}if(tab==='sc'){renderScores();return}if(tab==='dec'){renderDec();return}if(FORMS[tab]){const el=formTarget(tab);const st=(tab==='img'?$('#p-img'):el).scrollTop;renderForm(tab,el);(tab==='img'?$('#p-img'):el).scrollTop=st}if(tab==='img')renderImg()}
+document.addEventListener('click',e=>{const g=e.target.closest('[data-goto]');if(g){selectTab(g.dataset.goto);return}
+  const b=e.target.closest('.seg button[data-k]');if(!b)return;S.d[b.dataset.k]=b.dataset.v;renderTab(S.tab);autosave()});
+document.addEventListener('change',e=>{const i=e.target;if(!i.dataset||!i.dataset.k)return;const k=i.dataset.k;
+  S.d[k]=i.type==='checkbox'?i.checked:i.value;renderTab(S.tab);autosave()});
+document.addEventListener('input',e=>{const i=e.target;if(!i.dataset||!i.dataset.k||i.type!=='number')return;S.d[i.dataset.k]=i.value;autosave()});
+
+/* ---------- decision tab ---------- */
+const STATE={ind:['acc','Indicated'],consider:['warn','Consider'],contra:['bad','Not advised'],no:['mut','Not needed']};
+let lastSummary='';
+function gblCat(G){const T=S.th;return G==null?['mut','not measured']:G>=T.crit?['bad','critical']:G>=T.subcrit?['warn','subcritical']:['ok','below subcritical']}
+function trackTxt(v){return v.off==null?['mut','unknown']:v.off?['bad','off-track'+(v.offSrc==='dynamic'?' (dynamic)':'')]:v.near?['warn','near-track']:['ok','on-track']}
+function renderDec(){const R=decide();const d=S.d,T=S.th,v=R.v;let h='';const tr=trackTxt(v),gc=gblCat(v.gbl);
+  h+=`<div class="rec"><span class="l">Recommendation${R.prov?' (provisional)':''}</span><span class="h">${esc(R.head)}</span>
+   <div class="figs">${d.dir!=='post'?`<div><span class="k">Glenoid loss</span><span class="v">${v.gbl!=null?f1(v.gbl):'—'}<small>%</small></span></div><div><span class="k">Track</span><span class="v" style="font-size:15px">${tr[1]}</span></div>`:''}
+   ${d.dir==='post'?`<div><span class="k">Post. loss</span><span class="v">${v.pgbl!=null?f1(v.pgbl):'—'}<small>%</small></span></div><div><span class="k">Version</span><span class="v">${v.version!=null?f1(v.version):'—'}<small>°</small></span></div><div><span class="k">Reverse HS</span><span class="v">${v.rhs!=null?f0(v.rhs):'—'}<small>%</small></span></div>`:''}
+   <div><span class="k">ISIS</span><span class="v">${R.isisT}<small>/10</small></span></div>${R.gtimsT!=null?`<div><span class="k">GTIMS</span><span class="v">${R.gtimsT}<small>/10</small></span></div>`:''}</div>
+   <span class="fine">${esc(R.feds)} · Stanmore ${esc(R.stanmore.l)}</span></div>`;
+  if(d.dir!=='post'||v.gbl!=null||v.hsi!=null){
+    h+=`<div class="card"><div class="hd"><b>Bipolar bone loss</b><span class="pill ${tr[0]}">${tr[1]}</span></div><table class="mt">
+     <tr><td>Glenoid bone loss <span class="ref">width method</span></td><td class="n">${v.gbl!=null?f1(v.gbl)+' %':'—'} <span class="pill ${gc[0]}">${gc[1]}</span></td></tr>
+     ${v.im.gblArea!=null&&num(d.gbl)==null?`<tr><td>Glenoid bone loss <span class="ref">area method</span></td><td class="n">${f1(v.im.gblArea)} %</td></tr>`:''}
+     <tr><td>Glenoid diameter D</td><td class="n">${v.D!=null?f1(v.D)+' mm':'—'}</td></tr>
+     <tr><td>Defect width d</td><td class="n">${v.dmm!=null?f1(v.dmm)+' mm':'—'}</td></tr>
+     <tr><td>Glenoid track = ${T.gtk} × D − d</td><td class="n">${v.gt!=null?f1(v.gt)+' mm':'—'}</td></tr>
+     <tr><td>Hill-Sachs interval${v.im.bb!=null&&num(d.hsi)==null?` <span class="ref">bridge ${f1(v.im.bb)} + width ${f1(v.im.hsw)}</span>`:''}</td><td class="n">${v.hsi!=null?f1(v.hsi)+' mm':'—'}</td></tr>
+     <tr><td>Distance to dislocation (GT − HSI)</td><td class="n">${v.dtd!=null?f1(v.dtd)+' mm':'—'}</td></tr>
+     ${v.gtGraft!=null&&v.hsi!=null?`<tr><td>Track after a bone block restores D</td><td class="n">${f1(v.gtGraft)} mm · ${v.hsi>v.gtGraft?'still off-track':'on-track'}</td></tr>`:''}</table>
+     <p class="why">HSI > glenoid track = off-track (Di Giacomo 2014). Distance to dislocation < ${T.dtd} mm = near-track, higher failure after Bankart (Li 2021). Bone loss ≥ ${T.subcrit} % worsens Bankart outcomes (Shaha 2015); ≥ ${T.crit} % is critical.</p></div>`}
+  const isRow=a=>a.map(([l,p,m])=>`<tr><td>${esc(l)}</td><td class="n">${p}/${m}</td></tr>`).join('');
+  if(d.dir==='ant')h+=`<div class="card"><div class="hd"><b>Instability scores</b></div><table class="mt"><tr><th>Item</th><th>Points</th></tr>${isRow(R.isis)}<tr><td><b>ISIS</b></td><td class="n"><b>${R.isisT}/10</b></td></tr></table>
+     <p class="why">ISIS > 6: ~70 % recurrence after Bankart – Latarjet advised (Balg & Boileau 2007); many now use ≥ 4. GTIMS replaces the X-ray items with off-track on 3D CT (4 points); ≥ ${T.gtims} → Latarjet (Di Giacomo 2020).</p>
+     ${R.gtimsT!=null?`<p class="why"><b>GTIMS ${R.gtimsT}/10</b> – ${R.gtimsT>=T.gtims?'Latarjet range':'Bankart range'}</p>`:'<p class="why">GTIMS needs the glenoid track (Imaging tab).</p>'}</div>`;
+  const hx=R.hx;h+=`<div class="card"><div class="hd"><b>Classification and laxity</b></div><table class="mt"><tr><td>FEDS</td><td class="n" style="white-space:normal">${esc(R.feds)}</td></tr><tr><td>Stanmore</td><td class="n" style="white-space:normal">${esc(R.stanmore.l)}</td></tr>
+    <tr><td>External rotation at the side</td><td class="n">${hx.er!=null?hx.er+'°':'—'}${hx.ant?' · hyperlax':''}</td></tr><tr><td>Gagey hyperabduction</td><td class="n">${hx.gg!=null?hx.gg+'°':'—'}${hx.inf?' · inferior laxity':''}</td></tr>
+    <tr><td>Beighton</td><td class="n">${hx.bg}/9${hx.gen?' · hypermobile':''}</td></tr><tr><td>Sulcus</td><td class="n">${['< 1 cm','1–2 cm','> 2 cm'][+d.sulcus]}${d.sulcusER?' · persists in ER':''}</td></tr></table></div>`;
+  const shown=OPT_ORDER.filter(k=>R.O[k].st!=='no').sort((a,b)=>({ind:0,consider:1,contra:2}[R.O[a].st]-{ind:0,consider:1,contra:2}[R.O[b].st]));
+  h+=shown.map(k=>{const o=R.O[k];return`<div class="card ${o.st==='ind'?'ind':''}"><div class="hd"><b>${esc(OPT[k])}</b><span class="pill ${STATE[o.st][0]}">${STATE[o.st][1]}</span></div>${o.why?`<p class="why">${esc(o.why)}</p>`:''}${o.pro.length?`<ul class="lst pro">${o.pro.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}${o.con.length?`<ul class="lst con">${o.con.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>`}).join('');
+  if(R.failed)h+=`<div class="card"><div class="hd"><b>Failed stabilisation – risk factors</b><span class="pill ${R.failed.F.filter(x=>x[0]).length?'bad':'ok'}">${R.failed.F.filter(x=>x[0]).length} present</span></div><ul class="lst chk">${R.failed.F.map(([y,l])=>`<li class="${y?'y':'n'}">${esc(l)}</li>`).join('')}</ul></div>`;
+  if(R.steps.length)h+=`<div class="card"><div class="hd"><b>Work-up</b></div><ol>${R.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>`;
+  if(R.notes.length)h+=`<div class="card"><div class="hd"><b>Special situations</b></div><ul>${R.notes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
+  h+=`<div class="card"><div class="hd"><b>Rehabilitation and return to sport</b></div><ul>${R.rts.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
+  h+=scoresCard();
+  h+=`<div class="row"><button class="btn primary" id="decPrint">Print / PDF</button><button class="btn" id="copy">Copy summary</button><button class="btn" id="share">Share</button></div>`;
+  h+=`<details><summary>Thresholds</summary><div class="thr">${Object.keys(TH_DEFAULT).map(k=>`<label for="th_${k}">${TH_LABEL[k][0]} <span class="src">${TH_LABEL[k][1]}</span></label><input id="th_${k}" type="number" step="any" data-th="${k}" value="${T[k]}">`).join('')}</div><div class="row" style="margin-top:8px"><button class="btn" id="thReset">Reset to defaults</button></div></details>`;
+  h+=`<details><summary>References</summary><ol class="refs">${REFS.map(([t,doi])=>doi?`<li>${t} <a href="https://doi.org/${doi}" target="_blank" rel="noopener">doi:${doi}</a></li>`:`<li>${t}</li>`).join('')}</ol></details>`;
+  h+=`<p class="fine">Decision aid only: it combines the measurements and findings you enter with published thresholds. Confirm measurements on the original images; the decision belongs to the surgeon and the patient.</p>`;
+  const el=$('#p-dec');const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;
+  lastSummary=summary(R);
+  $('#decPrint').onclick=openPrintSheet;
+  $('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(lastSummary);toast('Summary copied')}catch{toast('Copy not available here')}};
+  $('#share').onclick=()=>shareText('Shoulder instability plan',lastSummary);
+  $$('[data-th]').forEach(i=>i.onchange=()=>{const x=num(i.value);if(x!=null){S.th[i.dataset.th]=x;renderDec();autosave()}});
+  $('#thReset').onclick=()=>{S.th={...TH_DEFAULT};renderDec();autosave()}}
+const REFS=[
+ ['Di Giacomo, Itoi, Burkhart 2014. Evolving concept of bipolar bone loss and the Hill-Sachs lesion: from engaging to on-track/off-track. Arthroscopy 30:90–98.','10.1016/j.arthro.2013.10.004'],
+ ['Balg & Boileau 2007. The instability severity index score. J Bone Joint Surg Br 89:1470–7.','10.1302/0301-620X.89B11.18962'],
+ ['Di Giacomo et al. 2020. Glenoid Track Instability Management Score: radiographic modification of the ISIS. Arthroscopy 36:56–67.','10.1016/j.arthro.2019.07.020'],
+ ['Shaha et al. 2015. Redefining “critical” bone loss in shoulder instability: subcritical bone loss (13.5 %). Am J Sports Med 43:1719–25.','10.1177/0363546515578250'],
+ ['Li et al. 2021. On-track lesions with a small distance to dislocation are associated with failure after arthroscopic stabilization. J Bone Joint Surg Am 103:961–7.','10.2106/JBJS.20.00917'],
+ ['Boileau et al. 2006. Risk factors for recurrence after arthroscopic Bankart repair. J Bone Joint Surg Am 88:1755–63.','10.2106/JBJS.E.00817'],
+ ['Hurley et al. 2022. Anterior shoulder instability part I – diagnosis, non-operative management and Bankart repair: international consensus. Arthroscopy 38:214–223.','10.1016/j.arthro.2021.07.022'],
+ ['Hurley et al. 2022. Anterior shoulder instability part II – Latarjet, remplissage and glenoid bone-grafting: international consensus. Arthroscopy 38:224–233.','10.1016/j.arthro.2021.07.023'],
+ ['Hurley et al. 2025. Posterior shoulder instability part I – diagnosis, non-operative management and labral repair: Delphi consensus. Arthroscopy 41:166–180.','10.1016/j.arthro.2024.04.035'],
+ ['Hurley et al. 2025. Posterior shoulder instability part II – glenoid bone-grafting, osteotomy, rehabilitation and return to play: Delphi consensus. Arthroscopy 41:181–195.','10.1016/j.arthro.2024.04.034'],
+ ['Guehring et al. 2017. Posterior shoulder dislocation with reverse Hill-Sachs lesion: treatment by defect size (< 25 %, 25–40 %, > 40 %). BMC Musculoskelet Disord 18:442.','10.1186/s12891-017-1808-6'],
+ ['Kirkley et al. 1998. The Western Ontario Shoulder Instability Index (WOSI). Am J Sports Med 26:764–72.','10.1177/03635465980260060501'],
+ ['Gerometta et al. 2018. Shoulder Instability-Return to Sport after Injury (SIRSI). Knee Surg Sports Traumatol Arthrosc 26:203–211.','10.1007/s00167-017-4645-0'],
+ ['Rowe, Patel, Southmayd 1978. The Bankart procedure: a long-term end-result study (Rowe score). J Bone Joint Surg Am 60:1–16.',''],
+ ['Lewis, Kitamura, Bayley 2004. The classification of shoulder instability: new light through old windows (Stanmore triangle). Curr Orthop 18:97–108.',''],
+ ['Kuhn 2010. A proposed classification system for shoulder instability (FEDS). J Shoulder Elbow Surg 19:1035–43.','']];
+function summary(R){const d=S.d,v=R.v,L=[];
+  L.push(`Shoulder instability · ${d.age||'?'} y ${d.sex} · ${d.side==='L'?'left':'right'} · ${R.feds}`);
+  L.push(`Stanmore ${R.stanmore.l}`);
+  if(v.gbl!=null||v.hsi!=null)L.push(`Glenoid bone loss ${v.gbl!=null?f1(v.gbl)+' %':'—'} · D ${v.D!=null?f1(v.D):'—'} mm · GT ${v.gt!=null?f1(v.gt):'—'} mm · HSI ${v.hsi!=null?f1(v.hsi):'—'} mm · ${trackTxt(v)[1]}${v.dtd!=null?' (DTD '+f1(v.dtd)+' mm)':''}`);
+  if(d.dir==='post')L.push(`Posterior bone loss ${v.pgbl!=null?f1(v.pgbl)+' %':'—'} · version ${v.version!=null?f1(v.version)+'°':'—'} · reverse Hill-Sachs ${v.rhs!=null?f0(v.rhs)+' %':'—'}`);
+  if(d.dir==='ant')L.push(`ISIS ${R.isisT}/10${R.gtimsT!=null?' · GTIMS '+R.gtimsT+'/10':''}`);
+  L.push('Plan: '+R.head);
+  OPT_ORDER.filter(k=>R.O[k].st!=='no').forEach(k=>{const o=R.O[k];L.push(`- ${OPT[k]}: ${STATE[o.st][1]}${o.why?' – '+o.why:''}`)});
+  if(R.steps.length){L.push('Work-up:');R.steps.forEach(x=>L.push('- '+x))}
+  R.notes.forEach(x=>L.push('! '+x));
+  return L.join('\n')}
+
+/* ---------- image handling ---------- */
+function curImg(){return imgs[S.mode]||null}
+function blobToCanvas(blob){return new Promise((res,rej)=>{const url=URL.createObjectURL(blob);const im=new Image();
+  im.onload=()=>{const MAX=3000,sc=Math.min(1,MAX/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c)};
+  im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('bad'))};im.src=url})}
+async function loadImageFile(f){if(!f)return;
+  try{const c=await blobToCanvas(f);imgs[S.mode]=c;blobs[S.mode]=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+    S.P[S.mode]={};S.active=MODES[S.mode].pts[0][0];S.noViewer=false;layout();fit();update();toast(`${MODES[S.mode].name} image loaded`)}
+  catch{toast('That file could not be opened. Export the image as JPEG or PNG.')}}
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';loadImageFile(f)});
+['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{if(!e.dataTransfer||![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();
+  if(ev==='drop'){const f=[...e.dataTransfer.files].find(x=>x.type.startsWith('image/'));if(!f)return;if(S.tab!=='img')selectTab('img');loadImageFile(f)}}));
+document.addEventListener('paste',e=>{const it=[...(e.clipboardData||{}).items||[]].find(x=>x.type&&x.type.startsWith('image/'));if(!it)return;e.preventDefault();if(S.tab!=='img')selectTab('img');loadImageFile(it.getAsFile())});
+document.addEventListener('keydown',e=>{const tag=(e.target.tagName||'').toLowerCase();const typing=['input','textarea','select'].includes(tag);
+  if(e.key==='Escape'){$$('.sheet').forEach(s=>s.hidden=true);return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='p'){e.preventDefault();openPrintSheet();return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveCase(false);return}
+  if(typing)return;
+  if((e.key==='Delete'||e.key==='Backspace')&&S.tab==='img'){e.preventDefault();deletePoint()}});
+let installEvt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('#installBtn').hidden=false;$('#installMenu').hidden=false});
+const doInstall=async()=>{if(!installEvt){toast('Use the browser menu → Install app');return}installEvt.prompt();try{await installEvt.userChoice}catch{}installEvt=null;$('#installBtn').hidden=true;$('#installMenu').hidden=true};
+$('#installBtn').onclick=doInstall;$('#installMenu').onclick=()=>{$('#menuSheet').hidden=true;doInstall()};
+window.addEventListener('appinstalled',()=>{$('#installBtn').hidden=true;$('#installMenu').hidden=true;toast('Installed: open it from the desktop or Start menu')});
+
+/* ---------- viewer ---------- */
+function resize(){const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));draw()}
+function fit(){const im=curImg();const r=cv.getBoundingClientRect();if(!im||!r.width){draw();return}
+  const top=56,bot=50,s=Math.min(r.width/im.width,(r.height-top-bot)/im.height)*.96;view={s,tx:(r.width-im.width*s)/2,ty:top+(r.height-top-bot-im.height*s)/2};draw()}
+let lastSize='';new ResizeObserver(()=>{const r=cv.getBoundingClientRect();const k=Math.round(r.width)+'x'+Math.round(r.height);if(k===lastSize)return;lastSize=k;resize();fit()}).observe($('#viewer'));
+$('#fit').onclick=fit;
+const zoomAt=(k,x,y)=>{const ns=Math.max(.05,Math.min(40,view.s*k));const kk=ns/view.s;view.tx=x-(x-view.tx)*kk;view.ty=y-(y-view.ty)*kk;view.s=ns;draw()};
+$('#zin').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1.4,r.width/2,r.height/2)};
+$('#zout').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1/1.4,r.width/2,r.height/2)};
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top)},{passive:false});
+const toS=p=>({x:p.x*view.s+view.tx,y:p.y*view.s+view.ty}),toI=(x,y)=>({x:(x-view.tx)/view.s,y:(y-view.ty)/view.s});
+const ptrs=new Map();let G=null,dragId=null;
+const loc=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+function hit(x,y){const pts=S.P[S.mode]||{};let best=null,bd=24;for(const k in pts){const s=toS(pts[k]);const dd=Math.hypot(s.x-x,s.y-y);if(dd<bd){bd=dd;best=k}}return best}
+cv.addEventListener('pointerdown',e=>{if(!curImg())return;cv.setPointerCapture(e.pointerId);const p=loc(e);ptrs.set(e.pointerId,p);
+  if(ptrs.size===1){const h=hit(p.x,p.y);G={type:h?'drag':'tap',id:h,sx:p.x,sy:p.y,lx:p.x,ly:p.y}}
+  else if(ptrs.size===2){const [a,b]=[...ptrs.values()];G={type:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y),c0:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},v0:{...view}};dragId=null}});
+cv.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId)||!G)return;const p=loc(e);ptrs.set(e.pointerId,p);
+  if(G.type==='pinch'&&ptrs.size>=2){const [a,b]=[...ptrs.values()];const c={x:(a.x+b.x)/2,y:(a.y+b.y)/2},dd=Math.hypot(a.x-b.x,a.y-b.y);
+    const s=Math.max(.05,Math.min(40,G.v0.s*dd/G.d0));const I={x:(G.c0.x-G.v0.tx)/G.v0.s,y:(G.c0.y-G.v0.ty)/G.v0.s};view={s,tx:c.x-I.x*s,ty:c.y-I.y*s};draw();return}
+  if(G.type==='drag'){if(Math.hypot(p.x-G.sx,p.y-G.sy)>3||dragId){const q=S.P[S.mode][G.id];q.x+=(p.x-G.lx)/view.s;q.y+=(p.y-G.ly)/view.s;dragId=G.id;G.lx=p.x;G.ly=p.y;update()}return}
+  if(G.type==='tap'&&Math.hypot(p.x-G.sx,p.y-G.sy)>8)G.type='pan';
+  if(G.type==='pan'){view.tx+=p.x-G.lx;view.ty+=p.y-G.ly;G.lx=p.x;G.ly=p.y;draw()}});
+function up(e){if(!ptrs.has(e.pointerId))return;const p=loc(e);ptrs.delete(e.pointerId);
+  if(G&&G.type==='tap'&&ptrs.size===0)place(toI(p.x,p.y));
+  if(G&&G.type==='drag'&&!dragId&&ptrs.size===0){S.active=G.id;update()}
+  if(ptrs.size===0){G=null;if(dragId){dragId=null;update()}}}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+function place(p){const md=MODES[S.mode];if(!S.active)return;(S.P[S.mode]=S.P[S.mode]||{})[S.active]=p;
+  const ids=md.pts.map(x=>x[0]);const i=ids.indexOf(S.active);const next=ids.slice(i+1).find(k=>!S.P[S.mode][k])||ids.find(k=>!S.P[S.mode][k]);
+  if(next)S.active=next;update();if(navigator.vibrate)try{navigator.vibrate(8)}catch{}}
+function deletePoint(){const pts=S.P[S.mode];if(!pts||!pts[S.active])return;delete pts[S.active];toast('Point deleted. Tap the image to place it again');update()}
+$('#delPt').onclick=deletePoint;$('#delPt2').onclick=deletePoint;
+
+let raf=0;function draw(){if(!raf)raf=requestAnimationFrame(render)}
+function line(a,b,col,w=1.6,dash=null){const A=toS(a),B=toS(b);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=w;if(dash)ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore()}
+function circleS(c,r,col,w=1.6,dash=null){const s=toS(c);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=w;if(dash)ctx.setLineDash(dash);ctx.beginPath();ctx.arc(s.x,s.y,r*view.s,0,7);ctx.stroke();ctx.restore()}
+function tag(p,text,col,dx=10,dy=-10){const s=toS(p);ctx.save();ctx.font='600 11.5px "IBM Plex Mono", monospace';const w=ctx.measureText(text).width+10;let x=s.x+dx,y=s.y+dy;if(dx<0)x-=w;ctx.fillStyle='rgba(5,8,11,.86)';ctx.fillRect(x,y-13,w,18);ctx.fillStyle=col;ctx.fillText(text,x+5,y);ctx.restore()}
+function render(){raf=0;const dpr=window.devicePixelRatio||1;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#05080b';ctx.fillRect(0,0,cv.width,cv.height);
+  const im=curImg();ctx.setTransform(dpr,0,0,dpr,0,0);
+  if(!im){ctx.fillStyle='#8a98a4';ctx.font='14px Archivo, sans-serif';ctx.fillText('Open an image for this measurement',20,90);return}
+  ctx.setTransform(dpr*view.s,0,0,dpr*view.s,dpr*view.tx,dpr*view.ty);ctx.drawImage(im,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
+  overlays();if(dragId&&S.P[S.mode][dragId])loupe(S.P[S.mode][dragId],dpr,im)}
+function overlays(){const m=S.mode,pts=S.P[m]||{};const r=computeImage();
+  if(pts.cal1&&pts.cal2)line(pts.cal1,pts.cal2,'#fff',1.4);
+  if(m==='glen'){const g=glenGeo();
+    if(g){circleS(g.c,g.r,COL.line,1.6,[6,4]);const top=add(g.c,mul(g.u,-g.r*1.6)),bot=add(g.c,mul(g.u,g.r*1.1));line(top,bot,COL.ghost,1.2,[4,4]);
+      const e1=add(g.c,mul(g.h,g.r)),e2=add(g.c,mul(g.h,-g.r));line(e1,e2,COL.ghost,1.2);
+      tag(add(g.c,mul(g.u,g.r)),r.D!=null?`D ${f1(r.D)} mm`:'calibrate',COL.line,10,16);
+      if(g.dA!=null){const edge=add(g.c,mul(g.h,g.sA*g.r));line(pts.A,edge,COL.bad,3);tag(pts.A,`${f1(r.gbl)} %${r.dmm!=null?' · '+f1(r.dmm)+' mm':''}`,COL.bad,g.sA>0?12:-12,-12)}
+      if(g.dP!=null){const edge=add(g.c,mul(g.h,g.sP*g.r));line(pts.Pr,edge,COL.alt,3);tag(pts.Pr,`post ${f1(r.pgbl)} %`,COL.alt,g.sP>0?12:-12,-12)}}
+    if(pts.S&&g)line(pts.S,g.c,COL.ghost,1)}
+  if(m==='hs'){if(pts.F&&pts.H1){line(pts.F,pts.H1,COL.line,2.4);if(r.bb!=null)tag(mid(pts.F,pts.H1),`bridge ${f1(r.bb)}`,COL.line,-10,-14)}
+    if(pts.H1&&pts.H2){line(pts.H1,pts.H2,COL.alt,3);if(r.hsw!=null)tag(mid(pts.H1,pts.H2),`HS ${f1(r.hsw)}`,COL.alt,-10,22)}
+    if(r.hsi!=null){const v=vals();tag(pts.H2,`HSI ${f1(r.hsi)} mm${v.gt!=null?(v.off?' > ':' ≤ ')+'GT '+f1(v.gt):''}`,v.off?COL.bad:COL.meas,-12,-14)}}
+  if(m==='ax'){const a=axGeo();
+    if(a.G0){line(pts.M,add(a.G0,mul(a.ax,180)),COL.ghost,1.4,[6,4]);line(pts.GA,pts.GP,COL.line,2.2);line(a.G0,add(a.G0,mul(a.n,90)),COL.meas,1.6);tag(pts.GP,`version ${f1(a.version)}° ${a.version>=0?'retro':'ante'}`,COL.meas,-12,26)}
+    if(a.head){circleS(a.head.c,a.head.r,COL.line,1.4,[6,4]);if(a.walch!=null)tag(a.head.c,`Walch ${f0(a.walch)} %`,COL.line,-50,4)}
+    if(a.head&&pts.R1&&pts.R2){line(pts.R1,pts.R2,COL.bad,3);if(a.rhs!=null)tag(pts.R2,`reverse HS ${f0(a.rhs)} %`,COL.bad,-14,-14)}
+    if(a.head&&pts.A1&&pts.A2){line(a.head.c,pts.A1,COL.ghost,1);line(a.head.c,pts.A2,COL.ghost,1)}}
+  for(const k in pts){const s=toS(pts[k]);const on=k===S.active;ctx.save();ctx.lineWidth=on?2.4:1.6;ctx.strokeStyle=on?'#fff':COL.pt;ctx.fillStyle='rgba(5,8,11,.5)';
+    ctx.beginPath();ctx.arc(s.x,s.y,on?8:6,0,7);ctx.fill();ctx.stroke();ctx.fillStyle=on?'#fff':COL.pt;ctx.beginPath();ctx.arc(s.x,s.y,1.6,0,7);ctx.fill();ctx.restore()}}
+function loupe(p,dpr,im){const r=cv.getBoundingClientRect();const s=toS(p);const R=62,Z=3;const cx=s.x<r.width/2?r.width-R-14:R+14,cy=R+60;
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.clip();ctx.fillStyle='#000';ctx.fillRect(cx-R,cy-R,2*R,2*R);const k=view.s*Z;
+  ctx.setTransform(dpr*k,0,0,dpr*k,dpr*(cx-p.x*k),dpr*(cy-p.y*k));ctx.drawImage(im,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.strokeStyle=COL.pt;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx-6,cy);ctx.moveTo(cx+6,cy);ctx.lineTo(cx+R,cy);ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy-6);ctx.moveTo(cx,cy+6);ctx.lineTo(cx,cy+R);ctx.stroke();ctx.restore();
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.stroke()}
+
+/* ---------- imaging pane ---------- */
+function renderImg(){const md=MODES[S.mode];const r=computeImage();
+  const val={glen:r.gbl!=null?f1(r.gbl)+' %'+(r.D!=null?' · D '+f1(r.D):''):'',hs:r.hsi!=null?'HSI '+f1(r.hsi)+' mm':'',ax:r.version!=null?f1(r.version)+'°'+(r.rhs!=null?' · RHS '+f0(r.rhs)+' %':''):''};
+  $('#modes').innerHTML=MODE_ORDER.map(k=>`<button class="sl ${k===S.mode?'on':''}" data-m="${k}"><b>${MODES[k].name}</b><span>${val[k]||MODES[k].sub}</span></button>`).join('');
+  $$('#modes .sl').forEach(b=>b.onclick=()=>chooseMode(b.dataset.m));
+  $('#modeHint').textContent=md.hint;$('#hideViewer').textContent=S.noViewer?'Show viewer':'Hide viewer';
+  $('#steps').innerHTML=md.pts.map(([id,l])=>`<button class="step ${P(S.mode,id)?'done':''} ${id===S.active?'on':''}" data-id="${id}"><span class="dot"></span><span>${l}</span><span class="gl">${id.indexOf('cal')===0?'Scale':''}</span></button>`).join('');
+  $$('#steps .step').forEach(b=>b.onclick=()=>{S.active=b.dataset.id;update()});
+  const can=!!(curImg()&&P(S.mode,S.active));$('#delPt').hidden=!can;$('#delPt2').hidden=!can;
+  $('#calBox').hidden=!md.cal;if(md.cal){$('#calmm').value=S.cal[S.mode];const k=mmpp(S.mode);$('#scaleout').textContent=k?`${k.toFixed(3)} mm/px`:'No scale yet: place both ends of the scale bar.'}
+  $('#measOut').innerHTML=measHTML(r);
+  renderPrompt()}
+function measHTML(r){const rows=[];const v=vals();
+  if(S.mode==='glen'){rows.push(['Bone loss (width)',r.gbl!=null?f1(r.gbl)+' %':'—'],['Bone loss (area)',r.gblArea!=null?f1(r.gblArea)+' %':'—'],['Diameter D',r.D!=null?f1(r.D)+' mm':'—'],['Defect d',r.dmm!=null?f1(r.dmm)+' mm':'—'],['Glenoid track',v.gt!=null?f1(v.gt)+' mm':'—']);if(r.pgbl!=null)rows.push(['Posterior bone loss',f1(r.pgbl)+' %']);if(r.pSame)rows.push(['Posterior point','same side as the defect – ignored'])}
+  if(S.mode==='hs')rows.push(['Bone bridge',r.bb!=null?f1(r.bb)+' mm':'—'],['Hill-Sachs width',r.hsw!=null?f1(r.hsw)+' mm':'—'],['HSI',r.hsi!=null?f1(r.hsi)+' mm':'—'],['Glenoid track',v.gt!=null?f1(v.gt)+' mm':'measure the glenoid'],['Status',trackTxt(v)[1]]);
+  if(S.mode==='ax')rows.push(['Glenoid version',r.version!=null?f1(r.version)+'° '+(r.version>=0?'retroversion':'anteversion'):'—'],['Walch subluxation',r.walch!=null?f0(r.walch)+' %':'—'],['Reverse Hill-Sachs',r.rhs!=null?f0(r.rhs)+' % of arc':'—']);
+  return`<table class="mt">${rows.map(([a,b])=>`<tr><td>${a}</td><td class="n">${b}</td></tr>`).join('')}</table>`}
+$('#calmm').addEventListener('input',e=>{const x=num(e.target.value);if(x){S.cal[S.mode]=x;update()}});
+$('#hideViewer').onclick=()=>{S.noViewer=!S.noViewer;layout();update()};
+function chooseMode(m){S.mode=m;const ids=MODES[m].pts.map(x=>x[0]);S.active=ids.find(k=>!P(m,k)&&k.indexOf('cal')!==0)||ids.find(k=>k.indexOf('cal')!==0);fit();update()}
+function renderPrompt(){const md=MODES[S.mode];const st=md.pts.find(p=>p[0]===S.active)||md.pts[0];
+  $('#vlabel').textContent=md.name;
+  $('#prompt').innerHTML=!curImg()?`<span class="k">Image</span><span>Open the ${md.name} image<small>${md.hint}</small></span>`:`<span class="k">${P(S.mode,S.active)?'Adjust':'Tap'}</span><span>${st[1]}<small>${st[2]||''}</small></span>`}
+
+/* ---------- outcome scores: WOSI, Rowe, Oxford instability, ASES, Constant, SIRSI, SANE ---------- */
+const TP=[['preop','Pre-op'],['m3','3 months'],['m6','6 months'],['m12','12 months'],['m24','24 months']];
+const TPL=Object.fromEntries(TP);
+const SCORE_VIEWS=[['risk','ISIS / GTIMS'],['wosi','WOSI'],['rowe','Rowe'],['oiss','Oxford'],['ases','ASES'],['con','Constant'],['sirsi','SIRSI'],['sane','SANE']];
+const WOSI=[
+ ['Physical symptoms',['Pain with overhead activities','Aching or throbbing in the shoulder','Weakness or lack of strength in the shoulder','Fatigue or lack of stamina in the shoulder','Clicking, cracking or snapping in the shoulder','Stiffness in the shoulder','Discomfort in the neck muscles because of the shoulder','Feeling of instability or looseness in the shoulder','Compensating for the shoulder with other muscles','Loss of range of motion in the shoulder']],
+ ['Sports, recreation and work',['Shoulder limits participation in sport or recreation','Shoulder affects the specific skills needed for sport or work','Need to protect the arm during activities','Difficulty lifting heavy objects below shoulder level']],
+ ['Lifestyle',['Fear of falling on the shoulder','Difficulty maintaining the desired fitness level','Difficulty doing rough or play activities with family and friends','Difficulty sleeping because of the shoulder']],
+ ['Emotions',['How conscious the patient is of the shoulder','Concern that the shoulder will get worse','Frustration because of the shoulder']]];
+const WOSI_FLAT=WOSI.flatMap(([,a])=>a);
+const VAS10=Array.from({length:11},(_,i)=>[i*10,i===0?'0 · no problem':i===10?'100 · extreme':String(i*10)]);
+const ROWE=[
+ ['stab','Stability',[[50,'No recurrence, subluxation or apprehension'],[30,'Apprehension in certain positions'],[10,'Subluxation (not requiring reduction)'],[0,'Recurrent dislocation']]],
+ ['mot','Motion',[[20,'Full external rotation, elevation and internal rotation'],[15,'75 % of normal external rotation; normal elevation and internal rotation'],[5,'50 % of normal external rotation; 75 % of elevation and internal rotation'],[0,'50 % of elevation and internal rotation; no external rotation']]],
+ ['fun','Function',[[30,'No limitation in work or sport; little or no discomfort'],[25,'Mild limitation and minimal discomfort'],[10,'Moderate limitation and discomfort'],[0,'Marked limitation and pain']]]];
+const OIS_G=[[4,'None / not at all / never'],[3,'Slightly / rarely'],[2,'Moderately / sometimes'],[1,'Severely / often'],[0,'Extremely / always']];
+const OISS=[
+ ['During the past 6 months, how many times has the shoulder slipped out of joint?',[[4,'Not at all'],[3,'1–2 times in 6 months'],[2,'1–2 times per month'],[1,'1–2 times per week'],[0,'More often than weekly']]],
+ ['Trouble dressing (e.g. putting on a T-shirt) because of the shoulder',OIS_G],['Worst pain from the shoulder',OIS_G],['Shoulder interfered with usual work (incl. housework)',OIS_G],
+ ['Avoided activities for fear of the shoulder slipping out',OIS_G],['Shoulder prevented doing important things',OIS_G],['Shoulder interfered with social life',OIS_G],
+ ['Shoulder interfered with sport or hobbies',OIS_G],['How often the shoulder is on the mind',OIS_G],['Shoulder interfered with lifting heavy objects',OIS_G],
+ ['Usual pain from the shoulder',OIS_G],['Avoided lying in certain positions in bed because of the shoulder',OIS_G]];
+const ASES_ADL=['Put on a coat','Sleep on the affected side','Wash back / fasten bra','Manage toileting','Comb hair','Reach a high shelf','Lift 10 lb (4.5 kg) above shoulder level','Throw a ball overhand','Do usual work','Do usual sport'];
+const ASES_O=[[3,'Not difficult'],[2,'Somewhat difficult'],[1,'Very difficult'],[0,'Unable to do']];
+const CON_ROM=[[0,'0–30°'],[2,'31–60°'],[4,'61–90°'],[6,'91–120°'],[8,'121–150°'],[10,'> 150°']];
+const CON=[
+ ['pain','Pain',[[15,'None'],[10,'Mild'],[5,'Moderate'],[0,'Severe']]],
+ ['work','Work limited by the shoulder',[[4,'Not limited'],[3,'Slightly'],[2,'Moderately'],[1,'Markedly'],[0,'Unable']]],
+ ['leis','Recreation / sport limited',[[4,'Not limited'],[3,'Slightly'],[2,'Moderately'],[1,'Markedly'],[0,'Unable']]],
+ ['sleep','Sleep',[[2,'Undisturbed'],[1,'Occasionally disturbed'],[0,'Disturbed every night']]],
+ ['pos','Pain-free hand position',[[2,'Up to the waist'],[4,'Up to the xiphoid'],[6,'Up to the neck'],[8,'Top of the head'],[10,'Above the head']]],
+ ['ff','Forward flexion (pain-free)',CON_ROM],['abd','Abduction (pain-free)',CON_ROM],
+ ['er','External rotation',[[0,'Hand cannot reach the head'],[2,'Hand behind head, elbow forward'],[4,'Hand behind head, elbow back'],[6,'Hand on top of head, elbow forward'],[8,'Hand on top of head, elbow back'],[10,'Full elevation from on top of the head']]],
+ ['ir','Internal rotation (back of hand reaches)',[[0,'Lateral thigh'],[2,'Buttock'],[4,'Lumbosacral junction'],[6,'Waist (L3)'],[8,'T12'],[10,'Between the scapulae (T7)']]]];
+const SIRSI=[['Confident to perform at the previous level of sport','Not at all confident','Fully confident'],['Likelihood of re-injuring the shoulder in sport','Extremely likely','Not likely at all'],['Nervous about playing sport','Extremely nervous','Not nervous at all'],
+ ['Confident the shoulder will not give way','Not at all confident','Fully confident'],['Confident to play without concern for the shoulder','Not at all confident','Fully confident'],['Frustrated at having to consider the shoulder in sport','Extremely frustrated','Not frustrated at all'],
+ ['Fearful of re-injuring the shoulder playing sport','Extremely fearful','Not fearful at all'],['Confident the shoulder can hold up under pressure','Not at all confident','Fully confident'],['Afraid of accidentally injuring the shoulder playing sport','Extremely afraid','Not afraid at all'],
+ ['Thoughts of having to go through surgery and rehab again stop me playing','All the time','Not at all'],['Confident in the ability to perform well in sport','Not at all confident','Fully confident'],['Relaxed about playing sport','Not at all relaxed','Fully relaxed']];
+const SIRSI_OPT=(lo,hi)=>Array.from({length:11},(_,i)=>[i*10,i===0?`0 · ${lo}`:i===10?`100 · ${hi}`:String(i*10)]);
+
+function blankTP(){return{date:'',wosi:{},rowe:{},oiss:{},ases:{},con:{},sirsi:{},sane:{}}}
+function scTP(k){S.sc=S.sc||{tp:'preop',view:'risk',d:{}};const t=S.sc.d[k]=S.sc.d[k]||blankTP();for(const g of ['wosi','rowe','oiss','ases','con','sirsi','sane'])t[g]=t[g]||{};return t}
+const vals0=(o,keys)=>keys.map(k=>num(o[k]));
+function wosiScore(t){const a=WOSI_FLAT.map((_,i)=>num(t.wosi['w'+i]));const got=a.filter(x=>x!=null);if(got.length<19)return null;
+  const raw=got.reduce((s,x)=>s+x,0)*21/got.length;return{raw:Math.round(raw),pct:(2100-raw)/2100*100,n:got.length}}
+function roweScore(t){const a=vals0(t.rowe,['stab','mot','fun']);if(a.some(x=>x==null))return null;return a.reduce((s,x)=>s+x,0)}
+const roweGrade=x=>x==null?'':x>=90?'Excellent':x>=75?'Good':x>=51?'Fair':'Poor';
+function oissScore(t){const a=OISS.map((_,i)=>num(t.oiss['o'+i])).filter(x=>x!=null);if(a.length<11)return null;return Math.round(a.reduce((s,x)=>s+x,0)*12/a.length)}
+function asesScore(t){const pain=num(t.ases.pain);const a=ASES_ADL.map((_,i)=>num(t.ases['a'+i])).filter(x=>x!=null);if(pain==null||a.length<9)return null;
+  return(10-pain)*5+a.reduce((s,x)=>s+x,0)*10/a.length*5/3}
+function conScore(t){const c=t.con;const a=CON.map(([k])=>num(c[k]));const kg=num(c.kg);if(a.some(x=>x==null)||kg==null)return null;
+  return a.reduce((s,x)=>s+x,0)+Math.min(25,Math.round(kg*2.2))}
+function sirsiScore(t){const a=SIRSI.map((_,i)=>num(t.sirsi['s'+i])).filter(x=>x!=null);return a.length>=10?a.reduce((s,x)=>s+x,0)/a.length:null}
+function saneScore(t){return num(t.sane.v)}
+function scoreRow(k){const t=scTP(k);const w=wosiScore(t);return{wosi:w?w.pct:null,wosiRaw:w?w.raw:null,rowe:roweScore(t),oiss:oissScore(t),ases:asesScore(t),con:conScore(t),sirsi:sirsiScore(t),sane:saneScore(t),date:t.date}}
+function hasData(k){const r=scoreRow(k);return Object.entries(r).some(([n,v])=>n!=='date'&&v!=null)}
+
+function optSel(path,opts,val,wide){return`<select data-s="${path}" ${wide?'style="max-width:none;width:100%"':''}><option value="">—</option>${opts.map(([v,l])=>`<option value="${v}" ${val!==''&&val!=null&&String(val)===String(v)?'selected':''}>${esc(l)}</option>`).join('')}</select>`}
+function qBlock(path,l,opts,val){return`<div class="q"><span>${esc(l)}</span>${optSel(path,opts,val,true)}</div>`}
+function riskView(){const R=decide();const row=a=>a.map(([l,p,m])=>`<tr><td>${esc(l)}</td><td class="n">${p}/${m}</td></tr>`).join('');const hx=R.hx;
+  return`<div class="group"><h3>Instability Severity Index Score (ISIS)</h3><table class="mt">${row(R.isis)}<tr><td><b>Total</b></td><td class="n"><b>${R.isisT}/10</b></td></tr></table>
+   <p class="fine">> 6: about 70 % recurrence after arthroscopic Bankart – Latarjet advised (Balg & Boileau 2007). Many surgeons now use ≥ 4.</p></div>
+   <div class="group"><h3>Glenoid Track Instability Management Score (GTIMS)</h3>${R.gtimsT!=null?`<table class="mt">${row(R.gtims)}<tr><td><b>Total</b></td><td class="n"><b>${R.gtimsT}/10</b></td></tr></table>`:'<p class="fine">Needs the glenoid track: measure glenoid bone loss and the Hill-Sachs interval on the Imaging tab.</p>'}
+   <p class="fine">Same clinical items as ISIS; the X-ray items are replaced by an off-track Hill-Sachs on 3D CT (4 points). ≥ 4 → Latarjet, < 4 → arthroscopic Bankart (Di Giacomo 2020).</p></div>
+   <div class="group"><h3>Laxity and classification</h3><table class="mt"><tr><td>Beighton</td><td class="n">${hx.bg}/9</td></tr><tr><td>External rotation at the side</td><td class="n">${hx.er??'—'}°</td></tr><tr><td>Gagey hyperabduction</td><td class="n">${hx.gg??'—'}°</td></tr>
+   <tr><td>FEDS</td><td class="n" style="white-space:normal">${esc(R.feds)}</td></tr><tr><td>Stanmore</td><td class="n" style="white-space:normal">${esc(R.stanmore.l)}</td></tr></table>
+   <p class="fine">Edit the items on the History, Exam and Imaging tabs.</p></div>`}
+function renderScores(){const el=$('#p-sc');S.sc=S.sc||{tp:'preop',view:'risk',d:{}};const k=S.sc.tp,t=scTP(k),view=S.sc.view;
+  let h=`<div class="seg" id="scView">${SCORE_VIEWS.map(([v,l])=>`<button data-sv="${v}" class="${v===view?'on':''}">${l}</button>`).join('')}</div>`;
+  if(view==='risk'){h+=riskView()}
+  else{h+=`<div class="group"><h3>Time point</h3><div class="fgrid"><label for="scTp">Assessment</label><select id="scTp">${TP.map(([v,l])=>`<option value="${v}" ${v===k?'selected':''}>${l}${hasData(v)?' ✓':''}</option>`).join('')}</select>
+   <label for="scDate">Date</label><input id="scDate" type="date" value="${esc(t.date||'')}" style="padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;grid-column:2/4"></div></div><div id="scLive"></div>`;
+    if(view==='wosi'){let i=0;h+=`<div class="group"><h3>Western Ontario Shoulder Instability Index</h3><p class="fine">Each item 0 (no problem) to 100 (extreme), for the past week. Lower raw score = better.</p>${WOSI.map(([dom,items])=>`<p class="fine" style="margin-top:8px"><b>${dom}</b></p>`+items.map(l=>{const j=i++;return qBlock('wosi.w'+j,(j+1)+'. '+l,VAS10,t.wosi['w'+j])}).join('')).join('')}</div>`}
+    if(view==='rowe')h+=`<div class="group"><h3>Rowe score for instability</h3>${ROWE.map(([key,l,o])=>qBlock('rowe.'+key,l,o.map(([v,x])=>[v,`${x} (${v})`]),t.rowe[key])).join('')}</div>`;
+    if(view==='oiss')h+=`<div class="group"><h3>Oxford Shoulder Instability Score</h3><p class="fine">Past 6 months. Each item 0–4; total 0–48, higher = better. Item wording paraphrased – use the licensed questionnaire for formal studies.</p>${OISS.map(([l,o],i)=>qBlock('oiss.o'+i,(i+1)+'. '+l,o,t.oiss['o'+i])).join('')}</div>`;
+    if(view==='ases')h+=`<div class="group"><h3>ASES shoulder score</h3>${qBlock('ases.pain','Pain today (0 = none, 10 = worst)',Array.from({length:11},(_,i)=>[i,String(i)]),t.ases.pain)}<p class="fine" style="margin-top:8px">Activities of daily living</p>${ASES_ADL.map((l,i)=>qBlock('ases.a'+i,(i+1)+'. '+l,ASES_O,t.ases['a'+i])).join('')}</div>`;
+    if(view==='con')h+=`<div class="group"><h3>Constant–Murley score</h3>${CON.map(([key,l,o])=>qBlock('con.'+key,l,o.map(([v,x])=>[v,`${x} (${v})`]),t.con[key])).join('')}
+      <div class="fgrid" style="margin-top:8px"><label>Strength at 90° abduction (kg, best of 3)</label><input type="number" inputmode="decimal" step="any" data-s="con.kg" value="${esc(t.con.kg??'')}"><span class="u">kg</span><p class="h">1 point per pound (kg × 2.2), maximum 25.</p></div></div>`;
+    if(view==='sirsi')h+=`<div class="group"><h3>SIRSI – psychological readiness to return to sport</h3><p class="fine">Each item 0–100 in steps of 10; 100 is always the most positive answer. Score = mean of the items.</p>${SIRSI.map((q,i)=>qBlock('sirsi.s'+i,(i+1)+'. '+q[0],SIRSI_OPT(q[1],q[2]),t.sirsi['s'+i])).join('')}</div>`;
+    if(view==='sane')h+=`<div class="group"><h3>Single Assessment Numeric Evaluation</h3><div class="fgrid"><label>How would you rate your shoulder today as a percentage of normal?</label><input type="number" inputmode="decimal" min="0" max="100" data-s="sane.v" value="${esc(t.sane.v??'')}"><span class="u">%</span></div></div>`}
+  h+=`<div class="group" id="scHist"></div>`;
+  const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;renderScoreLive();renderScoreHistory();
+  const tp=$('#scTp');if(tp)tp.onchange=e=>{S.sc.tp=e.target.value;renderScores();autosave()};
+  const dt=$('#scDate');if(dt)dt.onchange=e=>{scTP(S.sc.tp).date=e.target.value;renderScoreHistory();autosave()};
+  $$('#scView button').forEach(b=>b.onclick=()=>{S.sc.view=b.dataset.sv;renderScores();autosave()})}
+function renderScoreLive(){const el=$('#scLive');if(!el)return;const t=scTP(S.sc.tp),view=S.sc.view;let h='';const fig=(k,v,u)=>`<div><span class="k">${k}</span><span class="v">${v}<small>${u||''}</small></span></div>`;
+  if(view==='wosi'){const w=wosiScore(t);const n=WOSI_FLAT.filter((_,i)=>num(t.wosi['w'+i])!=null).length;h=`<div class="figs">${fig('WOSI raw',w?w.raw:'—','/2100')}${fig('% of normal',w?f0(w.pct):'—','%')}${fig('Answered',n,'/21')}</div><p class="fine">% of normal = (2100 − raw) ÷ 2100 × 100. Scored once 19 of 21 items are answered.</p>`}
+  if(view==='rowe'){const x=roweScore(t);h=`<div class="figs">${fig('Rowe',x??'—','/100')}${fig('Grade',`<span style="font-size:16px">${roweGrade(x)||'—'}</span>`)}</div><p class="fine">90–100 excellent · 75–89 good · 51–74 fair · ≤ 50 poor.</p>`}
+  if(view==='oiss'){const x=oissScore(t);h=`<div class="figs">${fig('Oxford instability',x??'—','/48')}</div><p class="fine">Higher = better. Scored once 11 of 12 items are answered.</p>`}
+  if(view==='ases'){const x=asesScore(t);h=`<div class="figs">${fig('ASES',x!=null?f0(x):'—','/100')}</div><p class="fine">ASES = (10 − pain) × 5 + ADL total × 5/3.</p>`}
+  if(view==='con'){const x=conScore(t);h=`<div class="figs">${fig('Constant',x??'—','/100')}</div><p class="fine">Pain 15 · activities 20 · motion 40 · strength 25. Compare with the other shoulder or age/sex norms.</p>`}
+  if(view==='sirsi'){const x=sirsiScore(t);h=`<div class="figs">${fig('SIRSI',x!=null?f1(x):'—','/100')}</div><p class="fine">Higher = more ready. Athletes who returned to rugby scored ~61 vs ~38 in those who did not (Gerometta 2018).</p>`}
+  if(view==='sane'){const x=saneScore(t);h=`<div class="figs">${fig('SANE',x??'—','%')}</div>`}
+  el.innerHTML=h?`<div class="rec" style="padding:10px 12px">${h}</div>`:''}
+function scoreHistoryRows(){return TP.filter(([k])=>hasData(k)).map(([k,l])=>({k,l,...scoreRow(k)}))}
+const HIST_COLS=[['wosi','WOSI %',x=>f0(x)],['rowe','Rowe',x=>x],['oiss','Oxford',x=>x],['ases','ASES',x=>f0(x)],['con','Constant',x=>x],['sirsi','SIRSI',x=>f0(x)],['sane','SANE',x=>x]];
+function histTable(rows){const cols=HIST_COLS.filter(([k])=>rows.some(r=>r[k]!=null));
+  return`<div style="overflow-x:auto"><table class="mt"><tr><th>Time point</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>${rows.map(r=>`<tr><td>${r.l}${r.date?`<div class="ref">${esc(r.date)}</div>`:''}</td>${cols.map(([k,,fm])=>`<td class="n">${r[k]!=null?fm(r[k]):'—'}</td>`).join('')}</tr>`).join('')}</table></div>`}
+function renderScoreHistory(){const el=$('#scHist');if(!el)return;const rows=scoreHistoryRows();
+  if(!rows.length){el.innerHTML='<h3>History</h3><div class="empty">No outcome scores recorded yet.</div>';return}
+  const base=rows.find(r=>r.k==='preop'&&r.wosi!=null),last=[...rows].reverse().find(r=>r.k!=='preop'&&r.wosi!=null);
+  let ch='';if(base&&last){ch=`<p class="fine">WOSI pre-op → ${last.l}: ${f0(base.wosi)} % → ${f0(last.wosi)} % of normal (raw ${base.wosiRaw} → ${last.wosiRaw}; a change of ~220 raw points is commonly quoted as clinically important).</p>`}
+  el.innerHTML=`<h3>History</h3>${histTable(rows)}${ch}${trendSVG(rows)}`}
+function trendSVG(rows){const pts=rows.filter(r=>r.wosi!=null||r.rowe!=null);if(pts.length<2)return'';
+  const W=320,H=130,L=30,R=10,T=12,B=26,x=i=>L+i*(W-L-R)/(pts.length-1),y=v=>T+(100-v)*(H-T-B)/100;
+  const path=key=>pts.map((r,i)=>r[key]==null?null:[x(i),y(r[key])]).filter(Boolean).map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const dots=(key,c)=>pts.map((r,i)=>r[key]==null?'':`<circle cx="${x(i).toFixed(1)}" cy="${y(r[key]).toFixed(1)}" r="3" fill="${c}"/>`).join('');
+  return`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:480px" role="img" aria-label="WOSI and Rowe over time">
+   ${[0,50,100].map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="var(--muted)">${v}</text>`).join('')}
+   ${pts.map((r,i)=>`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="10" fill="var(--muted)">${r.l.replace(' months',' m')}</text>`).join('')}
+   <path d="${path('wosi')}" fill="none" stroke="var(--accent)" stroke-width="2"/>${dots('wosi','var(--accent)')}
+   <path d="${path('rowe')}" fill="none" stroke="var(--warn)" stroke-width="2" stroke-dasharray="5 3"/>${dots('rowe','var(--warn)')}
+   </svg><p class="fine"><span style="color:var(--accent)">━ WOSI % of normal</span> · <span style="color:var(--warn)">╍ Rowe</span></p>`}
+document.addEventListener('change',e=>{const i=e.target;if(!i.dataset||!i.dataset.s)return;const [grp,key]=i.dataset.s.split('.');const t=scTP(S.sc.tp);
+  t[grp][key]=i.value;renderScoreLive();renderScoreHistory();
+  if(i.type!=='number'){const opt=$('#scTp')&&$('#scTp').selectedOptions[0];if(opt)opt.textContent=TPL[S.sc.tp]+(hasData(S.sc.tp)?' ✓':'')}
+  autosave()});
+document.addEventListener('input',e=>{const i=e.target;if(!i.dataset||!i.dataset.s||i.type!=='number')return;const [grp,key]=i.dataset.s.split('.');scTP(S.sc.tp)[grp][key]=i.value;renderScoreLive();autosave()});
+function scoresCard(){const rows=scoreHistoryRows();if(!rows.length)return'';
+  return`<div class="card"><div class="hd"><b>Outcome scores</b><button class="btn" data-goto="sc">Open</button></div>${histTable(rows)}</div>`}
+function scoresSummary(){return scoreHistoryRows().map(r=>`${r.l}${r.date?' ('+r.date+')':''}: `+HIST_COLS.filter(([k])=>r[k]!=null).map(([k,l,fm])=>`${l} ${fm(r[k])}`).join(', '))}
+/* ---------- patient record: identity, operation, follow-up visits, outcome; patient list; export ---------- */
+const O_COMP=[['none','None'],['recur','Recurrent instability'],['sublux','Subluxations / apprehension'],['stiff','Stiffness / loss of ER'],['nonunion','Graft non-union / lysis'],['hardware','Hardware problem'],['inf','Infection'],['nerve','Nerve injury'],['oa','Arthritis'],['other','Other (see notes)']];
+const PROC=[['','—'],['bankart','Arthroscopic Bankart'],['bankartRemp','Arthroscopic Bankart + remplissage'],['openBankart','Open Bankart / capsular shift'],['latarjetOpen','Open Latarjet'],['latarjetScope','Arthroscopic Latarjet'],['icbg','Iliac crest bone block'],['dta','Distal tibia allograft'],['bony','Bony Bankart fixation'],['hagl','HAGL repair'],['plication','Capsular plication / inferior shift (MDI)'],['post','Posterior capsulolabral repair'],['postBB','Posterior bone block'],['osteot','Posterior glenoid osteotomy'],['mclaughlin','McLaughlin / modified McLaughlin'],['allograft','Humeral head allograft'],['cuff','Rotator cuff repair'],['rsa','Reverse shoulder arthroplasty'],['other','Other']];
+const REC_FORM=[
+ ['Patient details',[
+  {p:'name',l:'Name',t:'txt'},{p:'fileNo',l:'File number',t:'txt'},{p:'phone',l:'Phone',t:'tel'},
+  {p:'injDate',l:'First dislocation',t:'date'},{p:'firstVisit',l:'First clinic visit',t:'date'},
+  {p:'xrDate',l:'X-ray date',t:'date'},{p:'ctDate',l:'3D CT date',t:'date'},{p:'mriDate',l:'MRI / MR arthrogram date',t:'date'},
+  {p:'notes',l:'Notes',t:'area'}]],
+ ['Operation',[
+  {p:'op.date',l:'Date of surgery',t:'date'},{p:'op.surgeon',l:'Surgeon',t:'txt'},
+  {p:'op.proc',l:'Procedure',t:'sel',o:PROC},
+  {p:'op.proc2',l:'Additional procedure',t:'sel',o:PROC},
+  {p:'op.eua',l:'EUA: load-and-shift / sulcus',t:'txt'},
+  {p:'op.findings',l:'Arthroscopic findings (labrum, HS engagement, cartilage)',t:'txt'},
+  {p:'op.anchors',l:'Anchors (number, type)',t:'txt'},
+  {p:'op.graft',l:'Graft size / position',t:'txt'},
+  {p:'op.fix',l:'Graft fixation',t:'sel',o:[['','—'],['2screws','Two screws'],['buttons','Suture buttons'],['1screw','One screw'],['none','None']]},
+  {p:'op.notes',l:'Operative notes',t:'area'}]],
+ ['Post-operative protocol',[
+  {p:'op.sling',l:'Sling',t:'num',u:'weeks'},
+  {p:'op.erLimit',l:'External rotation limit (first 6 weeks)',t:'txt'},
+  {p:'op.rtsPlan',l:'Return-to-sport plan',t:'txt'}]],
+ ['Outcome',[
+  {p:'out.recur',l:'Recurrence',t:'sel',o:[['','—'],['none','None'],['sublux','Subluxation'],['disl','Dislocation']]},
+  {p:'out.recurDate',l:'Recurrence date',t:'date'},
+  {p:'out.rts',l:'Return to sport',t:'sel',o:[['','—'],['same','Same level'],['lower','Lower level'],['other','Different sport'],['no','Did not return']]},
+  {p:'out.rtsDate',l:'Return-to-sport date',t:'date'},
+  {p:'out.erLoss',l:'Loss of external rotation vs other side',t:'num',u:'°'},
+  {p:'out.revision',l:'Revision surgery',t:'txt'},
+  {p:'out.lastFU',l:'Last follow-up',t:'date'}]]];
+const VISIT_F=[
+ {p:'date',l:'Visit date',t:'date'},
+ {p:'pain',l:'Pain (0–10)',t:'num',u:'/10'},
+ {p:'ff',l:'Forward flexion',t:'num',u:'°'},
+ {p:'er',l:'External rotation at the side',t:'num',u:'°'},
+ {p:'appr',l:'Apprehension',t:'sel',o:[['','—'],['none','None'],['mild','Mild'],['pos','Positive']]},
+ {p:'event',l:'Instability since last visit',t:'sel',o:[['','—'],['none','None'],['sublux','Subluxation'],['disl','Dislocation']]},
+ {p:'graft',l:'Graft (bone block)',t:'sel',o:[['','—'],['united','United'],['uniting','Uniting'],['nonunion','Non-union'],['lysis','Lysis']]},
+ {p:'comp',l:'Complication',t:'sel',o:O_COMP},
+ {p:'notes',l:'Notes',t:'area'}];
+function blankRec(){return{name:'',fileNo:'',phone:'',injDate:'',firstVisit:'',xrDate:'',ctDate:'',mriDate:'',notes:'',op:{},visits:[],out:{}}}
+const getP=(o,p)=>p.split('.').reduce((a,k)=>a==null?a:a[k],o);
+const setP=(o,p,v)=>{const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++)a=a[ks[i]]=a[ks[i]]||{};a[ks[ks.length-1]]=v};
+const lab=(f,v)=>{if(v===''||v==null)return'';if(f.t==='chk')return v?'Yes':'';if(f.t==='sel'){const o=f.o.find(x=>String(x[0])===String(v));return o?o[1]:v}return String(v)+(f.u&&f.u!=='n'?' '+f.u:'')};
+function weeksPostOp(date){const od=S.rec.op.date;if(!od||!date)return null;return Math.round((new Date(date)-new Date(od))/6048e5*10)/10}
+function rField(f,val,attr){const id='r_'+Math.random().toString(36).slice(2,8);
+  if(f.t==='chk')return`<label class="tog"><input type="checkbox" ${attr} ${val?'checked':''}> ${f.l}</label>`;
+  if(f.t==='area')return`<div class="full"><span>${f.l}</span><textarea ${attr} rows="3" class="ta">${esc(val??'')}</textarea></div>`;
+  if(f.t==='sel')return`<label for="${id}">${f.l}</label><select id="${id}" ${attr}>${f.o.map(([v,l])=>`<option value="${v}" ${String(val??'')===String(v)?'selected':''}>${l}</option>`).join('')}</select>`;
+  if(f.t==='num')return`<label for="${id}">${f.l}</label><input id="${id}" type="number" inputmode="decimal" step="any" ${attr} value="${esc(val??'')}"><span class="u">${f.u||''}</span>`;
+  return`<label for="${id}">${f.l}</label><input id="${id}" type="${f.t==='txt'?'text':f.t}" ${attr} value="${esc(val??'')}" class="wide">`}
+function renderRecord(){const el=$('#p-rec');const R=S.rec;let h='';
+  h+=`<div class="rec" style="padding:10px 12px"><span class="l">Patient record</span><span class="h" style="font-size:16px" id="recHead">${esc(R.name||'Unnamed patient')}${R.fileNo?' · #'+esc(R.fileNo):''}</span>
+   <span class="fine">${S.caseId?'Saved in the patient list; changes save automatically.':'Not in the patient list yet.'}${R.op.date?' · Surgery '+esc(R.op.date):''}${R.visits.length?' · '+R.visits.length+' follow-up visit'+(R.visits.length>1?'s':''):''}</span>
+   <div class="row">${S.caseId?'':'<button class="btn primary" id="recSave">Add to patient list</button>'}<button class="btn" id="recPrint">Print / PDF</button><button class="btn" id="recShare">Share as text</button></div></div>`;
+  h+=`<p class="fine">Pre-operative findings come from the History, Exam and Imaging tabs; scores from the Scores tab.</p>`;
+  REC_FORM.forEach(([title,fs],gi)=>{h+=`<details class="sec" ${gi<2?'open':''}><summary>${title}</summary><div class="fgrid">${fs.map(f=>rField(f,getP(R,f.p),`data-r="${f.p}"`)).join('')}</div></details>`;
+    if(gi===REC_FORM.length-2){h+=`<details class="sec" open><summary>Follow-up visits · ${R.visits.length}</summary><div class="group" id="visits">${visitsHTML()}</div><div class="row"><button class="btn primary" id="addVisit">Add visit</button></div></details>`}});
+  const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;bindRecord()}
+function visitsHTML(){const V=S.rec.visits;if(!V.length)return'<div class="empty">No follow-up visits yet.</div>';
+  return V.map((v,i)=>`<details class="visit" ${v._open?'open':''} data-vi="${i}"><summary>${visitSummary(v,i)}</summary>
+   <div class="fgrid">${VISIT_F.map(f=>rField(f,v[f.p],`data-v="${i}.${f.p}"`)).join('')}</div><div class="row"><button class="btn danger" data-vdel="${i}">Delete visit</button></div></details>`).join('')}
+function visitSummary(v,i){const w=weeksPostOp(v.date);return`<b>${v.date?esc(v.date):'Visit '+(i+1)}</b>${w!=null?` <span class="pill mut">${w<0?'pre-op':w+' wk post-op'}</span>`:''}${v.comp&&v.comp!=='none'?` <span class="pill bad">${lab(VISIT_F.find(f=>f.p==='comp'),v.comp)}</span>`:''}`}
+function recHeader(){const R=S.rec,h=$('#recHead');if(h)h.textContent=(R.name||'Unnamed patient')+(R.fileNo?' · #'+R.fileNo:'')}
+function bindRecord(){const el=$('#p-rec');
+  const sv=$('#recSave');if(sv)sv.onclick=()=>saveCase(true);
+  $('#recPrint').onclick=openPrintSheet;
+  $('#recShare').onclick=()=>shareText('Shoulder instability report',recordReport());
+  $('#addVisit').onclick=()=>{S.rec.visits.forEach(v=>v._open=false);S.rec.visits.push({date:new Date().toISOString().slice(0,10),comp:'none',_open:true});renderRecord();autosave();
+    const last=[...$$('#visits .visit')].pop();if(last)last.scrollIntoView({block:'start'})};
+  $$('#p-rec [data-vdel]').forEach(b=>b.onclick=()=>{if(b.dataset.armed){S.rec.visits.splice(+b.dataset.vdel,1);renderRecord();autosave()}else{b.dataset.armed=1;b.textContent='Tap again to delete'}});
+  $$('#p-rec details.visit').forEach(d=>d.addEventListener('toggle',()=>{S.rec.visits[+d.dataset.vi]._open=d.open}))}
+function recInput(e,commit){const i=e.target;if(!i.closest||!i.closest('#p-rec'))return;
+  const val=i.type==='checkbox'?i.checked:i.value;
+  if(i.dataset.r){setP(S.rec,i.dataset.r,val);recHeader();if(commit&&i.dataset.r==='op.date')$$('#visits .visit').forEach(d=>{const k=+d.dataset.vi;d.querySelector('summary').innerHTML=visitSummary(S.rec.visits[k],k)});autosave()}
+  else if(i.dataset.v){const [vi,k]=i.dataset.v.split('.');S.rec.visits[+vi][k]=val;if(k==='date'||k==='comp'){const d=i.closest('.visit');if(d)d.querySelector('summary').innerHTML=visitSummary(S.rec.visits[+vi],+vi)}autosave()}}
+document.addEventListener('input',e=>recInput(e,false));document.addEventListener('change',e=>recInput(e,true));
+
+/* ---------- text report ---------- */
+function recordReport(){const R=S.rec,L=[];
+  L.push(`${R.name||'Patient'}${R.fileNo?' · file '+R.fileNo:''}${R.phone?' · '+R.phone:''}`);
+  const fl=(fs,obj)=>fs.map(f=>{const v=lab(f,getP(obj,f.p));return v&&f.t!=='area'?`${f.l}: ${v}`:''}).filter(Boolean);
+  const dets=fl(REC_FORM[0][1].filter(f=>!['name','fileNo','phone'].includes(f.p)),R);if(dets.length)L.push(dets.join(' · '));if(R.notes)L.push('Notes: '+R.notes);
+  L.push('');L.push('ASSESSMENT');L.push(summary(decide()));
+  const grp=(i,title)=>{const x=fl(REC_FORM[i][1],R);if(x.length){L.push('');L.push(title);x.forEach(y=>L.push('- '+y))}};
+  grp(1,'OPERATION');if(R.op.notes)L.push('Notes: '+R.op.notes);grp(2,'POST-OPERATIVE');
+  if(R.visits.length){L.push('');L.push('FOLLOW-UP');R.visits.forEach(v=>{const w=weeksPostOp(v.date);L.push(`- ${v.date||'?'}${w!=null&&w>=0?' ('+w+' wk)':''}: `+VISIT_F.filter(f=>f.p!=='date'&&f.p!=='notes').map(f=>{const x=lab(f,v[f.p]);return x?`${f.l} ${x}`:''}).filter(Boolean).join(', ')+(v.notes?'. '+v.notes:''))})}
+  const sc=scoresSummary();if(sc.length){L.push('');L.push('SCORES');sc.forEach(x=>L.push('- '+x))}
+  grp(3,'OUTCOME');
+  return L.join('\n')}
+async function shareText(title,text){try{if(isNative&&window.Capacitor.Plugins.Share){await window.Capacitor.Plugins.Share.share({title,text});return}if(navigator.share){await navigator.share({title,text});return}await navigator.clipboard.writeText(text);toast('Copied')}catch{}}
+
+/* ---------- patient list ---------- */
+async function saveCase(fromRecord){const R=S.rec;const name=(R.name||$('#caseName').value.trim()||('Case '+new Date().toLocaleString([],{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})));
+  if(!R.name)R.name=name;S.caseId=S.caseId||('c'+Date.now());
+  try{await DB.put(caseRow());await saveNow();$('#caseName').value='';toast(`Saved “${name}”`);if(!$('#casesSheet').hidden)renderCases();if(S.tab==='rec')renderRecord()}catch{toast('Could not save on this device')}}
+function caseRow(){return{id:S.caseId,name:S.rec.name||'Unnamed',state:snap(),blobs:{...blobs},demo:isDemoImg(),date:Date.now()}}
+async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>!String(c.id).startsWith('__')).sort((a,b)=>b.date-a.date)}catch{}
+  const q=($('#caseSearch').value||'').trim().toLowerCase();
+  $('#caseCount').textContent=list.length?`${list.length} patient${list.length>1?'s':''}`:'';
+  if(q)list=list.filter(c=>{const r=c.state.rec||{};return[c.name,r.fileNo,r.phone,r.op&&r.op.date].join(' ').toLowerCase().includes(q)});
+  const el=$('#caseList');if(!list.length){el.innerHTML=`<div class="empty">${q?'No match.':'No patients saved yet.'}</div>`;return}
+  el.innerHTML=list.map(c=>{const r=c.state.rec||{},d=c.state.d||{};const op=r.op||{};
+    return`<div class="case ${c.id===S.caseId?'cur':''}"><div style="min-width:0"><div class="t"></div><div class="d">${[r.fileNo?'#'+esc(r.fileNo):'',esc(d.age||'?')+' y',{ant:'anterior',post:'posterior',mdi:'MDI'}[d.dir]||'',op.date?'op '+esc(op.date):'no surgery yet',(r.visits||[]).length?(r.visits.length+' visits'):''].filter(Boolean).join(' · ')}</div></div><div class="row"><button class="btn primary" data-open="${c.id}">Open</button><button class="btn danger" data-del="${c.id}">✕</button></div></div>`}).join('');
+  $$('#caseList .t').forEach((t,i)=>t.textContent=list[i].name);
+  $$('#caseList [data-open]').forEach(b=>b.onclick=async()=>{await saveNow();const r=await DB.get(b.dataset.open);await loadRecord(r);S.caseId=r.id;$('#casesSheet').hidden=true;selectTab('rec')});
+  $$('#caseList [data-del]').forEach(b=>b.onclick=async()=>{if(b.dataset.armed){await DB.del(b.dataset.del);if(S.caseId===b.dataset.del)S.caseId=null;renderCases()}else{b.dataset.armed=1;b.textContent='Delete?'}})}
+
+/* ---------- export / backup ---------- */
+const csvCell=v=>{v=v==null?'':String(v);return/[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+const toCSV=rows=>'﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+async function allCases(){let list=[];try{list=(await DB.all()).filter(c=>!String(c.id).startsWith('__'))}catch{}return list.sort((a,b)=>a.date-b.date)}
+function withState(st,fn){const keep=S;S={...S,d:{...BLANK,...st.d},P:st.P||{},cal:{glen:10,hs:10,...st.cal},th:{...TH_DEFAULT,...st.th},sc:st.sc||{tp:'preop',view:'risk',d:{}},rec:{...blankRec(),...(st.rec||{})}};try{return fn()}finally{S=keep}}
+async function exportCSV(){const list=await allCases();if(!list.length){toast('No saved patients to export');return}
+  const dKeys=Object.keys(BLANK);
+  const recF=REC_FORM.flatMap(([,fs])=>fs).filter(f=>f.t!=='area');
+  const tps=TP.map(t=>t[0]);const sk=['wosi','rowe','oiss','ases','con','sirsi','sane'];
+  const head=['id',...recF.map(f=>f.p),...dKeys,'glenoid_bone_loss_pct','glenoid_track_mm','hsi_mm','track','isis','gtims','plan',...tps.flatMap(t=>sk.map(k=>t+'_'+k)),'visits','last_visit','op_notes','notes'];
+  const rows=[head],vrows=[['id','name','file_no','op_date','weeks_post_op',...VISIT_F.map(f=>f.p)]];
+  for(const c of list)withState(c.state,()=>{const R=decide();const r=S.rec;const v=R.v;
+    const row=[c.id,...recF.map(f=>{const x=getP(r,f.p);return f.t==='sel'?lab(f,x):x??''}),...dKeys.map(k=>S.d[k]===true?1:S.d[k]===false?'':S.d[k]),v.gbl!=null?f1(v.gbl):'',v.gt!=null?f1(v.gt):'',v.hsi!=null?f1(v.hsi):'',trackTxt(v)[1],R.isisT,R.gtimsT??'',R.head];
+    tps.forEach(t=>{const sr=scoreRow(t);sk.forEach(k=>row.push(sr[k]!=null?(+sr[k]).toFixed(1):''))});
+    const vs=r.visits||[];row.push(vs.length,vs.length?vs[vs.length-1].date:'',r.op.notes||'',r.notes||'');rows.push(row);
+    vs.forEach(x=>vrows.push([c.id,r.name,r.fileNo,r.op.date||'',weeksPostOp(x.date)??'',...VISIT_F.map(f=>f.t==='sel'?lab(f,x[f.p]):x[f.p]??'')]))});
+  const day=new Date().toISOString().slice(0,10);
+  await saveFiles([[`ShoulderInstability-patients-${day}.csv`,toCSV(rows),'text/csv'],[`ShoulderInstability-visits-${day}.csv`,toCSV(vrows),'text/csv']]);toast(`Exported ${list.length} patients`)}
+const blobToDataURL=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b)});
+async function backup(){const list=await allCases();if(!list.length){toast('Nothing to back up yet');return}
+  const out=[];for(const c of list){const b={};for(const k in c.blobs||{}){try{b[k]=await blobToDataURL(c.blobs[k])}catch{}}out.push({...c,blobs:b})}
+  await saveFiles([[`ShoulderInstability-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({app:'shoulder-instability-planner',v:1,cases:out}),'application/json']]);toast(`Backed up ${list.length} patients`)}
+async function restore(file){try{const j=JSON.parse(await file.text());if(!j.cases)throw 0;let n=0;
+  for(const c of j.cases){const b={};for(const k in c.blobs||{}){try{b[k]=await (await fetch(c.blobs[k])).blob()}catch{}}await DB.put({...c,blobs:b});n++}
+  toast(`Restored ${n} patients`);renderCases()}catch{toast('That is not a Shoulder Instability Planner backup file')}}
+async function saveFiles(files){
+  if(isNative&&window.Capacitor.Plugins.Filesystem&&window.Capacitor.Plugins.Share){const {Filesystem,Share}=window.Capacitor.Plugins;const uris=[];
+    for(const [name,text] of files){const w=await Filesystem.writeFile({path:name,data:text,directory:'CACHE',encoding:'utf8'});uris.push(w.uri)}
+    try{await Share.share({title:files.map(f=>f[0]).join(', '),files:uris})}catch{}return}
+  for(const [name,text,type] of files){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);await new Promise(r=>setTimeout(r,400))}}
+$('#saveCase').onclick=()=>saveCase(false);
+$('#caseSearch').addEventListener('input',renderCases);
+$('#exportCsv').onclick=exportCSV;$('#backupBtn').onclick=backup;
+$('#restoreFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)restore(f)});
+
+/* ---------- printing: PDF reports ---------- */
+let SET={doctor:'',title:'Consultant Orthopaedic Surgeon · Knee & Shoulder Arthroscopy',clinic:'',phone:'',address:''};
+function loadPdfLib(){if(window.jsPDF)return Promise.resolve();return new Promise((res,rej)=>{const s=document.createElement('script');s.src='pdf.bundle.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+const pe=s=>esc(s==null?'':s);
+function fLabel(f,v){if(v===''||v==null||v===false)return'';if(f.t==='chk')return v?'Yes':'';if(f.t==='seg'||f.t==='sel'){const o=f.o.find(x=>String(x[0])===String(v));return o?o[1]:String(v)}return String(v)+(f.u&&!['n','0–10'].includes(f.u)?' '+f.u:'')}
+function kvTable(pairs){pairs=pairs.filter(p=>p[1]!==''&&p[1]!=null);if(!pairs.length)return'<p class="muted">Not recorded.</p>';
+  const rows=[];for(let i=0;i<pairs.length;i+=2)rows.push(`<tr><th>${pe(pairs[i][0])}</th><td>${pe(pairs[i][1])}</td>${pairs[i+1]?`<th>${pe(pairs[i+1][0])}</th><td>${pe(pairs[i+1][1])}</td>`:'<th></th><td></td>'}</tr>`);
+  return`<table class="kv">${rows.join('')}</table>`}
+function formPairs(tab,skip=[]){const d=S.d;const out=[];FORMS[tab].forEach(([,fs])=>fs.forEach(f=>{if(!f.k||f.t==='note'||f.t==='beighton'||skip.includes(f.k))return;if(f.show&&!f.show(d))return;
+  let v=d[f.k];if(f.m&&num(v)==null){const m=computeImage()[f.m];if(m!=null)v=f1(m)}out.push([f.l,fLabel(f,v)])}));return out}
+function recPairs(gi){const R=S.rec;return REC_FORM[gi][1].filter(f=>f.t!=='area').map(f=>[f.l,lab(f,getP(R,f.p))])}
+function blk(title,html){return`<div class="blk"><h2>${pe(title)}</h2>${html}</div>`}
+function reportHTML(kind){const d=S.d,R=decide(),r=S.rec,v=R.v;const age=num(d.age);
+  const head=`<div class="blk lh"><div><b>${pe(SET.doctor||'')}</b><span>${pe(SET.title||'')}</span><span>${pe([SET.clinic,SET.address,SET.phone].filter(Boolean).join(' · '))}</span></div><div class="lt">${pe({full:'Shoulder instability record',preop:'Pre-operative assessment and plan',op:'Operative note',fu:'Follow-up and outcome scores'}[kind])}</div></div>
+   <div class="blk pt"><span><b>Patient:</b> ${pe(r.name||'—')}</span><span><b>File:</b> ${pe(r.fileNo||'—')}</span><span><b>Age/Sex:</b> ${age??'—'} / ${d.sex}</span><span><b>Side:</b> ${d.side==='L'?'Left':'Right'}${d.dom?' (dominant)':''}</span>${r.phone?`<span><b>Phone:</b> ${pe(r.phone)}</span>`:''}<span><b>Printed:</b> ${new Date().toISOString().slice(0,10)}</span></div>`;
+  let h='';
+  const preop=()=>{
+    h+=blk('History',kvTable([...recPairs(0).filter(p=>!['Name','File number','Phone'].includes(p[0])),...formPairs('pt',['age','sex','side','dom'])])+(r.notes?`<p>${pe(r.notes)}</p>`:''));
+    h+=blk('Examination',kvTable([...formPairs('ex'),['Beighton',beightonScore(d)+'/9']]));
+    h+=blk('Imaging',kvTable(formPairs('img')));
+    const tr=trackTxt(v);
+    let bl=`<table class="kv"><tr><th>Glenoid bone loss</th><td>${v.gbl!=null?f1(v.gbl)+' % ('+gblCat(v.gbl)[1]+')':'—'}</td><th>Glenoid diameter</th><td>${v.D!=null?f1(v.D)+' mm':'—'}</td></tr>
+      <tr><th>Glenoid track</th><td>${v.gt!=null?f1(v.gt)+' mm':'—'}</td><th>Hill-Sachs interval</th><td>${v.hsi!=null?f1(v.hsi)+' mm':'—'}</td></tr>
+      <tr><th>Status</th><td>${pe(tr[1])}</td><th>Distance to dislocation</th><td>${v.dtd!=null?f1(v.dtd)+' mm':'—'}</td></tr>
+      ${d.dir==='post'?`<tr><th>Posterior bone loss</th><td>${v.pgbl!=null?f1(v.pgbl)+' %':'—'}</td><th>Glenoid version</th><td>${v.version!=null?f1(v.version)+'°':'—'}</td></tr><tr><th>Walch subluxation</th><td>${v.walch!=null?f0(v.walch)+' %':'—'}</td><th>Reverse Hill-Sachs</th><td>${v.rhs!=null?f0(v.rhs)+' %':'—'}</td></tr>`:''}</table>`;
+    if(d.dir==='ant')bl+=`<p>ISIS <b>${R.isisT}/10</b> (${pe(R.isis.filter(x=>x[1]).map(x=>x[0]).join('; ')||'no items')})${R.gtimsT!=null?` · GTIMS <b>${R.gtimsT}/10</b>`:''}</p>`;
+    bl+=`<p>${pe(R.feds)} · Stanmore ${pe(R.stanmore.l)}</p>`;
+    h+=blk('Bone loss and scores',bl);
+    let plan=`<p class="big">${pe(R.head)}</p>`;
+    OPT_ORDER.filter(k=>R.O[k].st!=='no').forEach(k=>{const o=R.O[k];plan+=`<h3>${pe(OPT[k])} – ${pe(STATE[o.st][1])}</h3>${o.why?`<p>${pe(o.why)}</p>`:''}${o.pro.length||o.con.length?`<ul style="list-style:none;padding-left:4px">${o.pro.map(x=>`<li>+ ${pe(x)}</li>`).join('')}${o.con.map(x=>`<li>− ${pe(x)}</li>`).join('')}</ul>`:''}`});
+    if(R.failed)plan+=`<h3>Failed stabilisation – risk factors present</h3><p>${pe(R.failed.F.filter(x=>x[0]).map(x=>x[1]).join('; ')||'None')}</p>`;
+    if(R.steps.length)plan+=`<h3>Work-up</h3><ol>${R.steps.map(x=>`<li>${pe(x)}</li>`).join('')}</ol>`;
+    if(R.notes.length)plan+=`<h3>Special situations</h3><ul>${R.notes.map(x=>`<li>${pe(x)}</li>`).join('')}</ul>`;
+    h+=blk('Plan',plan)};
+  const op=()=>{h+=blk('Operation',kvTable(recPairs(1))+(r.op.notes?`<h3>Operative notes</h3><p class="pre">${pe(r.op.notes)}</p>`:''));h+=blk('Post-operative protocol',kvTable(recPairs(2)))};
+  const fu=()=>{const V=r.visits||[];
+    h+=blk('Follow-up visits',V.length?`<table class="grid"><tr><th>Date</th><th>Wk</th><th>Pain</th><th>FF</th><th>ER</th><th>Apprehension</th><th>Instability</th><th>Graft</th><th>Event</th></tr>${V.map(x=>{const w=weeksPostOp(x.date);const L=k=>lab(VISIT_F.find(f=>f.p===k),x[k]);
+      return`<tr><td>${pe(x.date||'')}</td><td>${w!=null&&w>=0?Math.round(w):''}</td><td>${pe(x.pain??'')}</td><td>${pe(x.ff??'')}</td><td>${pe(x.er??'')}</td><td>${pe(L('appr'))}</td><td>${pe(L('event'))}</td><td>${pe(L('graft'))}</td><td>${pe(x.comp&&x.comp!=='none'?L('comp'):'')}</td></tr>${x.notes?`<tr><td></td><td colspan="8" class="muted">${pe(x.notes)}</td></tr>`:''}`}).join('')}</table>`:'<p class="muted">No follow-up visits recorded.</p>');
+    const rows=scoreHistoryRows();const cols=HIST_COLS.filter(([k])=>rows.some(x=>x[k]!=null));
+    h+=blk('Outcome scores',rows.length?`<table class="grid"><tr><th>Time point</th><th>Date</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>${rows.map(x=>`<tr><td>${pe(x.l)}</td><td>${pe(x.date||'')}</td>${cols.map(([k,,fm])=>`<td>${x[k]!=null?fm(x[k]):'—'}</td>`).join('')}</tr>`).join('')}</table>`:'<p class="muted">No scores recorded.</p>');
+    h+=blk('Outcome',kvTable(recPairs(3)))};
+  if(kind==='full'){preop();op();fu()}else if(kind==='preop')preop();else if(kind==='op'){h+=blk('Indication',`<p>${pe(R.feds)} – ${d.side==='L'?'left':'right'} shoulder. Plan: ${pe(R.head)}</p>`);op()}else fu();
+  h+=`<div class="blk sig"><span>Signature: ______________________</span><span>${pe(SET.doctor||'')}</span></div>`;
+  return`<div class="page">${head}${h}<div class="foot">${pe(SET.clinic||'Shoulder Instability Planner')} · ${pe(r.name||'')} ${r.fileNo?'#'+pe(r.fileNo):''}</div></div>`}
+async function printReport(kind){toast('Preparing PDF…');try{await loadPdfLib();const html=reportHTML(kind);const blob=await htmlToPdf(html);
+  const nm=(S.rec.name||'patient').replace(/[^\w؀-ۿ]+/g,'_');await shareBlob(blob,`${nm}_${kind}_${new Date().toISOString().slice(0,10)}.pdf`)}catch(e){console.error(e);toast('Could not create the PDF')}}
+async function htmlToPdf(html){const root=$('#printRoot');root.innerHTML=html;try{await document.fonts.ready}catch{}const el=root.firstElementChild;
+  const scale=2;const canvas=await window.html2canvas(el,{scale,backgroundColor:'#ffffff'});
+  const top=el.getBoundingClientRect().top;const breaks=[...el.querySelectorAll('.blk, .kv tr, .grid tr, li, p')].map(b=>Math.round((b.getBoundingClientRect().bottom-top)*scale)).sort((a,b)=>a-b);
+  root.innerHTML='';
+  const pdf=new window.jsPDF({unit:'pt',format:'a4'});const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+  const margin=28,usable=Math.floor((ph-2*margin)*canvas.width/pw);let y=0,first=true;
+  while(y<canvas.height-4){let end=Math.min(y+usable,canvas.height);if(end<canvas.height){const cand=breaks.filter(b=>b>y+usable*0.5&&b<=end);if(cand.length)end=cand[cand.length-1]+2}
+    const h=end-y;const c=document.createElement('canvas');c.width=canvas.width;c.height=h;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,h);g.drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);
+    if(!first)pdf.addPage();pdf.addImage(c.toDataURL('image/jpeg',.92),'JPEG',0,margin,pw,h*pw/canvas.width);first=false;y=end}
+  const n=pdf.getNumberOfPages();for(let i=1;i<=n;i++){pdf.setPage(i);pdf.setFontSize(8);pdf.setTextColor(120);pdf.text(`Page ${i} of ${n}`,pw-margin,ph-12,{align:'right'})}
+  return pdf.output('blob')}
+const blobToB64=b=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(b)});
+async function shareBlob(blob,name){
+  if(isNative&&window.Capacitor.Plugins.Filesystem){try{const {Filesystem,Share}=window.Capacitor.Plugins;const w=await Filesystem.writeFile({path:name,data:await blobToB64(blob),directory:'CACHE'});await Share.share({title:name,files:[w.uri]});return}catch(e){if(String(e).includes('cancel'))return;console.error(e)}}
+  const file=new File([blob],name,{type:'application/pdf'});if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});return}catch(e){if(e.name==='AbortError')return}}
+  const url=URL.createObjectURL(blob);const w=window.open(url,'_blank');if(w)return;const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Saved '+name)}
+function openPrintSheet(){$('#printSheet').hidden=false}
+$$('#printSheet [data-print]').forEach(b=>b.onclick=()=>{$('#printSheet').hidden=true;printReport(b.dataset.print)});
+$('#shareApp').onclick=async()=>{const url='https://eelforse-blip.github.io/Knee-planner/shoulder/';const text='Shoulder Instability Planner – glenoid bone loss (best-fit circle), glenoid track and on/off-track Hill-Sachs, ISIS and GTIMS, WOSI, Rowe, Oxford, ASES, Constant and SIRSI, and procedure choice (Bankart, remplissage, Latarjet, bone block, posterior and MDI). Free, works offline on iPhone, Android and PC.\n\niPhone: open in Safari → Share → Add to Home Screen.\nAndroid / PC: open in Chrome or Edge → Install app.\n\n';
+  try{if(isNative&&window.Capacitor.Plugins.Share){await window.Capacitor.Plugins.Share.share({title:'Shoulder Instability Planner',text:text+url});return}if(navigator.share){await navigator.share({title:'Shoulder Instability Planner',text,url});return}await navigator.clipboard.writeText(text+url);toast('Link copied')}catch{}};
+$('#setBtn').onclick=()=>{['doctor','title','clinic','phone','address'].forEach(k=>$('#set_'+k).value=SET[k]||'');$('#menuSheet').hidden=true;$('#setSheet').hidden=false};
+$('#setSave').onclick=async()=>{['doctor','title','clinic','phone','address'].forEach(k=>SET[k]=$('#set_'+k).value.trim());try{await DB.put({id:'__settings',set:SET})}catch{}$('#setSheet').hidden=true;toast('Letterhead saved')};
+
+/* ---------- tabs ---------- */
+function update(){if(S.tab==='img'){renderImg();const meas=computeImage();$$('#imgForm input[data-k]').forEach(i=>{const f=FORMS.img.flatMap(g=>g[1]).find(x=>x.k===i.dataset.k);if(f&&f.m)i.placeholder=meas[f.m]!=null?f1(meas[f.m]):''})}
+  if(S.tab==='dec')renderDec();draw();autosave()}
+function layout(){const w=$('#work');const showV=S.tab==='img'&&!S.noViewer;w.classList.toggle('calc',!showV);requestAnimationFrame(()=>{resize();fit()})}
+function selectTab(t){S.tab=t;$$('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===t));['rec','pt','ex','img','sc','dec'].forEach(n=>$('#p-'+n).hidden=n!==t);
+  layout();renderTab(t);$('#p-'+t).scrollTop=0;autosave()}
+$$('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.t));
+$('#grab').onclick=()=>{$('#work').classList.toggle('tall');requestAnimationFrame(()=>{resize();fit()})};
+
+/* ---------- storage ---------- */
+const DB=(()=>{let p=null;const open=()=>p||(p=new Promise((res,rej)=>{try{const r=indexedDB.open('shoulder-instability-planner',1);r.onupgradeneeded=()=>r.result.createObjectStore('cases',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
+  const tx=async(mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('cases',mode);const out=fn(t.objectStore('cases'));t.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);t.onerror=()=>rej(t.error)})};
+  return{put:v=>tx('readwrite',s=>s.put(v)),get:id=>tx('readonly',s=>s.get(id)),del:id=>tx('readwrite',s=>s.delete(id)),all:()=>tx('readonly',s=>s.getAll())}})();
+const snap=()=>JSON.parse(JSON.stringify({d:S.d,P:S.P,cal:S.cal,th:S.th,mode:S.mode,sc:S.sc,rec:S.rec}));
+const isDemoImg=()=>Object.keys(imgs).length>0&&Object.keys(blobs).length===0;
+const saveNow=()=>{clearTimeout(saveT);const p=[DB.put({id:'__current',caseId:S.caseId,state:snap(),tab:S.tab,blobs:{...blobs},demo:isDemoImg(),date:Date.now()})];if(S.caseId)p.push(DB.put(caseRow()));return Promise.all(p).catch(()=>{})};
+let saveT=0;function autosave(){clearTimeout(saveT);saveT=setTimeout(saveNow,400)}
+addEventListener('pagehide',saveNow);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveNow()});
+async function loadRecord(r){const st=JSON.parse(JSON.stringify(r.state));S.d={...BLANK,...st.d};S.P=st.P||{};S.cal={glen:10,hs:10,...st.cal};S.th={...TH_DEFAULT,...st.th};S.mode=MODES[st.mode]?st.mode:'glen';S.sc=st.sc||{tp:'preop',view:'risk',d:{}};{const b0=blankRec(),rr=st.rec||{};S.rec={...b0,...rr,op:{...b0.op,...(rr.op||{})},out:{...(rr.out||{})},visits:rr.visits||[]}}S.caseId=r.caseId||null;
+  const ids=MODES[S.mode].pts.map(x=>x[0]);S.active=ids.find(k=>!P(S.mode,k))||ids[0];
+  imgs={};blobs={...(r.blobs||{})};for(const k in blobs){try{imgs[k]=await blobToCanvas(blobs[k])}catch{}}
+  if(r.demo){for(const m in (st.P||{})){if(DEMO_P[m]&&JSON.stringify(st.P[m])!=='{}')imgs[m]={glen:demoGlen,hs:demoHS,ax:demoAx}[m]()}}}
+$('#casesBtn').onclick=()=>{$('#caseSearch').value='';renderCases();$('#casesSheet').hidden=false};$('#menuBtn').onclick=()=>$('#menuSheet').hidden=false;
+$$('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s||e.target.hasAttribute('data-close'))s.hidden=true}));
+$('#newCase').onclick=()=>{S={d:{...BLANK},P:{},cal:{glen:10,hs:10},th:{...S.th},tab:'pt',mode:'glen',active:'cal1',noViewer:false,sc:{tp:'preop',view:'risk',d:{}},rec:blankRec(),caseId:null};imgs={};blobs={};$('#menuSheet').hidden=true;selectTab('rec');toast('New patient')};
+$('#demoList').innerHTML=DEMOS.map((x,i)=>`<button class="btn" data-demo="${i}">${x.t}</button>`).join('');
+$$('[data-demo]').forEach(b=>b.onclick=()=>{$('#menuSheet').hidden=true;openDemo(+b.dataset.demo)});
+let toastT=0;function toast(m){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t)}t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2200)}
+
+/* ---------- iPhone install hint ---------- */
+(()=>{const ua=navigator.userAgent;const ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;let seen=false;try{seen=!!localStorage.getItem('iosHint')}catch{}
+  if(ios&&!standalone&&!isNative&&!seen){const h=$('#iosHint');setTimeout(()=>h.hidden=false,1500);$('#iosHintX').onclick=()=>{h.hidden=true;try{localStorage.setItem('iosHint','1')}catch{}}}})();
+
+/* ---------- boot ---------- */
+DB.get('__settings').then(r=>{if(r&&r.set)SET={...SET,...r.set}}).catch(()=>{});
+resize();
+(async()=>{let r=null;try{r=await DB.get('__current')}catch{}
+  if(r&&r.state){await loadRecord(r);selectTab(r.tab||'dec')}else openDemo(0)})();
+window.__sh={pdf:k=>loadPdfLib().then(()=>htmlToPdf(reportHTML(k))).then(blobToB64),decide,vals,computeImage,openDemo,selectTab,S:()=>S,setMode:m=>chooseMode(m),setD:o=>{Object.assign(S.d,o);renderTab(S.tab);if(S.tab==='dec')renderDec()}};
+if('serviceWorker' in navigator&&!isNative&&/^https?:$/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+})();
+</script>
+</body>
+</html>
