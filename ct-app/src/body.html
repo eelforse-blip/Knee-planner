@@ -1,0 +1,55 @@
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>CT Viewer</b><span>Brain · chest · abdomen · angio · bone — window presets, HU, MPR, MIP</span></div>
+    <button class="ib" id="installBtn" hidden title="Install on this computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Install app</span></button>
+    <label class="ib" for="fileIn" title="Open DICOM files or a ZIP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Open</span></label>
+    <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+  </header>
+  <input id="fileIn" type="file" multiple hidden>
+  <input id="dirIn" type="file" webkitdirectory directory multiple hidden>
+
+  <main class="work" id="work">
+    <section class="viewer" id="viewer">
+      <canvas id="cv" aria-label="CT image"></canvas>
+      <div class="ctbar"><button id="prevS" aria-label="Previous slice">‹</button><input type="range" id="sliceBar" min="0" max="0" value="0" aria-label="Slice"><button id="nextS" aria-label="Next slice">›</button></div>
+      <div class="vtools">
+        <button id="cineBtn" title="Cine (Space)">▶</button>
+        <button id="fit" title="Fit (F)">Fit</button>
+        <button id="zin" aria-label="Zoom in">+</button>
+        <button id="zout" aria-label="Zoom out">−</button>
+      </div>
+      <div class="busy" id="busy" hidden><div><b id="busyT">Reading…</b><span id="busyS"></span><i><em id="busyBar"></em></i></div></div>
+    </section>
+
+    <aside class="panel">
+      <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="ser" aria-selected="true">Series</button>
+        <button class="tab" role="tab" data-t="win" aria-selected="false">Window</button>
+        <button class="tab" role="tab" data-t="tool" aria-selected="false">Tools</button>
+        <button class="tab" role="tab" data-t="info" aria-selected="false">Scan info</button>
+      </div>
+      <div class="pane" id="p-ser"></div>
+      <div class="pane" id="p-win" hidden></div>
+      <div class="pane" id="p-tool" hidden></div>
+      <div class="pane" id="p-info" hidden></div>
+    </aside>
+  </main>
+</div>
+
+<div class="sheet" id="menuSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="More">
+    <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn" id="closeStudy">Close study (clear from memory)</button>
+      <button class="btn primary" id="shareApp">Share this app with colleagues</button>
+      <button class="btn" id="installMenu" hidden>Install on this computer / phone</button>
+      <h3>Keyboard (PC)</h3>
+      <p class="fine">Wheel or ↑ ↓ – slices · Ctrl + wheel – zoom · right-drag – window · middle-drag – pan · PgUp / PgDn – 10 slices · 1–9, 0 – presets · A / C / S – axial, coronal, sagittal · M – MIP · I – invert · Space – cine · F – fit · R – reset · Delete – undo measurement. Drag files or a ZIP onto the window.</p>
+      <h3>Privacy</h3>
+      <p class="fine">Images are opened on this device only and are never uploaded. Closing the study removes them from memory.</p>
+      <p class="fine">For viewing and teaching. Not a certified diagnostic workstation: reports must be made on approved PACS / diagnostic monitors.</p>
+      <p class="fine">Version 1.0</p>
+    </div>
+  </div>
+</div>

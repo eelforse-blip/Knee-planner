@@ -39,6 +39,8 @@ jobs:
           cp -r tumour-app/www/. site/tumour/
           mkdir site/shoulder
           cp -r shoulder-app/www/. site/shoulder/
+          mkdir site/ct
+          cp -r ct-app/www/. site/ct/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

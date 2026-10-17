@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>CT Viewer</title>
+<meta name="description" content="CT DICOM viewer for phone and PC: window presets for brain, chest, abdomen, bone and angiography, HU measurements, MPR and MIP.">
+<meta name="theme-color" content="#05080b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CT Viewer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+@font-face{font-family:"Archivo";font-weight:400;font-display:swap;src:url(fonts/archivo-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:500;font-display:swap;src:url(fonts/archivo-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:600;font-display:swap;src:url(fonts/archivo-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:700;font-display:swap;src:url(fonts/archivo-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-latin-600-normal.woff2) format("woff2")}
+/*END-FONTFACE*/
+
+/* Layout: dark cross-sectional viewer on top, tabbed sheet below (phone) or beside (tablet) */
+:root{
+  --bg:#ebeef3; --surface:#ffffff; --ink:#141c2b; --muted:#586579; --line:#d2d9e3;
+  --accent:#2f5fa8; --accent-ink:#ffffff; --soft:#e4ecf8;
+  --ok:#1d7f47; --warn:#a86a0f; --bad:#b8352a;
+  --view:#05080b; --chrome:#0b1018; --chrome-ink:#e6ecf2; --chrome-muted:#8e9aab; --chrome-line:#1e2836;
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1219; --surface:#151b25; --ink:#e2e7ef; --muted:#95a1b3; --line:#283243;
+  --accent:#7ea6e8; --accent-ink:#0a1426; --soft:#1a2a45;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1219; --surface:#151b25; --ink:#e2e7ef; --muted:#95a1b3; --line:#283243;
+  --accent:#7ea6e8; --accent-ink:#0a1426; --soft:#1a2a45;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}
+
+[hidden]{display:none!important}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{background:var(--chrome);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{height:100%;height:100dvh;display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--chrome);color:var(--chrome-ink)}
+.brand{display:flex;flex-direction:column;margin-right:auto;min-width:0}
+.brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand span{font-size:10.5px;color:var(--chrome-muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{border:1px solid var(--chrome-line);background:#121a26;color:var(--chrome-ink);border-radius:9px;min-height:38px;padding:0 11px;cursor:pointer;font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.ib svg{width:17px;height:17px;flex:none}
+.ib:focus-visible,.tab:focus-visible,.step:focus-visible,.chip:focus-visible,.btn:focus-visible,.sl:focus-visible{outline:2px solid #7ea6e8;outline-offset:2px}
+
+.work{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 430px}
+.viewer{position:relative;background:var(--view);overflow:hidden;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;display:block}
+.prompt{position:absolute;left:10px;right:10px;top:10px;background:rgba(8,12,16,.86);color:#e9eef2;border:1px solid rgba(255,194,71,.45);border-radius:9px;padding:7px 10px;font-size:13px;pointer-events:none;display:flex;gap:8px;align-items:baseline}
+.prompt .k{font-family:var(--f-num);color:#ffc247;font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.prompt small{color:#a9b4bd;display:block;font-size:11.5px}
+.vtools{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.vtools button{background:rgba(8,12,16,.86);color:#e9eef2;border:1px solid rgba(255,255,255,.18);border-radius:8px;min-width:40px;height:38px;padding:0 10px;font-size:13px;cursor:pointer}
+.vtools #delPt{color:#ffb4aa;border-color:rgba(255,120,100,.45)}
+.vlabel{position:absolute;left:10px;bottom:12px;color:#c9d3dd;font-size:12px;background:rgba(8,12,16,.8);padding:5px 8px;border-radius:7px;pointer-events:none;max-width:55%}
+
+.panel{background:var(--surface);display:flex;flex-direction:column;min-height:0;min-width:0;border-left:1px solid var(--line)}
+.grab{display:none}
+.tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+.tab{flex:1;background:none;border:0;padding:12px 2px;cursor:pointer;font-weight:600;font-size:12.5px;color:var(--muted);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px;min-height:0;flex:1;background:var(--surface)}
+h3{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.group{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fine{font-size:11.5px;color:var(--muted);margin:0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;min-height:38px;padding:0 12px;cursor:pointer;font-weight:600;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.form{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;font-size:13.5px}
+.form input[type=number],.form select,.mt input,.mt select,.pc input,.pc select{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.form input[type=number],.mt input{width:84px;font-family:var(--f-num)}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{flex:1;border:0;background:none;padding:9px 6px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.tog{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.tog input{width:20px;height:20px;accent-color:var(--accent)}
+/* slice chooser */
+.slices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.sl{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0}
+.sl.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--soft)}
+.sl b{font-size:12.5px}
+.sl span{font-size:11px;color:var(--muted);font-family:var(--f-num)}
+.steps{display:flex;flex-direction:column;gap:2px}
+.step{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:8px;cursor:pointer;min-height:40px}
+.step.on{border-color:var(--accent);background:var(--soft)}
+.dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--muted)}
+.step.done .dot{background:#ffc247;border-color:#ffc247}
+.step .gl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+/* tables & pills */
+.mt{width:100%;border-collapse:collapse;font-size:13px}
+.mt th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
+.mt td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.mt td.n{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt .ref{font-size:11px;color:var(--muted)}
+.src{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pill{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.03em;white-space:nowrap}
+.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.pill.acc{color:var(--accent-ink);background:var(--accent)}
+.pill.mut{color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent)}
+/* decision */
+.rec{border:1.5px solid var(--accent);background:var(--soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.rec .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700}
+.rec .h{font-size:18px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.rec ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.risk{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rk{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.rk .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.rk .v{font-family:var(--f-num);font-size:24px;font-weight:600;letter-spacing:-.02em}
+.rk .v small{font-size:12px;color:var(--muted);font-weight:500}
+.rk .s{font-size:11.5px;color:var(--muted)}
+.rk ul{margin:4px 0 0;padding-left:16px;font-size:11.5px;color:var(--muted)}
+.pc{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.pc.ind{border-color:var(--accent)}
+.pc.no{opacity:.75}
+.pc .hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.pc .hd b{font-size:14.5px}
+.pc .why{font-size:12.5px;color:var(--muted)}
+.pc .opts{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;font-size:12.5px}
+.pc .opts select{max-width:210px}
+.pc .opts input{width:76px;font-family:var(--f-num)}
+.figs{display:flex;gap:14px;flex-wrap:wrap}
+.figs div{display:flex;flex-direction:column}
+.figs .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.figs .v{font-family:var(--f-num);font-size:20px;font-weight:600;letter-spacing:-.02em}
+.figs .v small{font-size:12px;color:var(--muted);font-weight:500}
+.pc ol,.pc ul{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.notes{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.notes li{font-size:12.5px;padding:8px 10px;border-radius:7px;border-left:3px solid var(--line);background:var(--bg)}
+.notes li.warn{border-left-color:var(--warn)} .notes li.bad{border-left-color:var(--bad)} .notes li.ok{border-left-color:var(--ok)}
+.empty{font-size:13px;color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:9px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;padding:4px 0}
+details[open] summary{margin-bottom:8px}
+.sheet{position:fixed;inset:0;background:rgba(3,6,9,.55);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet-card{background:var(--surface);color:var(--ink);width:100%;max-width:520px;max-height:85%;border-radius:16px 16px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sheet-head b{font-size:16px;margin-right:auto}
+.sheet-body{overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.case{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px}
+.case .t{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.case .d{font-size:11.5px;color:var(--muted);font-family:var(--f-num)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#141c2b;color:#fff;padding:9px 14px;border-radius:9px;font-size:13px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90%}
+.work.calc{grid-template-columns:1fr!important;grid-template-rows:1fr!important}
+.work.calc .viewer{display:none}
+.work.calc .panel{margin-top:0!important;border-radius:0!important;max-width:720px;width:100%;justify-self:center;border-left:0}
+.cgrid{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center;font-size:13.5px}
+.cgrid input,.cgrid select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;width:92px;font-family:var(--f-num)}
+.cgrid select{width:auto;font-family:var(--f-ui)}
+.cgrid .u{font-size:11px;color:var(--muted);min-width:58px}
+.work.calc .grab{display:none!important}
+.cgrid .ref{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-4px}
+.cout .pc{padding:10px 12px}
+@media (max-width:820px){
+  .brand span{display:none}
+  .bar .lbl{display:none}
+  .work{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,48%)}
+  .work.tall{grid-template-rows:minmax(0,24%) minmax(0,1fr)}
+  .panel{border-left:0;border-radius:14px 14px 0 0;margin-top:-10px;position:relative;z-index:2}
+  .grab{display:block;border:0;background:none;padding:7px 0 2px;cursor:pointer}
+  .grab i{display:block;width:38px;height:4px;border-radius:4px;background:var(--line);margin:0 auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* CT viewer additions */
+.viewer{display:block!important;background:#000;touch-action:none}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.ctbar{position:absolute;left:8px;right:8px;bottom:56px;display:flex;align-items:center;gap:6px}
+.ctbar input{flex:1;accent-color:#7ea6e8}
+.ctbar button{background:rgba(8,12,16,.8);color:#e9eef2;border:1px solid rgba(255,255,255,.18);border-radius:8px;width:38px;height:34px;font-size:20px;line-height:1;cursor:pointer}
+.vtools{bottom:10px}
+.busy{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:3}
+.busy>div{background:#151b25;color:#e2e7ef;border:1px solid #283243;border-radius:12px;padding:14px 18px;min-width:230px;display:flex;flex-direction:column;gap:6px}
+.busy span{font-size:12px;color:#95a1b3}
+.busy i{display:block;height:5px;border-radius:5px;background:#283243;overflow:hidden}
+.busy em{display:block;height:100%;width:0;background:#7ea6e8}
+.tab{flex:1 0 auto;padding:12px 10px;font-size:12.5px}
+.tabs{overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.pane>*{flex-shrink:0}
+.ser{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--surface);text-align:left;cursor:pointer;color:var(--ink)}
+.ser.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--soft)}
+.ser img,.ser .ph{width:72px;height:72px;border-radius:6px;background:#000;object-fit:contain}
+.ser b{font-size:13px;display:block;overflow:hidden;text-overflow:ellipsis}
+.ser span{font-size:11.5px;color:var(--muted);font-family:var(--f-num);display:block}
+.ser .warn{color:var(--warn)}
+.pgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.pgrid button{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 6px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;color:var(--ink)}
+.pgrid button.on{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.pgrid b{font-size:12.5px}.pgrid span{font-size:10.5px;color:var(--muted);font-family:var(--f-num)}
+.pgrid kbd{font-size:9.5px;color:var(--muted);font-family:var(--f-num)}
+.mgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.mgrid button{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 4px;cursor:pointer;font-size:12px;font-weight:600;color:var(--ink)}
+.mgrid button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.fgrid{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center;font-size:13.5px}
+.fgrid input[type=number]{width:88px;padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;font-family:var(--f-num);color:var(--ink)}
+.fgrid .u{font-size:11px;color:var(--muted)}
+.mt td.n{white-space:normal}
+.kv{width:100%;border-collapse:collapse;font-size:12.5px}
+.kv td{padding:5px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.kv td:first-child{color:var(--muted);width:44%}
+.kv td:last-child{font-family:var(--f-num);word-break:break-word}
+.qa{font-size:12.5px;padding:8px 10px;border-radius:9px;border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent)}
+.qa.ok{border-left-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent)}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.tog{display:flex;gap:8px;align-items:center;font-size:13.5px}
+@media (min-width:1100px){.work{grid-template-columns:minmax(0,1fr) 400px}}
+@media (hover:none){.pcOnly{display:none}}
+.ser,.pgrid button,.mgrid button{font:inherit}
+.ser b{font-size:13px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>CT Viewer</b><span>Brain · chest · abdomen · angio · bone — window presets, HU, MPR, MIP</span></div>
+    <button class="ib" id="installBtn" hidden title="Install on this computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Install app</span></button>
+    <label class="ib" for="fileIn" title="Open DICOM files or a ZIP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Open</span></label>
+    <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+  </header>
+  <input id="fileIn" type="file" multiple hidden>
+  <input id="dirIn" type="file" webkitdirectory directory multiple hidden>
+
+  <main class="work" id="work">
+    <section class="viewer" id="viewer">
+      <canvas id="cv" aria-label="CT image"></canvas>
+      <div class="ctbar"><button id="prevS" aria-label="Previous slice">‹</button><input type="range" id="sliceBar" min="0" max="0" value="0" aria-label="Slice"><button id="nextS" aria-label="Next slice">›</button></div>
+      <div class="vtools">
+        <button id="cineBtn" title="Cine (Space)">▶</button>
+        <button id="fit" title="Fit (F)">Fit</button>
+        <button id="zin" aria-label="Zoom in">+</button>
+        <button id="zout" aria-label="Zoom out">−</button>
+      </div>
+      <div class="busy" id="busy" hidden><div><b id="busyT">Reading…</b><span id="busyS"></span><i><em id="busyBar"></em></i></div></div>
+    </section>
+
+    <aside class="panel">
+      <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="ser" aria-selected="true">Series</button>
+        <button class="tab" role="tab" data-t="win" aria-selected="false">Window</button>
+        <button class="tab" role="tab" data-t="tool" aria-selected="false">Tools</button>
+        <button class="tab" role="tab" data-t="info" aria-selected="false">Scan info</button>
+      </div>
+      <div class="pane" id="p-ser"></div>
+      <div class="pane" id="p-win" hidden></div>
+      <div class="pane" id="p-tool" hidden></div>
+      <div class="pane" id="p-info" hidden></div>
+    </aside>
+  </main>
+</div>
+
+<div class="sheet" id="menuSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="More">
+    <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn" id="closeStudy">Close study (clear from memory)</button>
+      <button class="btn primary" id="shareApp">Share this app with colleagues</button>
+      <button class="btn" id="installMenu" hidden>Install on this computer / phone</button>
+      <h3>Keyboard (PC)</h3>
+      <p class="fine">Wheel or ↑ ↓ – slices · Ctrl + wheel – zoom · right-drag – window · middle-drag – pan · PgUp / PgDn – 10 slices · 1–9, 0 – presets · A / C / S – axial, coronal, sagittal · M – MIP · I – invert · Space – cine · F – fit · R – reset · Delete – undo measurement. Drag files or a ZIP onto the window.</p>
+      <h3>Privacy</h3>
+      <p class="fine">Images are opened on this device only and are never uploaded. Closing the study removes them from memory.</p>
+      <p class="fine">For viewing and teaching. Not a certified diagnostic workstation: reports must be made on approved PACS / diagnostic monitors.</p>
+      <p class="fine">Version 1.0</p>
+    </div>
+  </div>
+</div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const cv=$('#cv'),ctx=cv.getContext('2d');
+const isNative=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>v===''||v==null||isNaN(+v)?null:+v;
+const f0=v=>v==null||isNaN(v)?'—':Math.round(v)+'',f1=v=>v==null||isNaN(v)?'—':(+v).toFixed(1);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- window presets ---------- */
+const PRESETS=[
+ ['brain','Brain',80,40,'Head: grey–white matter, acute blood'],
+ ['subdural','Subdural',215,75,'Thin extra-axial blood against the skull'],
+ ['stroke','Stroke',40,40,'Early ischaemia (narrow window)'],
+ ['bone','Bone',2000,500,'Fractures, skull, spine, joints'],
+ ['temporal','Temporal bone',2800,600,'Middle / inner ear, fine bone detail'],
+ ['lung','Lung',1500,-600,'Lung parenchyma, nodules, pneumothorax'],
+ ['medi','Mediastinum',350,50,'Chest soft tissue, nodes, effusion'],
+ ['abd','Abdomen',400,50,'Abdomen and pelvis soft tissue'],
+ ['liver','Liver',150,30,'Subtle liver lesions'],
+ ['cta','Angio (CTA)',700,200,'Contrast-filled arteries, aneurysm, stenosis'],
+ ['pe','Pulmonary embolism',700,100,'Filling defects in pulmonary arteries'],
+ ['soft','Soft tissue / neck',350,40,'Neck, muscles, collections']];
+const PKEY={1:'brain',2:'subdural',3:'stroke',4:'bone',5:'lung',6:'medi',7:'abd',8:'liver',9:'cta',0:'pe'};
+
+/* ---------- state ---------- */
+let study={series:[]};
+let C={si:-1,plane:'ax',idx:0,W:400,L:40,preset:'',inv:false,mip:0,mode:'scroll',ann:{},hide:false,smooth:true};
+let view={s:1,tx:0,ty:0};
+let probe=null,cineT=0,tab='ser';
+const cur=()=>study.series[C.si]||null;
+
+/* ---------- DICOM loading ---------- */
+let libP=null;
+function loadLib(){if(window.daikon&&window.JSZip)return Promise.resolve();return libP||(libP=new Promise((res,rej)=>{const s=document.createElement('script');s.src='dicom.bundle.js';s.onload=()=>{try{daikon.Parser.verbose=false}catch{}res()};s.onerror=()=>{libP=null;rej(new Error('lib'))};document.head.appendChild(s)}))}
+function busy(t,s,p){const b=$('#busy');if(t==null){b.hidden=true;return}b.hidden=false;$('#busyT').textContent=t;$('#busyS').textContent=s||'';$('#busyBar').style.width=(p==null?0:Math.round(p*100))+'%'}
+const dstr=d=>d instanceof Date&&!isNaN(d)?`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`:d;
+const tagv=(img,g,e)=>{try{const t=img.getTag(g,e);if(!t||t.value==null)return null;let v=t.value;if(Array.isArray(v))v=v.map(dstr);else v=dstr(v);if(Array.isArray(v))return v.length===1?v[0]:v.join('\\');if(v instanceof DataView)return null;return v}catch{return null}};
+const tagn=(img,g,e)=>{const v=tagv(img,g,e);if(v==null)return null;const x=parseFloat(String(v).split('\\')[0]);return isNaN(x)?null:x};
+const tagarr=(img,g,e)=>{try{const t=img.getTag(g,e);return t&&Array.isArray(t.value)?t.value.map(Number):null}catch{return null}};
+async function readEntries(files){const out=[];let i=0;
+  for(const f of files){i++;if(i%20===0)busy('Reading files…',`${i} / ${files.length}`,i/files.length*.3);
+    try{if(/\.zip$/i.test(f.name)||f.type==='application/zip'||f.type==='application/x-zip-compressed'){const z=await JSZip.loadAsync(f);const ents=Object.values(z.files).filter(e=>!e.dir&&!/__MACOSX|\.(jpe?g|png|pdf|txt|html?|xml|exe|inf|ini|js|css)$/i.test(e.name));
+        for(const e of ents)out.push({name:e.name,get:()=>e.async('arraybuffer')})}
+      else if(!/\.(jpe?g|png|pdf|txt|html?|xml|exe|inf|ini|js|css)$/i.test(f.name)&&f.size>132)out.push({name:f.name,get:()=>f.arrayBuffer()})}catch(e){console.warn(e)}}
+  return out}
+async function openFiles(files){files=[...files];if(!files.length)return;stopCine();
+  try{busy('Loading viewer…');await loadLib()}catch{busy();toast('Could not load the DICOM decoder');return}
+  const ents=await readEntries(files);const map=new Map();let ok=0,i=0;
+  for(const e of ents){i++;if(i%10===0){busy('Reading DICOM headers…',`${i} / ${ents.length}`,.3+.4*i/ents.length);await sleep(0)}
+    let img=null;try{img=daikon.Series.parseImage(new DataView(await e.get()))}catch{img=null}
+    if(!img||!img.hasPixelData())continue;ok++;
+    const uid=img.getSeriesId?img.getSeriesId():tagv(img,0x0020,0x000E)||'s';
+    const iop=tagarr(img,0x0020,0x0037)||[1,0,0,0,1,0],ipp=tagarr(img,0x0020,0x0032);
+    const nf=img.getNumberOfFrames?img.getNumberOfFrames():1;
+    let s=map.get(uid);if(!s){s=newSeries(img,uid);map.set(uid,s)}
+    for(let fr=0;fr<nf;fr++){const pos=ipp?[...ipp]:null;
+      if(pos&&nf>1){const n=cross(iop.slice(0,3),iop.slice(3));const sp=tagn(img,0x0018,0x0088)||s.thick||1;pos[0]+=n[0]*sp*fr;pos[1]+=n[1]*sp*fr;pos[2]+=n[2]*sp*fr}
+      s.slices.push({src:e.get,frame:nf>1?fr:null,pos,iop,inst:(tagn(img,0x0020,0x0013)||0)*1000+fr,rows:img.getRows(),cols:img.getCols(),ps:tagarr(img,0x0028,0x0030),
+        mA:tagn(img,0x0018,0x1151),mAs:tagn(img,0x0018,0x1152),ctdi:tagn(img,0x0018,0x9345),hu:null})}}
+  busy();
+  if(!ok){toast('No DICOM images found. Open the image files (or a ZIP / the CD folder), not a JPEG or PDF.');return}
+  closeStudy(true);study={series:[...map.values()].map(finishSeries).filter(Boolean)};
+  study.series.sort((a,b)=>(b.scout?-1:0)-(a.scout?-1:0)||(a.num??999)-(b.num??999));
+  toast(`${ok} images · ${study.series.length} series`);
+  const best=study.series.reduce((bi,s,i,a)=>!s.scout&&s.slices.length>(a[bi].scout?0:a[bi].slices.length)?i:bi,0);
+  await selectSeries(best);selectTab('ser')}
+function newSeries(img,uid){const t=(g,e)=>tagv(img,g,e),n=(g,e)=>tagn(img,g,e);
+  const it=String(t(0x0008,0x0008)||'');
+  return{uid,slices:[],desc:t(0x0008,0x103E)||t(0x0018,0x1030)||'Series',num:n(0x0020,0x0011),scout:/LOCALIZER|SCOUT|TOPOGRAM/i.test(it+' '+(t(0x0008,0x103E)||'')),
+   meta:{name:t(0x0010,0x0010),pid:t(0x0010,0x0020),birth:t(0x0010,0x0030),sex:t(0x0010,0x0040),age:t(0x0010,0x1010),studyDate:t(0x0008,0x0020),studyTime:t(0x0008,0x0030),studyDesc:t(0x0008,0x1030),
+    institution:t(0x0008,0x0080),manufacturer:t(0x0008,0x0070),model:t(0x0008,0x1090),modality:t(0x0008,0x0060),bodyPart:t(0x0018,0x0015),protocol:t(0x0018,0x1030),contrast:t(0x0018,0x0010),
+    kvp:n(0x0018,0x0060),expTime:n(0x0018,0x1150),pitch:n(0x0018,0x9311),rev:n(0x0018,0x9305),thick:n(0x0018,0x0050),sbs:n(0x0018,0x0088),recDiam:n(0x0018,0x1100),kernel:t(0x0018,0x1210),
+    filter:t(0x0018,0x1160),tilt:n(0x0018,0x1120),ppos:t(0x0018,0x5100),wc:n(0x0028,0x1050),ww:n(0x0028,0x1051),ts:img.getTransferSyntax?img.getTransferSyntax():'',imageType:it,acq:t(0x0018,0x9302)},
+   thick:n(0x0018,0x0050)}}
+function finishSeries(s){const sl=s.slices;if(!sl.length)return null;
+  const r0=sl[0].rows,c0=sl[0].cols;s.slices=sl.filter(x=>x.rows===r0&&x.cols===c0);s.rows=r0;s.cols=c0;
+  const iop=s.slices[0].iop;s.rowDir=iop.slice(0,3);s.colDir=iop.slice(3,6);s.n=cross(s.rowDir,s.colDir);
+  const ps=s.slices[0].ps||[1,1];s.rs=ps[0]||1;s.cs=ps[1]||1;
+  if(s.slices.every(x=>x.pos)){s.slices.forEach(x=>x.d=dot3(x.pos,s.n));s.slices.sort((a,b)=>b.d-a.d)}else s.slices.sort((a,b)=>a.inst-b.inst);
+  const diffs=[];for(let i=1;i<s.slices.length;i++)if(s.slices[i].d!=null)diffs.push(Math.abs(s.slices[i].d-s.slices[i-1].d));
+  const sd=[...diffs].sort((a,b)=>a-b);s.spacing=sd.length?sd[Math.floor(sd.length/2)]||s.meta.thick||1:(s.meta.thick||1);
+  s.irregular=diffs.some(x=>Math.abs(x-s.spacing)>Math.max(.1,s.spacing*.15));s.dups=diffs.filter(x=>x<.01).length;
+  const avg=k=>{const a=s.slices.map(x=>x[k]).filter(x=>x!=null);return a.length?a.reduce((p,q)=>p+q,0)/a.length:null};
+  s.mA=avg('mA');s.mAs=avg('mAs');s.ctdi=avg('ctdi');s.length=(s.slices.length-1)*s.spacing+(s.meta.thick||s.spacing);
+  s.planeName=planeOf(s.n);return s}
+async function decodeSlice(s,x){if(x.hu)return x.hu;
+  const img=daikon.Series.parseImage(new DataView(await x.src()));const f=x.frame==null?img.getInterpretedData(false,false):img.getInterpretedData(false,false,x.frame);
+  const hu=new Int16Array(f.length);for(let i=0;i<f.length;i++){const v=Math.round(f[i]);hu[i]=v<-32768?-32768:v>32767?32767:v}
+  x.hu=hu;return hu}
+async function decodeAll(s,label){if(s.synthetic)return true;const n=s.slices.length;let t=performance.now();
+  for(let i=0;i<n;i++){const x=s.slices[i];if(!x.hu){try{await decodeSlice(s,x)}catch(e){console.warn(e);x.hu=new Int16Array(s.rows*s.cols).fill(-1024);x.bad=true}}
+    if(performance.now()-t>60){busy(label||'Decoding images…',`${i+1} / ${n}`,(i+1)/n);await sleep(0);t=performance.now();if(s!==cur())return false}}
+  busy();return true}
+function freeOthers(keep){study.series.forEach(s=>{if(s!==keep&&!s.synthetic){s.slices.forEach(x=>x.hu=null);s.vol=null}})}
+async function selectSeries(i){stopCine();const s=study.series[i];if(!s)return;C.si=i;C.plane='ax';C.mip=0;C.idx=Math.floor(s.slices.length/2);probe=null;
+  freeOthers(s);fcache=null;
+  if(!s.synthetic){busy('Decoding images…','',0);try{await decodeSlice(s,s.slices[C.idx])}catch(e){busy();toast('This image compression is not supported: '+(s.meta.ts||''));return}}
+  autoWindow(s);syncBar();fit();renderPanel();
+  const ok=await decodeAll(s);if(ok&&s===cur()){if(!s.thumb)s.thumb=thumbOf(s);renderPanel();paint()}}
+
+/* ---------- geometry ---------- */
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const neg=a=>a.map(x=>-x);
+function letter(v){const ax=[Math.abs(v[0]),Math.abs(v[1]),Math.abs(v[2])];const m=ax.indexOf(Math.max(...ax));return m===0?(v[0]>0?'L':'R'):m===1?(v[1]>0?'P':'A'):(v[2]>0?'S':'I')}
+function planeOf(n){const l=letter(n);return 'LR'.includes(l)?'Sagittal':'AP'.includes(l)?'Coronal':'Axial'}
+function nFor(s,pl){return pl==='ax'?s.slices.length:pl==='cor'?s.rows:s.cols}
+function dirs(s,pl){const down=neg(s.n);return pl==='ax'?{r:s.rowDir,d:s.colDir}:pl==='cor'?{r:s.rowDir,d:down}:{r:s.colDir,d:down}}
+
+/* ---------- volume / MPR / MIP ---------- */
+function ensureVol(s){if(s.vol)return s.vol;const nz=s.slices.length,np=s.rows*s.cols;if(nz*np>Math.min(320e6,(navigator.deviceMemory||4)*30e6)){s.tooBig=true;return null}
+  const v=new Int16Array(nz*np);for(let k=0;k<nz;k++){const h=s.slices[k].hu;if(!h)return null;v.set(h,k*np)}for(let k=0;k<nz;k++)s.slices[k].hu=v.subarray(k*np,(k+1)*np);s.vol=v;return v}
+let fcache=null;
+function frameData(){const s=cur();if(!s)return null;const key=[C.si,C.plane,C.idx,C.mip].join('|');if(fcache&&fcache.key===key)return fcache.f;
+  const R=s.rows,Cc=s.cols,nz=s.slices.length,np=R*Cc;let f;
+  const half=sp=>Math.max(0,Math.round(C.mip/sp/2));
+  if(C.plane==='ax'){const h=half(s.spacing);if(!h){const x=s.slices[C.idx];if(!x.hu){if(!x.pending){x.pending=1;decodeSlice(s,x).then(()=>{x.pending=0;paint()}).catch(()=>{x.pending=0})}return{pending:true}}f={w:Cc,h:R,data:x.hu,sx:s.cs,sy:s.rs}}
+    else{const v=ensureVol(s);if(!v)return s.tooBig?null:{pending:true};const out=new Int16Array(np).fill(-32768);const a=Math.max(0,C.idx-h),b=Math.min(nz-1,C.idx+h);for(let k=a;k<=b;k++){const o=k*np;for(let i=0;i<np;i++){const x=v[o+i];if(x>out[i])out[i]=x}}f={w:Cc,h:R,data:out,sx:s.cs,sy:s.rs}}}
+  else{const v=ensureVol(s);if(!v)return null;
+    if(C.plane==='cor'){const h=half(s.rs);const out=new Int16Array(Cc*nz).fill(-32768);const a=Math.max(0,C.idx-h),b=Math.min(R-1,C.idx+h);
+      for(let k=0;k<nz;k++)for(let y=a;y<=b;y++){const o=k*np+y*Cc,q=k*Cc;for(let x=0;x<Cc;x++){const t=v[o+x];if(t>out[q+x])out[q+x]=t}}f={w:Cc,h:nz,data:out,sx:s.cs,sy:s.spacing}}
+    else{const h=half(s.cs);const out=new Int16Array(R*nz).fill(-32768);const a=Math.max(0,C.idx-h),b=Math.min(Cc-1,C.idx+h);
+      for(let k=0;k<nz;k++)for(let y=0;y<R;y++){const o=k*np+y*Cc,q=k*R+y;let m=-32768;for(let x=a;x<=b;x++){const t=v[o+x];if(t>m)m=t}out[q]=m}f={w:R,h:nz,data:out,sx:s.rs,sy:s.spacing}}}
+  if(f&&!f.pending)fcache={key,f};return f}
+
+/* ---------- rendering ---------- */
+const lut=new Uint8Array(65536);let lutKey='';
+function buildLut(){const k=C.W+'|'+C.L+'|'+C.inv;if(k===lutKey)return;lutKey=k;const lo=C.L-C.W/2,w=Math.max(1,C.W);
+  for(let i=0;i<65536;i++){let y=((i-32768)-lo)/w*255;y=y<0?0:y>255?255:y;lut[i]=C.inv?255-y:y}}
+const off=document.createElement('canvas'),octx=off.getContext('2d');let offKey='';
+function paintOff(f){const k=fcache.key+'|'+lutKey;if(k===offKey)return;offKey=k;if(off.width!==f.w||off.height!==f.h){off.width=f.w;off.height=f.h}
+  const id=octx.createImageData(f.w,f.h),d=id.data,src=f.data;for(let i=0,j=0;i<src.length;i++,j+=4){const g=lut[src[i]+32768];d[j]=d[j+1]=d[j+2]=g;d[j+3]=255}octx.putImageData(id,0,0)}
+let raf=0;function paint(){if(!raf)raf=requestAnimationFrame(render)}
+function resize(){const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));paint()}
+function render(){raf=0;const dpr=window.devicePixelRatio||1;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height);ctx.setTransform(dpr,0,0,dpr,0,0);
+  const s=cur();const r=cv.getBoundingClientRect();
+  if(!s){ctx.fillStyle='#8a98a4';ctx.font='15px Archivo, sans-serif';ctx.textAlign='center';ctx.fillText('Open CT images (DICOM files, a ZIP or the CD folder)',r.width/2,r.height/2-10);ctx.fillText('or try a demo study in the Series tab',r.width/2,r.height/2+14);ctx.textAlign='left';return}
+  const f=frameData();if(f&&f.pending){fcache=null;ctx.fillStyle='#8a98a4';ctx.font='14px sans-serif';ctx.fillText('Decoding…',16,90);return}if(!f){ctx.fillStyle='#ef6f62';ctx.font='14px sans-serif';ctx.fillText('Series too large for reconstruction on this device',16,90);return}
+  buildLut();paintOff(f);
+  ctx.save();ctx.imageSmoothingEnabled=C.smooth;ctx.setTransform(dpr*view.s*f.sx,0,0,dpr*view.s*f.sy,dpr*view.tx,dpr*view.ty);ctx.drawImage(off,0,0);ctx.restore();
+  ctx.setTransform(dpr,0,0,dpr,0,0);drawAnn(f);drawOverlay(s,f,r)}
+function txt(t,x,y,al,col){ctx.textAlign=al||'left';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.strokeText(t,x,y);ctx.fillStyle=col||'#e8eef3';ctx.fillText(t,x,y);ctx.textAlign='left'}
+function drawOverlay(s,f,r){const m=s.meta;ctx.font='12px "IBM Plex Mono", monospace';const W=r.width;
+  const tl=[C.hide?'Patient hidden':(String(m.name||'').replace(/\^/g,' ')||'—'),C.hide?'':(m.pid?'ID '+m.pid:''),[m.studyDate?fmtDate(m.studyDate):'',m.age||'',m.sex||''].filter(Boolean).join(' · '),String(s.desc).slice(0,40)].filter(Boolean);
+  tl.forEach((t,i)=>txt(t,8,18+i*15));
+  const n=nFor(s,C.plane);const pn={ax:s.planeName,cor:'Coronal MPR',sag:'Sagittal MPR'}[C.plane];
+  const tr=[`${pn}${C.mip?' · MIP '+C.mip+' mm':''}`,`Im ${C.idx+1} / ${n}`,`W ${Math.round(C.W)}  L ${Math.round(C.L)}${C.inv?' inv':''}`,`Zoom ${(view.s*Math.min(f.sx,f.sy)).toFixed(2)}×`];
+  if(C.plane==='ax'&&s.slices[C.idx]&&s.slices[C.idx].d!=null)tr.splice(2,0,`Pos ${s.slices[C.idx].d.toFixed(1)} mm`);
+  tr.forEach((t,i)=>txt(t,W-8,18+i*15,'right'));
+  const bl=[m.kvp?`${m.kvp} kV${s.mA?' · '+Math.round(s.mA)+' mA':''}${s.mAs?' · '+Math.round(s.mAs)+' mAs':''}`:'',`${m.thick?m.thick+' mm':''}${m.kernel?' · '+m.kernel:''}`,s.ctdi?`CTDIvol ${f1(s.ctdi)} mGy`:''].filter(Boolean);
+  const by=r.height-118;bl.forEach((t,i)=>txt(t,8,by-(bl.length-1-i)*15));
+  if(probe&&probe.v!=null)txt(`HU ${probe.v}  (${probe.x.toFixed(0)}, ${probe.y.toFixed(0)})`,W-8,by,'right','#ffc247');
+  const D=dirs(s,C.plane);ctx.font='600 14px Archivo, sans-serif';const cy=r.height/2-40;
+  txt(letter(neg(D.r)),8,cy,'left','#ffc247');txt(letter(D.r),W-8,cy,'right','#ffc247');txt(letter(neg(D.d)),W/2,74,'center','#ffc247');txt(letter(D.d),W/2,r.height-100,'center','#ffc247');
+  if(s.synthetic){ctx.font='11px sans-serif';txt('Synthetic demo – not a patient',W/2,r.height-136,'center','#95a1b3')}}
+function fmtDate(d){d=String(d);return d.length===8?`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}`:d}
+
+/* ---------- view ---------- */
+function fit(){let f=frameData();if(f&&f.pending)f=null;const r=cv.getBoundingClientRect();if(!f||!r.width){paint();return}
+  const top=30,bot=128,ww=f.w*f.sx,hh=f.h*f.sy;const s=Math.min(r.width/ww,(r.height-top-bot)/hh);view={s,tx:(r.width-ww*s)/2,ty:top+(r.height-top-bot-hh*s)/2};paint()}
+const zoomAt=(k,x,y)=>{const ns=Math.max(.05,Math.min(80,view.s*k));const kk=ns/view.s;view.tx=x-(x-view.tx)*kk;view.ty=y-(y-view.ty)*kk;view.s=ns;paint()};
+const toMM=(x,y)=>({x:(x-view.tx)/view.s,y:(y-view.ty)/view.s}),toScr=p=>({x:p.x*view.s+view.tx,y:p.y*view.s+view.ty});
+function setIdx(i){const s=cur();if(!s)return;const n=nFor(s,C.plane);C.idx=Math.max(0,Math.min(n-1,i));$('#sliceBar').value=C.idx;probe=null;paint();if(tab==='tool')liveTool()}
+function syncBar(){const s=cur();const b=$('#sliceBar');b.max=s?nFor(s,C.plane)-1:0;b.value=C.idx}
+function setPlane(p){const s=cur();if(!s)return;if(p!=='ax'&&!s.synthetic&&s.slices.some(x=>!x.hu)){toast('Still decoding – try again in a moment');return}
+  if(p!=='ax'&&s.slices.length<10){toast('Too few slices for reconstruction');return}
+  if(p!=='ax'&&!ensureVol(s)){toast('Series too large to reconstruct on this device');return}
+  if(p!==C.plane){C.plane=p;C.idx=Math.floor(nFor(s,p)/2);fcache=null;syncBar();fit()}
+  if(p!=='ax'&&(s.meta.tilt||0)!==0)toast('Gantry tilt: reconstructions are distorted');
+  if(p!=='ax'&&s.spacing>3)toast(`Slices are ${f1(s.spacing)} mm apart – reconstructions will look stepped`);
+  renderPanel()}
+function setWL(W,L,key){C.W=Math.max(1,W);C.L=L;C.preset=key||'';paint();if(tab==='win')syncWin()}
+function autoWindow(s){const m=s.meta;const t=[m.bodyPart,m.protocol,s.desc,m.studyDesc,m.kernel].join(' ').toUpperCase();
+  let k=/CTA|ANGIO|AORT|CAROT|COW|RUNOFF|PULM.*ART/.test(t)?(/PULM|PE\b/.test(t)?'pe':'cta'):/LUNG|PULM/.test(t)||/\bB[6-9]\d|LUNG|BL\d\d|\bL\b|YC/.test(String(m.kernel||'').toUpperCase())&&/CHEST|THORAX|LUNG/.test(t)?'lung':/HEAD|BRAIN|SKULL|CRAN/.test(t)?'brain':/BONE|SPINE|KNEE|SHOULDER|HIP|ANKLE|WRIST|TEMPORAL|FACIAL|SINUS|EXTREM/.test(t)?'bone':/CHEST|THORAX/.test(t)?'medi':/ABD|PELV|LIVER|KIDNEY|RENAL|UROGRAM/.test(t)?'abd':null;
+  if(k){const p=PRESETS.find(x=>x[0]===k);setWL(p[2],p[3],k)}else if(m.ww&&m.wc!=null)setWL(m.ww,m.wc,'');else setWL(400,40,'abd')}
+function thumbOf(s){try{const i=Math.floor(s.slices.length/2);const h=s.slices[i].hu;if(!h)return null;const c=document.createElement('canvas');c.width=s.cols;c.height=s.rows;const g=c.getContext('2d');const id=g.createImageData(s.cols,s.rows);
+  const lo=C.L-C.W/2;for(let j=0,q=0;j<h.length;j++,q+=4){let y=(h[j]-lo)/C.W*255;y=y<0?0:y>255?255:y;id.data[q]=id.data[q+1]=id.data[q+2]=y;id.data[q+3]=255}g.putImageData(id,0,0);
+  const t=document.createElement('canvas');t.width=t.height=96;const tg=t.getContext('2d');tg.fillStyle='#000';tg.fillRect(0,0,96,96);const k=Math.min(96/(s.cols*s.cs),96/(s.rows*s.rs));tg.drawImage(c,(96-s.cols*s.cs*k)/2,(96-s.rows*s.rs*k)/2,s.cols*s.cs*k,s.rows*s.rs*k);return t.toDataURL('image/jpeg',.8)}catch{return null}}
+
+/* ---------- annotations ---------- */
+const akey=()=>[C.si,C.plane,C.idx,C.mip].join('|');
+const anns=()=>C.ann[akey()]||(C.ann[akey()]=[]);
+let draft=null;
+function huAt(f,p){const x=Math.floor(p.x/f.sx),y=Math.floor(p.y/f.sy);if(x<0||y<0||x>=f.w||y>=f.h)return null;const v=f.data[y*f.w+x];return v===-32768?null:v}
+function roiStats(f,a){const x0=Math.max(0,Math.floor((a.c.x-a.rx)/f.sx)),x1=Math.min(f.w-1,Math.ceil((a.c.x+a.rx)/f.sx)),y0=Math.max(0,Math.floor((a.c.y-a.ry)/f.sy)),y1=Math.min(f.h-1,Math.ceil((a.c.y+a.ry)/f.sy));
+  let n=0,sum=0,sq=0,mn=1e9,mx=-1e9;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const dx=((x+.5)*f.sx-a.c.x)/a.rx,dy=((y+.5)*f.sy-a.c.y)/a.ry;if(dx*dx+dy*dy>1)continue;const v=f.data[y*f.w+x];if(v===-32768)continue;n++;sum+=v;sq+=v*v;if(v<mn)mn=v;if(v>mx)mx=v}
+  if(!n)return null;const mean=sum/n;return{n,mean,sd:Math.sqrt(Math.max(0,sq/n-mean*mean)),min:mn,max:mx,area:Math.PI*a.rx*a.ry}}
+function annText(f,a){if(a.t==='len'){const d=Math.hypot(a.b.x-a.a.x,a.b.y-a.a.y);return f1(d)+' mm'}
+  if(a.t==='pt'){const v=huAt(f,a.p);return v==null?'—':v+' HU'}
+  if(a.t==='roi'){const st=roiStats(f,a);return st?`${f0(st.mean)} ± ${f0(st.sd)} HU · ${f1(st.area/100)} cm²`:'—'}
+  if(a.t==='ang'&&a.c){const v1=[a.a.x-a.b.x,a.a.y-a.b.y],v2=[a.c.x-a.b.x,a.c.y-a.b.y];const ang=Math.acos(Math.max(-1,Math.min(1,(v1[0]*v2[0]+v1[1]*v2[1])/(Math.hypot(...v1)*Math.hypot(...v2)||1))))*180/Math.PI;return f1(ang)+'°'}
+  return''}
+function drawAnn(f){const list=[...anns()];if(draft)list.push(draft);ctx.save();ctx.font='600 12px "IBM Plex Mono", monospace';
+  for(const a of list){ctx.strokeStyle='#4fe3b4';ctx.fillStyle='#4fe3b4';ctx.lineWidth=1.8;const lab=annText(f,a);let at;
+    if(a.t==='len'){const A=toScr(a.a),B=toScr(a.b);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();[A,B].forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,3,0,7);ctx.fill()});at=B}
+    if(a.t==='pt'){const A=toScr(a.p);ctx.beginPath();ctx.moveTo(A.x-7,A.y);ctx.lineTo(A.x+7,A.y);ctx.moveTo(A.x,A.y-7);ctx.lineTo(A.x,A.y+7);ctx.stroke();at=A}
+    if(a.t==='roi'){const c=toScr(a.c);ctx.beginPath();ctx.ellipse(c.x,c.y,Math.max(1,a.rx*view.s),Math.max(1,a.ry*view.s),0,0,7);ctx.stroke();at={x:c.x+a.rx*view.s,y:c.y-a.ry*view.s}}
+    if(a.t==='ang'){const A=toScr(a.a),B=toScr(a.b);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);if(a.c){const Cc=toScr(a.c);ctx.lineTo(Cc.x,Cc.y)}ctx.stroke();at=B}
+    if(lab&&at){const w=ctx.measureText(lab).width+10;ctx.fillStyle='rgba(5,8,11,.85)';ctx.fillRect(at.x+8,at.y-16,w,19);ctx.fillStyle='#4fe3b4';ctx.fillText(lab,at.x+13,at.y-2)}}
+  ctx.restore()}
+
+/* ---------- pointer interaction ---------- */
+const ptrs=new Map();let G=null,lastTap=0;
+const loc=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerdown',e=>{if(!cur())return;cv.setPointerCapture(e.pointerId);const p=loc(e);ptrs.set(e.pointerId,p);stopCine();
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];G={type:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y),c0:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},v0:{...view}};draft=null;return}
+  let mode=e.button===2?'wl':e.button===1?'pan':C.mode;
+  G={type:mode,sx:p.x,sy:p.y,lx:p.x,ly:p.y,acc:0,W0:C.W,L0:C.L,moved:false};
+  const m=toMM(p.x,p.y);
+  if(mode==='len')draft={t:'len',a:m,b:m};
+  if(mode==='roi')draft={t:'roi',o:m,c:m,rx:0,ry:0};
+  if(mode==='ang'){if(draft&&draft.t==='ang'&&draft.stage===1){draft.c=m;draft.stage=2}else draft={t:'ang',a:m,b:m,stage:0}}});
+cv.addEventListener('pointermove',e=>{const p=loc(e);
+  if(!ptrs.has(e.pointerId)){if(e.pointerType==='mouse'&&cur()){const f=frameData();if(f&&!f.pending){const m=toMM(p.x,p.y);const v=huAt(f,m);probe=v==null?null:{v,x:m.x/f.sx,y:m.y/f.sy};paint()}}return}
+  ptrs.set(e.pointerId,p);if(!G)return;
+  if(G.type==='pinch'&&ptrs.size>=2){const [a,b]=[...ptrs.values()];const c={x:(a.x+b.x)/2,y:(a.y+b.y)/2},dd=Math.hypot(a.x-b.x,a.y-b.y);
+    const s=Math.max(.05,Math.min(80,G.v0.s*dd/G.d0));const I={x:(G.c0.x-G.v0.tx)/G.v0.s,y:(G.c0.y-G.v0.ty)/G.v0.s};view={s,tx:c.x-I.x*s,ty:c.y-I.y*s};paint();return}
+  const dx=p.x-G.lx,dy=p.y-G.ly;if(Math.hypot(p.x-G.sx,p.y-G.sy)>4)G.moved=true;const m=toMM(p.x,p.y);
+  if(G.type==='scroll'){G.acc+=dy;const step=e.pointerType==='mouse'?6:9;while(Math.abs(G.acc)>=step){setIdx(C.idx+(G.acc>0?1:-1));G.acc-=Math.sign(G.acc)*step}}
+  else if(G.type==='wl'){C.W=Math.max(1,G.W0+(p.x-G.sx)*4);C.L=G.L0+(p.y-G.sy)*2;C.preset='';paint();if(tab==='win')syncWin()}
+  else if(G.type==='pan'){view.tx+=dx;view.ty+=dy;paint()}
+  else if(G.type==='len'&&draft){draft.b=m;paint()}
+  else if(G.type==='roi'&&draft){draft.c={x:(draft.o.x+m.x)/2,y:(draft.o.y+m.y)/2};draft.rx=Math.abs(m.x-draft.o.x)/2;draft.ry=Math.abs(m.y-draft.o.y)/2;paint()}
+  else if(G.type==='ang'&&draft){if(draft.stage===0)draft.b=m;else draft.c=m;paint()}
+  else if(G.type==='hu'){const f=frameData();if(!f||f.pending)return;const v=huAt(f,m);probe=v==null?null:{v,x:m.x/f.sx,y:m.y/f.sy};paint()}
+  G.lx=p.x;G.ly=p.y});
+function up(e){if(!ptrs.has(e.pointerId))return;const p=loc(e);ptrs.delete(e.pointerId);if(!G){return}
+  if(G.type==='pinch'){if(ptrs.size===0)G=null;return}
+  const m=toMM(p.x,p.y);const t=G.type;
+  if(t==='len'&&draft){if(G.moved){anns().push(draft);draft=null}else draft=null}
+  else if(t==='roi'&&draft){if(G.moved&&draft.rx>.5&&draft.ry>.5)anns().push({t:'roi',c:draft.c,rx:draft.rx,ry:draft.ry});draft=null}
+  else if(t==='ang'&&draft){if(draft.stage===0){if(G.moved){draft.b=m;draft.stage=1}else{draft.b=m;draft.stage=1}}else if(draft.stage===2){anns().push({t:'ang',a:draft.a,b:draft.b,c:m});draft=null}}
+  else if(t==='hu'&&!G.moved){anns().push({t:'pt',p:m})}
+  else if((t==='scroll'||t==='pan')&&!G.moved&&e.pointerType!=='mouse'){const now=Date.now();if(now-lastTap<300)fit();lastTap=now}
+  G=null;paint();if(tab==='tool')liveTool()}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('pointerleave',()=>{if(probe&&!G){probe=null;paint()}});
+cv.addEventListener('wheel',e=>{e.preventDefault();if(!cur())return;const r=cv.getBoundingClientRect();if(e.ctrlKey||e.metaKey)zoomAt(Math.exp(-e.deltaY*.0018),e.clientX-r.left,e.clientY-r.top);else setIdx(C.idx+(e.deltaY>0?1:-1)*(Math.abs(e.deltaY)>200?3:1))},{passive:false});
+cv.addEventListener('dblclick',fit);
+$('#fit').onclick=fit;
+$('#zin').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1.4,r.width/2,r.height/2)};
+$('#zout').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1/1.4,r.width/2,r.height/2)};
+$('#sliceBar').addEventListener('input',e=>setIdx(+e.target.value));
+$('#prevS').onclick=()=>setIdx(C.idx-1);$('#nextS').onclick=()=>setIdx(C.idx+1);
+function stopCine(){if(cineT){clearInterval(cineT);cineT=0;$('#cineBtn').textContent='▶'}}
+function toggleCine(){if(cineT){stopCine();return}const s=cur();if(!s)return;$('#cineBtn').textContent='❚❚';const fps=+(localGet('fps')||12);
+  cineT=setInterval(()=>{const n=nFor(s,C.plane);C.idx=(C.idx+1)%n;$('#sliceBar').value=C.idx;paint()},1000/fps)}
+$('#cineBtn').onclick=toggleCine;
+new ResizeObserver(()=>{resize();fit()}).observe($('#viewer'));
+document.addEventListener('keydown',e=>{const tg=(e.target.tagName||'').toLowerCase();if(['input','textarea','select'].includes(tg))return;
+  if(e.key==='Escape'){$$('.sheet').forEach(s=>s.hidden=true);draft=null;paint();return}if(!cur())return;
+  const k=e.key;
+  if(k==='ArrowUp'||k==='ArrowLeft'){e.preventDefault();setIdx(C.idx-1)}else if(k==='ArrowDown'||k==='ArrowRight'){e.preventDefault();setIdx(C.idx+1)}
+  else if(k==='PageUp'){e.preventDefault();setIdx(C.idx-10)}else if(k==='PageDown'){e.preventDefault();setIdx(C.idx+10)}
+  else if(k==='Home')setIdx(0);else if(k==='End')setIdx(1e9);
+  else if(PKEY[k]){const p=PRESETS.find(x=>x[0]===PKEY[k]);setWL(p[2],p[3],p[0])}
+  else if(/^[acs]$/i.test(k))setPlane({a:'ax',c:'cor',s:'sag'}[k.toLowerCase()]);
+  else if(/^m$/i.test(k)){C.mip=C.mip?0:10;fcache=null;paint();renderPanel()}
+  else if(/^i$/i.test(k)){C.inv=!C.inv;paint();renderPanel()}
+  else if(/^f$/i.test(k))fit();else if(/^r$/i.test(k)){autoWindow(cur());C.inv=false;fit()}
+  else if(k===' '){e.preventDefault();toggleCine()}
+  else if(k==='Delete'||k==='Backspace'){anns().pop();paint();if(tab==='tool')liveTool()}});
+
+/* ---------- open files: buttons, drag-drop ---------- */
+$('#fileIn').addEventListener('change',e=>{const f=[...e.target.files];e.target.value='';openFiles(f)});
+$('#dirIn').addEventListener('change',e=>{const f=[...e.target.files];e.target.value='';openFiles(f)});
+['dragover','drop'].forEach(ev=>document.addEventListener(ev,async e=>{if(!e.dataTransfer||![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();if(ev!=='drop')return;
+  const items=[...e.dataTransfer.items||[]];const files=[];
+  const walk=async(en)=>{if(!en)return;if(en.isFile)await new Promise(r=>en.file(f=>{files.push(f);r()},r));else if(en.isDirectory){const rd=en.createReader();let batch;do{batch=await new Promise(r=>rd.readEntries(r,()=>r([])));for(const x of batch)await walk(x)}while(batch.length)}};
+  if(items.length&&items[0].webkitGetAsEntry){busy('Reading folder…');for(const it of items)await walk(it.webkitGetAsEntry())}else files.push(...e.dataTransfer.files);
+  openFiles(files)}));
+
+/* ---------- panels ---------- */
+function selectTab(t){tab=t;$$('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===t));['ser','win','tool','info'].forEach(n=>$('#p-'+n).hidden=n!==t);renderPanel()}
+$$('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.t));
+$('#grab').onclick=()=>{$('#work').classList.toggle('tall');requestAnimationFrame(()=>{resize();fit()})};
+function renderPanel(){if(tab==='ser')renderSeries();else if(tab==='win')renderWin();else if(tab==='tool')renderTool();else renderInfo()}
+function renderSeries(){const el=$('#p-ser');let h=`<div class="drop"><b>Open a CT study</b><div class="row"><label class="btn primary" for="fileIn">Files or ZIP</label><label class="btn pcOnly" for="dirIn">CD / folder</label></div>
+   <p class="fine">Select all the DICOM files (multi-select), a ZIP, or the whole CD folder on a PC (DICOM folder, not the viewer program). On a computer you can also drag the folder onto the window. Images stay on this device.</p></div>`;
+  if(study.series.length){const m=study.series[0].meta;
+    h+=`<div class="group"><h3>${esc(C.hide?'Patient hidden':String(m.name||'').replace(/\^/g,' ')||'Study')} · ${esc(fmtDate(m.studyDate||''))}</h3><p class="fine">${esc(m.studyDesc||'')}${m.institution?' · '+esc(m.institution):''}</p>
+     ${study.series.map((s,i)=>`<button class="ser ${i===C.si?'on':''}" data-si="${i}">${s.thumb?`<img src="${s.thumb}" alt="">`:'<span class="ph"></span>'}<span><b>${esc(s.desc)}</b><span>${s.num!=null?'#'+s.num+' · ':''}${s.slices.length} image${s.slices.length>1?'s':''} · ${s.scout?'scout':s.planeName}</span><span>${s.meta.thick?s.meta.thick+' mm':''}${s.spacing&&s.slices.length>1?' / '+f1(s.spacing)+' mm':''}${s.meta.kernel?' · '+esc(s.meta.kernel):''}${s.meta.contrast?' · contrast':''}</span>${s.irregular?'<span class="warn">Irregular spacing / missing slices</span>':''}</span></button>`).join('')}</div>`}
+  h+=`<div class="group"><h3>Demo studies (synthetic)</h3><div class="row"><button class="btn" data-demo="head">Head</button><button class="btn" data-demo="body">Chest–abdomen CTA</button></div></div>`;
+  el.innerHTML=h;
+  $$('#p-ser [data-si]').forEach(b=>b.onclick=()=>selectSeries(+b.dataset.si));
+  $$('#p-ser [data-demo]').forEach(b=>b.onclick=()=>openDemo(b.dataset.demo))}
+function renderWin(){const el=$('#p-win');
+  el.innerHTML=`<div class="group"><h3>Presets</h3><div class="pgrid">${PRESETS.map(([k,l,w,c])=>{const kb=Object.keys(PKEY).find(x=>PKEY[x]===k);return`<button data-p="${k}" class="${C.preset===k?'on':''}" title="${esc(PRESETS.find(x=>x[0]===k)[4])}"><b>${l}</b><span>W ${w} · L ${c}</span>${kb!=null?`<kbd class="pcOnly">key ${kb}</kbd>`:''}</button>`}).join('')}</div></div>
+   <div class="group"><h3>Custom</h3><div class="fgrid"><label for="wW">Width (W)</label><input id="wW" type="number" value="${Math.round(C.W)}"><span class="u">HU</span><label for="wL">Level (L)</label><input id="wL" type="number" value="${Math.round(C.L)}"><span class="u">HU</span></div>
+   <div class="row"><button class="btn" id="dicomWL">Window from DICOM</button><label class="tog"><input type="checkbox" id="invT" ${C.inv?'checked':''}> Invert</label></div>
+   <p class="fine">Drag on the image in “Window” mode (Tools), or right-drag on a PC: left–right changes the width, up–down the level.</p></div>
+   <div class="group"><h3>What each preset is for</h3><table class="kv">${PRESETS.map(p=>`<tr><td>${p[1]}</td><td style="font-family:inherit">${esc(p[4])}</td></tr>`).join('')}</table></div>`;
+  $$('#p-win [data-p]').forEach(b=>b.onclick=()=>{const p=PRESETS.find(x=>x[0]===b.dataset.p);setWL(p[2],p[3],p[0]);renderWin()});
+  $('#wW').onchange=e=>setWL(num(e.target.value)||1,C.L,'');$('#wL').onchange=e=>setWL(C.W,num(e.target.value)??0,'');
+  $('#invT').onchange=e=>{C.inv=e.target.checked;paint()};
+  $('#dicomWL').onclick=()=>{const s=cur();if(s&&s.meta.ww)setWL(s.meta.ww,s.meta.wc,'');else toast('No window stored in this series')}}
+function syncWin(){const w=$('#wW'),l=$('#wL');if(w&&document.activeElement!==w)w.value=Math.round(C.W);if(l&&document.activeElement!==l)l.value=Math.round(C.L);$$('#p-win [data-p]').forEach(b=>b.classList.toggle('on',b.dataset.p===C.preset))}
+const MODES=[['scroll','Scroll'],['wl','Window'],['pan','Pan'],['hu','HU point'],['roi','HU area'],['len','Length'],['ang','Angle']];
+function renderTool(){const el=$('#p-tool');const s=cur();
+  el.innerHTML=`<div class="group"><h3>Touch / left-mouse action</h3><div class="mgrid">${MODES.map(([k,l])=>`<button data-m="${k}" class="${C.mode===k?'on':''}">${l}</button>`).join('')}</div>
+    <p class="fine">Two fingers always zoom and move. Double-tap to fit. HU area: drag an ellipse; length: drag a line; angle: three taps.</p></div>
+   <div class="group"><h3>Plane</h3><div class="seg">${[['ax','Original'],['cor','Coronal'],['sag','Sagittal']].map(([k,l])=>`<button data-pl="${k}" class="${C.plane===k?'on':''}">${l}</button>`).join('')}</div>
+    <p class="fine">Coronal and sagittal are rebuilt from the original slices (best with thin slices, ≤ 1.5 mm, and no gantry tilt).</p></div>
+   <div class="group"><h3>MIP slab (angiography)</h3><div class="seg">${[0,5,10,20,40].map(v=>`<button data-mip="${v}" class="${C.mip===v?'on':''}">${v?v+' mm':'Off'}</button>`).join('')}</div>
+    <p class="fine">Maximum-intensity projection shows contrast-filled vessels, stents and calcification along their course. Use the CTA window.</p></div>
+   <div class="group"><h3>Measurements on this image</h3><div id="liveMeas"></div><div class="row"><button class="btn" id="undoA">Undo last</button><button class="btn danger" id="clearA">Clear all</button></div></div>
+   <div class="group"><h3>Image</h3><div class="row"><button class="btn primary" id="snap">Save / share image</button><label class="tog"><input type="checkbox" id="hideT" ${C.hide?'checked':''}> Hide patient name</label></div>
+   <div class="row"><label class="tog"><input type="checkbox" id="smT" ${C.smooth?'checked':''}> Smooth pixels</label><label class="tog">Cine speed <select id="fpsS">${[6,12,20,30].map(v=>`<option ${String(localGet('fps')||12)==v?'selected':''}>${v}</option>`).join('')}</select> fps</label></div></div>`;
+  $$('#p-tool [data-m]').forEach(b=>b.onclick=()=>{C.mode=b.dataset.m;draft=null;renderTool()});
+  $$('#p-tool [data-pl]').forEach(b=>b.onclick=()=>setPlane(b.dataset.pl));
+  $$('#p-tool [data-mip]').forEach(b=>b.onclick=()=>{const v=+b.dataset.mip;const s=cur();if(v&&s&&!s.synthetic&&s.slices.some(x=>!x.hu)){toast('Still decoding – try again in a moment');return}C.mip=v;fcache=null;paint();renderTool()});
+  $('#undoA').onclick=()=>{anns().pop();paint();liveTool()};$('#clearA').onclick=()=>{C.ann[akey()]=[];paint();liveTool()};
+  $('#snap').onclick=snapshot;$('#hideT').onchange=e=>{C.hide=e.target.checked;paint()};$('#smT').onchange=e=>{C.smooth=e.target.checked;paint()};
+  $('#fpsS').onchange=e=>{localSet('fps',e.target.value);if(cineT){stopCine();toggleCine()}};
+  liveTool()}
+function liveTool(){const el=$('#liveMeas');if(!el)return;let f=frameData();if(f&&f.pending)f=null;const a=anns();
+  if(!f||!a.length){el.innerHTML='<div class="empty">None yet. Pick HU point, HU area, Length or Angle above, then use the image.</div>';return}
+  el.innerHTML=`<table class="kv">${a.map((x,i)=>{let v=annText(f,x);if(x.t==='roi'){const st=roiStats(f,x);if(st)v=`mean ${f0(st.mean)} · SD ${f0(st.sd)} · min ${st.min} · max ${st.max} HU · ${f1(st.area/100)} cm²`}return`<tr><td>${i+1}. ${{len:'Length',pt:'HU point',roi:'HU area',ang:'Angle'}[x.t]}</td><td>${esc(v)}</td></tr>`}).join('')}</table>`}
+function renderInfo(){const el=$('#p-info');const s=cur();if(!s){el.innerHTML='<div class="empty">Open a study first.</div>';return}const m=s.meta;
+  const rows=[['Patient',C.hide?'hidden':String(m.name||'').replace(/\^/g,' ')],['Patient ID',C.hide?'hidden':m.pid],['Sex / age',[m.sex,m.age].filter(Boolean).join(' / ')],['Study date',fmtDate(m.studyDate||'')],['Study',m.studyDesc],['Series',s.desc],['Institution',m.institution],
+   ['Scanner',[m.manufacturer,m.model].filter(Boolean).join(' ')],['Body part',m.bodyPart],['Protocol',m.protocol],['Patient position',m.ppos],['Contrast / bolus',m.contrast],['Acquisition',m.acq],
+   ['Tube voltage',m.kvp?m.kvp+' kV':''],['Tube current (mean)',s.mA?Math.round(s.mA)+' mA':''],['Exposure (mean)',s.mAs?Math.round(s.mAs)+' mAs':''],['Rotation time',m.rev?m.rev+' s':''],['Pitch',m.pitch],
+   ['Slice thickness',m.thick?m.thick+' mm':''],['Slice spacing',s.slices.length>1?f1(s.spacing)+' mm':''],['Images',s.slices.length],['Scan length',s.slices.length>1?f1(s.length/10)+' cm':''],
+   ['Matrix',`${s.cols} × ${s.rows}`],['Pixel size',`${s.cs.toFixed(3)} × ${s.rs.toFixed(3)} mm`],['Field of view',m.recDiam?m.recDiam+' mm':f0(s.cols*s.cs)+' mm'],['Kernel',m.kernel],['Gantry tilt',m.tilt!=null?m.tilt+'°':''],['Transfer syntax',tsName(m.ts)]].filter(r=>r[1]!==''&&r[1]!=null);
+  let h=`<div class="group"><h3>Scan parameters</h3><table class="kv">${rows.map(([a,b])=>`<tr><td>${a}</td><td>${esc(b)}</td></tr>`).join('')}</table></div>`;
+  const reg=doseRegion(s);const dlp=s.ctdi!=null&&s.slices.length>1?s.ctdi*s.length/10:null;
+  h+=`<div class="group"><h3>Dose (this series)</h3><table class="kv"><tr><td>CTDIvol (mean)</td><td>${s.ctdi!=null?f1(s.ctdi)+' mGy':'not in the image header'}</td></tr>
+    <tr><td>DLP (estimated)</td><td>${dlp!=null?f0(dlp)+' mGy·cm':'—'}</td></tr><tr><td>Effective dose (estimated)</td><td>${dlp!=null&&reg?f1(dlp*reg[1])+' mSv ('+reg[0]+', k = '+reg[1]+')':'—'}</td></tr></table>
+    <p class="fine">DLP ≈ CTDIvol × image length; the console dose report (or dose SR) is the official value. Adult k-factors (mSv per mGy·cm): head 0.0021, neck 0.0059, chest 0.014, abdomen–pelvis 0.015. Scan region is guessed from the series labels.</p></div>`;
+  const qa=[];if((m.tilt||0)!==0)qa.push(`Gantry tilt ${m.tilt}°: reconstructions are distorted – use a tilt-corrected series for MPR.`);
+  if(s.irregular)qa.push('Irregular slice spacing: missing, duplicated or overlapping slices – check the series is complete.');
+  if(s.dups)qa.push(`${s.dups} duplicate slice position(s).`);if(s.spacing>3&&s.slices.length>1)qa.push(`Slice spacing ${f1(s.spacing)} mm: send thin reconstructions (≤ 1–1.5 mm) for MPR / MIP / 3D.`);
+  if(s.slices.length&&s.slices[0].bad)qa.push('Some images could not be decoded.');if(m.modality&&m.modality!=='CT')qa.push(`Modality is ${m.modality}, not CT: HU values may not apply.`);
+  h+=`<div class="group"><h3>Technician checks</h3>${qa.length?qa.map(x=>`<div class="qa">${esc(x)}</div>`).join(''):'<div class="qa ok">No problems found: uniform spacing, no tilt.</div>'}</div>`;
+  h+=`<div class="group"><h3>All series</h3><div style="overflow-x:auto"><table class="mt"><tr><th>Series</th><th>Imgs</th><th>mm</th><th>kV</th><th>mAs</th><th>CTDIvol</th><th>Kernel</th></tr>${study.series.map(x=>`<tr><td>${esc(String(x.desc).slice(0,26))}</td><td class="n">${x.slices.length}</td><td class="n">${x.meta.thick??'—'}</td><td class="n">${x.meta.kvp??'—'}</td><td class="n">${x.mAs?Math.round(x.mAs):'—'}</td><td class="n">${x.ctdi?f1(x.ctdi):'—'}</td><td class="n">${esc(x.meta.kernel||'—')}</td></tr>`).join('')}</table></div></div>`;
+  el.innerHTML=h}
+function doseRegion(s){const t=[s.meta.bodyPart,s.meta.protocol,s.desc,s.meta.studyDesc].join(' ').toUpperCase();
+  return /HEAD|BRAIN|SKULL|CRAN|SINUS/.test(t)?['head',0.0021]:/NECK|CAROT/.test(t)?['neck',0.0059]:/ABD|PELV|LIVER|KIDNEY|RENAL|UROGRAM/.test(t)?['abdomen–pelvis',0.015]:/CHEST|THORAX|LUNG|PULM|AORT/.test(t)?['chest',0.014]:null}
+function tsName(ts){return{'1.2.840.10008.1.2':'Implicit VR little endian','1.2.840.10008.1.2.1':'Explicit VR little endian','1.2.840.10008.1.2.2':'Explicit VR big endian','1.2.840.10008.1.2.4.70':'JPEG lossless','1.2.840.10008.1.2.4.57':'JPEG lossless','1.2.840.10008.1.2.4.50':'JPEG baseline (lossy)','1.2.840.10008.1.2.4.90':'JPEG 2000 lossless','1.2.840.10008.1.2.4.91':'JPEG 2000','1.2.840.10008.1.2.4.80':'JPEG-LS lossless','1.2.840.10008.1.2.5':'RLE lossless','1.2.840.10008.1.2.1.99':'Deflated'}[ts]||ts||''}
+
+/* ---------- snapshot ---------- */
+async function snapshot(){const blob=await new Promise(r=>cv.toBlob(r,'image/png'));if(!blob)return;const s=cur();const name=`CT_${(s&&s.desc||'image').replace(/[^\w]+/g,'_').slice(0,30)}_${C.idx+1}.png`;
+  if(isNative&&window.Capacitor.Plugins.Filesystem){try{const {Filesystem,Share}=window.Capacitor.Plugins;const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(blob)});const w=await Filesystem.writeFile({path:name,data:b64,directory:'CACHE'});await Share.share({title:name,files:[w.uri]});return}catch(e){if(String(e).includes('cancel'))return}}
+  const file=new File([blob],name,{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});return}catch(e){if(e.name==='AbortError')return}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast('Saved '+name)}
+
+/* ---------- synthetic demo studies ---------- */
+function rnd(seed){let x=seed>>>0||1;return()=>{x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return x/4294967296}}
+function makeSeries(desc,meta,W,H,N,ps,sp,fn){const r=rnd(7);const slices=[];
+  for(let k=0;k<N;k++){const hu=new Int16Array(W*H);const z=(N-1-k)*sp;
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=fn((x-W/2)*ps,(y-H/2)*ps,z,(N-1)*sp);hu[y*W+x]=Math.round(v+(v>-900?(r()-.5)*14:0))}
+    slices.push({hu,pos:[-W/2*ps,-H/2*ps,z],d:z,inst:k+1,rows:H,cols:W})}
+  const s={uid:desc,desc,num:1,slices,rows:H,cols:W,rs:ps,cs:ps,spacing:sp,rowDir:[1,0,0],colDir:[0,1,0],n:[0,0,1],synthetic:true,irregular:false,dups:0,planeName:'Axial',
+    meta:{name:'DEMO^SYNTHETIC',pid:'DEMO',studyDate:'20261017',sex:'',modality:'CT',manufacturer:'Synthetic',model:'Phantom',kvp:120,thick:sp,kernel:'Soft',tilt:0,ts:'',...meta},mA:200,mAs:150,ctdi:meta.ctdi,length:(N-1)*sp+sp};
+  return s}
+const inE=(x,y,cx,cy,a,b)=>((x-cx)/a)**2+((y-cy)/b)**2<=1;
+function headFn(x,y,z,Z){const zc=z-Z*.45;const sc=Math.sqrt(Math.max(0,1-(zc/(Z*.62))**2));if(sc<.05)return -1000;
+  const A=80*sc,B=98*sc;if(!inE(x,y,0,0,A,B))return -1000;if(!inE(x,y,0,0,A-5,B-5))return 40;if(!inE(x,y,0,0,A-12,B-12))return 1100;
+  if(z>Z*.35&&z<Z*.7&&inE(x,y,-A+20,-5,7,45*sc)&&x<-A+14+8)return 72;
+  if(Math.abs(x)<7&&Math.abs(y)<20*sc&&z>Z*.4&&z<Z*.7)return 6;
+  if(inE(x,y,-14,8,6,16)&&z>Z*.35&&z<Z*.65||inE(x,y,14,8,6,16)&&z>Z*.35&&z<Z*.65)return 6;
+  if(inE(x,y,30,-35,9,9)&&z>Z*.5&&z<Z*.62)return 18;
+  const gm=((x*x/(A*A)+y*y/(B*B))>0.62)?38:30;return gm}
+function bodyFn(x,y,z,Z){const t=z/Z;if(!inE(x,y,0,0,165,115))return -1000;let v=-90;if(!inE(x,y,0,0,157,107))v=40;else if(!inE(x,y,0,0,145,97))v=-100;
+  if(inE(x,y,0,0,140,92))v=50;
+  const vb=inE(x,y,0,55,20,18);if(vb)return inE(x,y,0,55,16,14)?320:900;if(inE(x,y,0,82,6,12))return 800;
+  if(t>.55){if(inE(x,y,-75,0,60,70)||inE(x,y,75,0,60,70))v=-840;
+    for(const r of [100,108])if(Math.abs(Math.hypot(x/1.45,y)-r)<2.5&&y<70)return 850;}
+  const ax=-10+ (t>.86?(t-.86)*500:0),ay=30-(t>.86?(t-.86)*280:0);
+  if(t<=.93&&inE(x,y,t>.86?ax:-10,t>.86?ay:30,13,13))return 330;
+  if(t>.86&&t<.93&&inE(x,y,25,-5,13,13))return 330;
+  if(t<.5&&t>.08&&(inE(x,y,-35+t*0,30,6,6)||false))return 330;
+  if(t<.5&&inE(x,y,22,32,10,10))return 160;
+  if(t<.55&&t>.3&&inE(x,y,-70,10,55,60))return 62;
+  if(t<.42&&t>.22&&(inE(x,y,-60,45,18,26)||inE(x,y,60,45,18,26)))return inE(x,y,-60,45,8,12)||inE(x,y,60,45,8,12)?20:180;
+  if(t<.42&&t>.24&&inE(x,y,-30,48,4,4))return 330;if(t<.42&&t>.24&&inE(x,y,10,48,4,4))return 330;
+  if(t>.55&&t<.85&&inE(x,y,0,-10,28,30))return 45;
+  if(t<.2&&(inE(x,y,-60,30,24,24)||inE(x,y,60,30,24,24)))return inE(x,y,-60,30,14,14)||inE(x,y,60,30,14,14)?350:1000;
+  return v}
+async function openDemo(kind){stopCine();busy('Building demo…');await sleep(20);closeStudy(true);
+  const s=kind==='head'?makeSeries('Head – synthetic',{bodyPart:'HEAD',studyDesc:'CT brain (synthetic demo)',ctdi:52},224,256,80,0.85,1.5,headFn):makeSeries('CTA chest–abdomen – synthetic',{bodyPart:'CHEST',protocol:'CTA aorta',studyDesc:'CTA aorta (synthetic demo)',contrast:'Iodinated',ctdi:11},256,192,150,1.35,2.5,bodyFn);
+  study={series:[s]};busy();await selectSeries(0);s.thumb=thumbOf(s);selectTab('ser');toast('Synthetic demo – not a patient')}
+function closeStudy(silent){stopCine();study.series.forEach(s=>{s.slices.forEach(x=>{x.hu=null;x.src=null});s.vol=null});study={series:[]};C.si=-1;C.ann={};fcache=null;offKey='';probe=null;draft=null;syncBar();paint();if(!silent){renderPanel();toast('Study closed')}}
+
+/* ---------- misc ---------- */
+function localGet(k){try{return localStorage.getItem('ct_'+k)}catch{return null}}
+function localSet(k,v){try{localStorage.setItem('ct_'+k,v)}catch{}}
+let toastT=0;function toast(m){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t)}t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
+$('#menuBtn').onclick=()=>$('#menuSheet').hidden=false;
+$$('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s||e.target.hasAttribute('data-close'))s.hidden=true}));
+$('#closeStudy').onclick=()=>{$('#menuSheet').hidden=true;closeStudy(false)};
+$('#shareApp').onclick=async()=>{const url='https://eelforse-blip.github.io/Knee-planner/ct/';const text='CT Viewer – open CT DICOM (CD folder, ZIP or files) on phone or PC: brain, subdural, stroke, bone, lung, mediastinum, abdomen, liver and CTA windows, HU and size measurements, coronal/sagittal MPR, MIP for angiography and scan/dose info. Images stay on the device.\n\n';
+  try{if(isNative&&window.Capacitor.Plugins.Share){await window.Capacitor.Plugins.Share.share({title:'CT Viewer',text:text+url});return}if(navigator.share){await navigator.share({title:'CT Viewer',text,url});return}await navigator.clipboard.writeText(text+url);toast('Link copied')}catch{}};
+let installEvt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('#installBtn').hidden=false;$('#installMenu').hidden=false});
+const doInstall=async()=>{if(!installEvt){toast('Use the browser menu → Install app');return}installEvt.prompt();try{await installEvt.userChoice}catch{}installEvt=null;$('#installBtn').hidden=true;$('#installMenu').hidden=true};
+$('#installBtn').onclick=doInstall;$('#installMenu').onclick=()=>{$('#menuSheet').hidden=true;doInstall()};
+
+/* ---------- boot ---------- */
+resize();renderPanel();
+window.__ct={openFiles,openDemo,selectSeries,setPlane,setWL,setIdx,state:()=>({C,view,series:study.series.map(s=>({desc:s.desc,n:s.slices.length,rows:s.rows,cols:s.cols,spacing:s.spacing,irregular:s.irregular,ctdi:s.ctdi,mA:s.mA,decoded:s.slices.filter(x=>x.hu).length}))}),
+ hu:(x,y)=>{const f=frameData();return f&&!f.pending?f.data[y*f.w+x]:null},frame:()=>{const f=frameData();return f&&!f.pending&&{w:f.w,h:f.h,sx:f.sx,sy:f.sy}},addAnn:a=>{anns().push(a);paint()},liveTool,selectTab,setMode:m=>{C.mode=m},setMip:v=>{C.mip=v;fcache=null;paint()}};
+if('serviceWorker' in navigator&&!isNative&&/^https?:$/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+})();
+</script>
+</body>
+</html>

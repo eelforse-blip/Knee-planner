@@ -1,0 +1,21 @@
+{
+  "name": "ct-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CT DICOM viewer: window presets, HU measurements, MPR and MIP.",
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/share": "^8.0.0",
+    "daikon": "1.2.46",
+    "jszip": "3.10.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.2",
+    "esbuild": "^0.28.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4"
+  }
+}
