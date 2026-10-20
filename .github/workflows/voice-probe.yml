@@ -28,7 +28,7 @@ jobs:
           cat tts.txt
       - run: npm install
         if: always()
-      - run: node probe.mjs 2>&1 | tee probe.txt
+      - run: (node probe.mjs; node asr-check.mjs) 2>&1 | tee probe.txt
       - name: Publish result
         if: always()
         env:
