@@ -1,0 +1,25 @@
+name: Voice model probe
+on:
+  push:
+    branches: [main]
+    paths: ['voice-probe/**', '.github/workflows/voice-probe.yml']
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: voice-probe
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Make speech samples
+        run: |
+          pip install gTTS==2.5.4
+          python -c "from gtts import gTTS;gTTS('المريض يشكو من ألم في الركبة اليمنى منذ ثلاثة أشهر بعد إصابة أثناء لعب كرة القدم. الفحص يظهر تورم بسيط وألم في الخط المفصلي الداخلي. نحتاج رنين مغناطيسي على الركبة.',lang='ar').save('ar.mp3');gTTS('The patient complains of right knee pain for three months after a football injury. Examination shows mild effusion and medial joint line tenderness. We need an MRI of the knee.',lang='en').save('en.mp3')"
+          ffmpeg -loglevel error -y -i ar.mp3 -ar 16000 -ac 1 ar.wav
+          ffmpeg -loglevel error -y -i en.mp3 -ar 16000 -ac 1 en.wav
+      - run: npm install
+      - run: node probe.mjs
