@@ -5,7 +5,10 @@ const P={};
 function get(task,model,opts,id){const k=task+'|'+model+'|'+JSON.stringify(opts);
   if(!P[k])P[k]=pipeline(task,model,{...opts,progress_callback:p=>postMessage({id,type:'progress',p})}).catch(e=>{delete P[k];throw e});
   return P[k]}
-function splitText(t){return t.split(/\n/).map(para=>{const s=para.trim();if(!s)return[];const sents=s.match(/[^.!?؟۔]+[.!?؟۔]*\s*/g)||[s];const out=[];let buf='';for(const x of sents){if((buf+x).length>350&&buf){out.push(buf.trim());buf=x}else buf+=x}if(buf.trim())out.push(buf.trim());return out})}
+function splitLong(x){if(x.length<=220)return[x];const parts=x.split(/(?<=[،,;؛])\s+/);const out=[];let buf='';
+  for(const p of parts){if((buf+' '+p).length>220&&buf){out.push(buf.trim());buf=p}else buf=buf?buf+' '+p:p}if(buf.trim())out.push(buf.trim());
+  return out.flatMap(c=>{if(c.length<=300)return[c];const w=c.split(/\s+/),r=[];for(let i=0;i<w.length;i+=35)r.push(w.slice(i,i+35).join(' '));return r})}
+function splitText(t){return t.split(/\n/).map(para=>{const s=para.trim();if(!s)return[];const sents=s.match(/[^.!?؟۔]+[.!?؟۔]*/g)||[s];return sents.map(x=>x.trim()).filter(x=>x&&!/^[.!?؟۔\s]+$/.test(x)).flatMap(splitLong)})}
 onmessage=async e=>{const m=e.data;
   try{
     if(m.type==='asr'){
