@@ -41,6 +41,9 @@ jobs:
           cp -r shoulder-app/www/. site/shoulder/
           mkdir site/ct
           cp -r ct-app/www/. site/ct/
+          sh voice-app/fetch-libs.sh
+          mkdir site/voice
+          cp -r voice-app/www/. site/voice/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

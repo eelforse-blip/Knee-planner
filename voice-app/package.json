@@ -1,0 +1,21 @@
+{
+  "name": "voice-notes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Record voice, transcribe and translate (Arabic / English).",
+  "dependencies": {
+    "@capacitor-community/speech-recognition": "7.0.1",
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/share": "^8.0.0",
+    "@shiguredo/rnnoise-wasm": "2025.1.5"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.2",
+    "esbuild": "^0.28.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4"
+  }
+}

@@ -1,0 +1,26 @@
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>Voice Notes</b><span>Record · speech to text · Arabic ⇄ English translation</span></div>
+    <button class="ib" id="installBtn" hidden title="Install"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Install app</span></button>
+    <button class="ib" id="menuBtn" title="Settings"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+  </header>
+  <main class="work calc" id="work">
+    <aside class="panel">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="rec" aria-selected="true">Record</button>
+        <button class="tab" role="tab" data-t="lib" aria-selected="false">Notes</button>
+        <button class="tab" role="tab" data-t="note" aria-selected="false">Text</button>
+      </div>
+      <div class="pane" id="p-rec"></div>
+      <div class="pane" id="p-lib" hidden></div>
+      <div class="pane" id="p-note" hidden></div>
+    </aside>
+  </main>
+</div>
+<input id="audioIn" type="file" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac,.amr,video/mp4,video/webm" hidden>
+<div class="sheet" id="menuSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Settings">
+    <div class="sheet-head"><b>Settings</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body" id="setBody"></div>
+  </div>
+</div>

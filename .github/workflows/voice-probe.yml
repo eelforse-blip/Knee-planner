@@ -2,7 +2,7 @@ name: Voice model probe
 on:
   push:
     branches: [main]
-    paths: ['voice-probe/**', '.github/workflows/voice-probe.yml']
+    paths: ['voice-probe/**', '.github/workflows/voice-probe.yml', 'voice-app/www/**']
   workflow_dispatch:
 permissions:
   contents: write
@@ -28,7 +28,15 @@ jobs:
           cat tts.txt
       - run: npm install
         if: always()
-      - run: (node probe.mjs; node asr-check.mjs) 2>&1 | tee probe.txt
+      - run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: Browser end-to-end test of the Voice Notes web app
+        run: |
+          sh ../voice-app/fetch-libs.sh
+          cp ar.wav en.wav ../voice-app/www/ 2>/dev/null || true
+          (cd ../voice-app/www && nohup python3 -m http.server 8099 >/dev/null 2>&1 &)
+          sleep 2
+          node e2e.cjs || true
+          cp e2e.txt probe.txt
       - name: Publish result
         if: always()
         env:
