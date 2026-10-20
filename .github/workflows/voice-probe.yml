@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths: ['voice-probe/**', '.github/workflows/voice-probe.yml']
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -17,9 +19,19 @@ jobs:
           node-version: 22
       - name: Make speech samples
         run: |
-          pip install gTTS==2.5.4
-          python -c "from gtts import gTTS;gTTS('المريض يشكو من ألم في الركبة اليمنى منذ ثلاثة أشهر بعد إصابة أثناء لعب كرة القدم. الفحص يظهر تورم بسيط وألم في الخط المفصلي الداخلي. نحتاج رنين مغناطيسي على الركبة.',lang='ar').save('ar.mp3');gTTS('The patient complains of right knee pain for three months after a football injury. Examination shows mild effusion and medial joint line tenderness. We need an MRI of the knee.',lang='en').save('en.mp3')"
+          AR='المريض يشكو من ألم في الركبة اليمنى منذ ثلاثة أشهر بعد إصابة أثناء لعب كرة القدم. الفحص يظهر تورم بسيط وألم في الخط المفصلي الداخلي. نحتاج رنين مغناطيسي على الركبة.'
+          EN='The patient complains of right knee pain for three months after a football injury. Examination shows mild effusion and medial joint line tenderness. We need an MRI of the knee.'
+          (python3 -m pip install --user --break-system-packages gTTS==2.5.4 && python3 -c "from gtts import gTTS;import sys;gTTS(sys.argv[1],lang='ar').save('ar.mp3');gTTS(sys.argv[2],lang='en').save('en.mp3')" "$AR" "$EN" && echo TTS=gtts > tts.txt) || (sudo apt-get -qq install -y espeak-ng >/dev/null && espeak-ng -v ar -w ar.mp3 "$AR" && espeak-ng -v en -w en.mp3 "$EN" && echo TTS=espeak > tts.txt)
           ffmpeg -loglevel error -y -i ar.mp3 -ar 16000 -ac 1 ar.wav
           ffmpeg -loglevel error -y -i en.mp3 -ar 16000 -ac 1 en.wav
+          cat tts.txt
       - run: npm install
-      - run: node probe.mjs
+      - run: node probe.mjs 2>&1 | tee probe.txt
+      - name: Publish result
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat tts.txt >> probe.txt || true
+          gh release delete voice-probe --yes --cleanup-tag || true
+          gh release create voice-probe probe.txt --title "voice probe" --notes "CI probe output" --prerelease
