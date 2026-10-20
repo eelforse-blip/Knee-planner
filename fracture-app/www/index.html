@@ -1,0 +1,1432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Fracture Planner</title>
+<meta name="description" content="Fracture planning for upper limb, pelvis, hip, lower limb and spine: classification, X-ray and CT measurement, timing of surgery, approaches, implants and follow-up.">
+<meta name="theme-color" content="#05080b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fractures">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+@font-face{font-family:"Archivo";font-weight:400;font-display:swap;src:url(fonts/archivo-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:500;font-display:swap;src:url(fonts/archivo-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:600;font-display:swap;src:url(fonts/archivo-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Archivo";font-weight:700;font-display:swap;src:url(fonts/archivo-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;font-display:swap;src:url(fonts/ibm-plex-mono-latin-600-normal.woff2) format("woff2")}
+/*END-FONTFACE*/
+
+/* Layout: dark cross-sectional viewer on top, tabbed sheet below (phone) or beside (tablet) */
+:root{
+  --bg:#ebeef3; --surface:#ffffff; --ink:#141c2b; --muted:#586579; --line:#d2d9e3;
+  --accent:#2f5fa8; --accent-ink:#ffffff; --soft:#e4ecf8;
+  --ok:#1d7f47; --warn:#a86a0f; --bad:#b8352a;
+  --view:#05080b; --chrome:#0b1018; --chrome-ink:#e6ecf2; --chrome-muted:#8e9aab; --chrome-line:#1e2836;
+  --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1219; --surface:#151b25; --ink:#e2e7ef; --muted:#95a1b3; --line:#283243;
+  --accent:#7ea6e8; --accent-ink:#0a1426; --soft:#1a2a45;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1219; --surface:#151b25; --ink:#e2e7ef; --muted:#95a1b3; --line:#283243;
+  --accent:#7ea6e8; --accent-ink:#0a1426; --soft:#1a2a45;
+  --ok:#4cc27f; --warn:#e3a53c; --bad:#ef6f62; color-scheme:dark}
+
+[hidden]{display:none!important}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overscroll-behavior:none}
+body{background:var(--chrome);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{height:100%;height:100dvh;display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--chrome);color:var(--chrome-ink)}
+.brand{display:flex;flex-direction:column;margin-right:auto;min-width:0}
+.brand b{font-size:16px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand span{font-size:10.5px;color:var(--chrome-muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{border:1px solid var(--chrome-line);background:#121a26;color:var(--chrome-ink);border-radius:9px;min-height:38px;padding:0 11px;cursor:pointer;font-weight:600;font-size:12.5px;display:inline-flex;align-items:center;gap:6px}
+.ib svg{width:17px;height:17px;flex:none}
+.ib:focus-visible,.tab:focus-visible,.step:focus-visible,.chip:focus-visible,.btn:focus-visible,.sl:focus-visible{outline:2px solid #7ea6e8;outline-offset:2px}
+
+.work{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 430px}
+.viewer{position:relative;background:var(--view);overflow:hidden;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;display:block}
+.prompt{position:absolute;left:10px;right:10px;top:10px;background:rgba(8,12,16,.86);color:#e9eef2;border:1px solid rgba(255,194,71,.45);border-radius:9px;padding:7px 10px;font-size:13px;pointer-events:none;display:flex;gap:8px;align-items:baseline}
+.prompt .k{font-family:var(--f-num);color:#ffc247;font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.prompt small{color:#a9b4bd;display:block;font-size:11.5px}
+.vtools{position:absolute;right:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.vtools button{background:rgba(8,12,16,.86);color:#e9eef2;border:1px solid rgba(255,255,255,.18);border-radius:8px;min-width:40px;height:38px;padding:0 10px;font-size:13px;cursor:pointer}
+.vtools #delPt{color:#ffb4aa;border-color:rgba(255,120,100,.45)}
+.vlabel{position:absolute;left:10px;bottom:12px;color:#c9d3dd;font-size:12px;background:rgba(8,12,16,.8);padding:5px 8px;border-radius:7px;pointer-events:none;max-width:55%}
+
+.panel{background:var(--surface);display:flex;flex-direction:column;min-height:0;min-width:0;border-left:1px solid var(--line)}
+.grab{display:none}
+.tabs{display:flex;border-bottom:1px solid var(--line);flex:none}
+.tab{flex:1;background:none;border:0;padding:12px 2px;cursor:pointer;font-weight:600;font-size:12.5px;color:var(--muted);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px;min-height:0;flex:1;background:var(--surface)}
+h3{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.group{display:flex;flex-direction:column;gap:7px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fine{font-size:11.5px;color:var(--muted);margin:0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;min-height:38px;padding:0 12px;cursor:pointer;font-weight:600;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.form{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;font-size:13.5px}
+.form input[type=number],.form select,.mt input,.mt select,.pc input,.pc select{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.form input[type=number],.mt input{width:84px;font-family:var(--f-num)}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{flex:1;border:0;background:none;padding:9px 6px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.tog{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.tog input{width:20px;height:20px;accent-color:var(--accent)}
+/* slice chooser */
+.slices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.sl{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0}
+.sl.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--soft)}
+.sl b{font-size:12.5px}
+.sl span{font-size:11px;color:var(--muted);font-family:var(--f-num)}
+.steps{display:flex;flex-direction:column;gap:2px}
+.step{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;text-align:left;background:none;border:1px solid transparent;border-radius:8px;padding:8px;cursor:pointer;min-height:40px}
+.step.on{border-color:var(--accent);background:var(--soft)}
+.dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--muted)}
+.step.done .dot{background:#ffc247;border-color:#ffc247}
+.step .gl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+/* tables & pills */
+.mt{width:100%;border-collapse:collapse;font-size:13px}
+.mt th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;text-align:left;padding:4px 6px;border-bottom:1px solid var(--line)}
+.mt td{padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.mt td.n{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt .ref{font-size:11px;color:var(--muted)}
+.src{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pill{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:99px;letter-spacing:.03em;white-space:nowrap}
+.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+.pill.acc{color:var(--accent-ink);background:var(--accent)}
+.pill.mut{color:var(--muted);background:color-mix(in srgb,var(--muted) 14%,transparent)}
+/* decision */
+.rec{border:1.5px solid var(--accent);background:var(--soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.rec .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:700}
+.rec .h{font-size:18px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.rec ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:12.5px}
+.risk{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rk{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.rk .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.rk .v{font-family:var(--f-num);font-size:24px;font-weight:600;letter-spacing:-.02em}
+.rk .v small{font-size:12px;color:var(--muted);font-weight:500}
+.rk .s{font-size:11.5px;color:var(--muted)}
+.rk ul{margin:4px 0 0;padding-left:16px;font-size:11.5px;color:var(--muted)}
+.pc{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.pc.ind{border-color:var(--accent)}
+.pc.no{opacity:.75}
+.pc .hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.pc .hd b{font-size:14.5px}
+.pc .why{font-size:12.5px;color:var(--muted)}
+.pc .opts{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;font-size:12.5px}
+.pc .opts select{max-width:210px}
+.pc .opts input{width:76px;font-family:var(--f-num)}
+.figs{display:flex;gap:14px;flex-wrap:wrap}
+.figs div{display:flex;flex-direction:column}
+.figs .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.figs .v{font-family:var(--f-num);font-size:20px;font-weight:600;letter-spacing:-.02em}
+.figs .v small{font-size:12px;color:var(--muted);font-weight:500}
+.pc ol,.pc ul{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.notes{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.notes li{font-size:12.5px;padding:8px 10px;border-radius:7px;border-left:3px solid var(--line);background:var(--bg)}
+.notes li.warn{border-left-color:var(--warn)} .notes li.bad{border-left-color:var(--bad)} .notes li.ok{border-left-color:var(--ok)}
+.empty{font-size:13px;color:var(--muted);padding:12px;border:1px dashed var(--line);border-radius:9px}
+details summary{cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;padding:4px 0}
+details[open] summary{margin-bottom:8px}
+.sheet{position:fixed;inset:0;background:rgba(3,6,9,.55);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet-card{background:var(--surface);color:var(--ink);width:100%;max-width:520px;max-height:85%;border-radius:16px 16px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sheet-head b{font-size:16px;margin-right:auto}
+.sheet-body{overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.case{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px}
+.case .t{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.case .d{font-size:11.5px;color:var(--muted);font-family:var(--f-num)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#141c2b;color:#fff;padding:9px 14px;border-radius:9px;font-size:13px;z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:90%}
+.work.calc{grid-template-columns:1fr!important;grid-template-rows:1fr!important}
+.work.calc .viewer{display:none}
+.work.calc .panel{margin-top:0!important;border-radius:0!important;max-width:720px;width:100%;justify-self:center;border-left:0}
+.cgrid{display:grid;grid-template-columns:1fr auto auto;gap:6px 10px;align-items:center;font-size:13.5px}
+.cgrid input,.cgrid select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;width:92px;font-family:var(--f-num)}
+.cgrid select{width:auto;font-family:var(--f-ui)}
+.cgrid .u{font-size:11px;color:var(--muted);min-width:58px}
+.work.calc .grab{display:none!important}
+.cgrid .ref{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-4px}
+.cout .pc{padding:10px 12px}
+@media (max-width:820px){
+  .brand span{display:none}
+  .bar .lbl{display:none}
+  .work{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,48%)}
+  .work.tall{grid-template-rows:minmax(0,24%) minmax(0,1fr)}
+  .panel{border-left:0;border-radius:14px 14px 0 0;margin-top:-10px;position:relative;z-index:2}
+  .grab{display:block;border:0;background:none;padding:7px 0 2px;cursor:pointer}
+  .grab i{display:block;width:38px;height:4px;border-radius:4px;background:var(--line);margin:0 auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ACL app additions */
+.fgrid{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center;font-size:13.5px}
+.fgrid input[type=number],.fgrid select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.fgrid input[type=number]{width:88px;font-family:var(--f-num)}
+.fgrid select{max-width:220px;grid-column:2/4}
+.fgrid .u{font-size:11px;color:var(--muted);min-width:34px}
+.fgrid .h{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-5px}
+.fgrid .full{grid-column:1/-1;display:flex;flex-direction:column;gap:5px}
+.fgrid .full>span{font-size:13.5px}
+.fgrid .tog{grid-column:1/-1}
+.fgrid input::placeholder{color:var(--accent);opacity:.8}
+.bgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.bgrid .tog{font-size:12.5px}
+.badge{font-family:var(--f-num);font-weight:600;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--soft);color:var(--accent);margin-left:6px;letter-spacing:0;text-transform:none}
+.card{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.card.ind{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.card .hd{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.card .hd b{font-size:14.5px}
+.card ul,.card ol{margin:0;padding-left:18px;font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.card .why{font-size:12.5px;color:var(--muted);margin:0}
+.lst{list-style:none;padding:0!important}
+.lst li{padding-left:18px;position:relative}
+.lst li::before{position:absolute;left:0;top:0;font-weight:700}
+.lst.pro li::before{content:"+";color:var(--ok)}
+.lst.con li::before{content:"−";color:var(--bad)}
+.lst.chk li.y::before{content:"✓";color:var(--ok)}
+.lst.chk li.n::before{content:"·";color:var(--muted)}
+.lst.chk li.n{color:var(--muted)}
+.gr{display:grid;grid-template-columns:1fr;gap:8px}
+.g{border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:4px}
+.g.top{border-color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
+.g.out{opacity:.6}
+.g .t{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.g .t b{font-size:13.5px}
+.g .bar2{height:5px;border-radius:5px;background:var(--line);overflow:hidden}
+.g .bar2 i{display:block;height:100%;background:var(--accent)}
+.g.top .bar2 i{background:var(--ok)}
+.g ul{margin:0;padding-left:16px;font-size:11.5px;color:var(--muted)}
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.refs{font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px;margin:0;padding-left:18px}
+.refs a{color:var(--accent)}
+.banner{font-size:12.5px;padding:9px 11px;border-radius:9px;background:var(--soft);border-left:3px solid var(--accent)}
+.thr{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;font-size:12.5px}
+.thr input{width:76px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;font-family:var(--f-num)}
+.iosHint{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;background:#0b1116;color:#e6ecf1;border:1px solid #7ea6e8;border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:13.5px}
+.iosHint div{display:flex;flex-direction:column;gap:2px}
+.iosHint svg{vertical-align:-3px}
+.iosHint button{background:none;border:0;color:#8d9aa6;font-size:16px;cursor:pointer;padding:2px 4px}
+.tab{font-size:12px}
+.mt td.n .ref{white-space:normal;font-family:var(--f-ui)}
+.q{display:flex;flex-direction:column;gap:5px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}
+.q.sub{padding-top:2px}
+.q select{padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px}
+.tg{display:flex;flex-direction:column;gap:4px}
+.tg .tog{align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px;gap:10px}
+.tg .tog.on{border-color:var(--accent);background:var(--soft)}
+.tg .tog b{font-family:var(--f-num);font-size:16px;min-width:20px}
+.tg .tog input{margin-top:2px}
+#scView button{padding:9px 2px;font-size:12px}
+.tab{font-size:11.5px;padding:12px 0}
+.pane>*{flex-shrink:0}
+.tabs{overflow-x:auto;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;padding:12px 10px;font-size:12.5px}
+.inp{flex:1;min-width:0;width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px}
+.fgrid input.wide,.fgrid input[type=date],.fgrid input[type=tel]{grid-column:2/4;padding:7px 8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;min-width:0;width:100%;max-width:220px}
+.ta{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:16px;font-family:var(--f-ui);resize:vertical}
+details.sec{border:1px solid var(--line);border-radius:12px;padding:6px 12px 10px}
+details.sec>summary{font-size:12px;padding:8px 0}
+details.visit summary{display:flex;gap:6px;align-items:center;flex-wrap:wrap;text-transform:none;letter-spacing:0;font-size:13.5px;color:var(--ink)}
+.case.cur{border-color:var(--accent)}
+.sheet-head .fine{margin-right:8px}
+details.visit{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+details.visit[open]>summary{margin-bottom:8px}
+details.visit .fgrid{margin-bottom:8px}
+#printRoot{position:fixed;left:-10000px;top:0;width:794px;background:#fff;color:#111;font-family:var(--f-ui);font-size:12.5px;line-height:1.45}
+#printRoot .page{padding:10px 40px 20px;background:#fff}
+#printRoot .lh{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1e3a66;padding-bottom:8px;margin-bottom:10px}
+#printRoot .lh div{display:flex;flex-direction:column}#printRoot .lh b{font-size:17px;color:#1e3a66}#printRoot .lh span{color:#444;font-size:11.5px}
+#printRoot .lt{font-size:15px;font-weight:700;color:#1e3a66;text-align:right}
+#printRoot .pt{display:flex;flex-wrap:wrap;gap:4px 18px;background:#eef2f8;border-radius:6px;padding:7px 10px;margin-bottom:10px;font-size:12px}
+#printRoot h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#1e3a66;margin:14px 0 6px;border-bottom:1px solid #c9d3e3;padding-bottom:3px}
+#printRoot h3{font-size:12.5px;margin:8px 0 3px}
+#printRoot p{margin:3px 0}#printRoot ul{margin:3px 0;padding-left:18px}
+#printRoot .big{font-size:15px;font-weight:700}#printRoot .warn{color:#a3271c;font-weight:600}#printRoot .muted{color:#666}#printRoot .pre{white-space:pre-line}
+#printRoot table{width:100%;border-collapse:collapse}
+#printRoot .kv th{text-align:left;font-weight:600;color:#444;width:23%;padding:3px 6px;border-bottom:1px solid #e3e7ee;vertical-align:top}
+#printRoot .kv td{width:27%;padding:3px 6px;border-bottom:1px solid #e3e7ee;vertical-align:top}
+#printRoot .grid th{background:#eef2f8;text-align:left;font-size:11px;padding:4px 5px}#printRoot .grid td{padding:4px 5px;border-bottom:1px solid #e3e7ee;font-size:11.5px;vertical-align:top}
+#printRoot .sig{display:flex;justify-content:space-between;margin-top:40px}
+#printRoot .foot{margin-top:14px;font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:4px}
+@media (min-width:1100px){
+  .work.calc .panel{max-width:1200px}
+  #p-dec,#p-pt,#p-ex,#p-ch{display:block;column-count:2;column-gap:18px}
+  #p-dec>*,#p-pt>*,#p-ex>*,#p-ch>*{break-inside:avoid;margin-bottom:14px}
+  #p-dec>.rec,#p-dec>.row,#p-dec>details,#p-dec>p,#p-ch>.banner{column-span:all}
+  #p-rec{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-content:start;align-items:start}
+  #p-rec>.rec,#p-rec>p{grid-column:1/-1}
+  .work:not(.calc){grid-template-columns:minmax(0,1fr) 520px}
+}
+@media (hover:none){.pcOnly{display:none}}
+#scView{flex-wrap:wrap}#scView button{flex:1 0 30%}
+.hopi{width:72px;padding:6px;border:1px solid var(--line);border-radius:7px;background:var(--bg);font-size:16px;font-family:var(--f-num)}
+.big2{margin:4px 0}
+
+.fxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:10px 0}
+.fxgrid button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:inherit;font:inherit;cursor:pointer}
+.fxgrid button b{font-size:13.5px}.fxgrid button span{font-size:11px;opacity:.7}
+.fxgrid button.on{border-color:var(--accent);background:var(--soft)}
+#regSeg{flex-wrap:wrap}
+.card.ind{border-color:var(--accent)}
+ol.refs{font-size:12px;padding-left:18px}ol.refs li{margin:4px 0}
+.mt td.ref{white-space:normal;font-family:var(--f-ui);font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand"><b>Fracture Planner</b><span>Classification · X-ray measurement · timing · approach · implants · follow-up</span></div>
+    <button class="ib" id="installBtn" hidden title="Install on this computer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Install app</span></button>
+    <button class="ib" id="casesBtn" title="Patients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h6l2 2h8v12H4z"/></svg><span class="lbl">Patients</span></button>
+    <button class="ib" id="menuBtn" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+  </header>
+
+  <main class="work calc" id="work">
+    <section class="viewer" id="viewer">
+      <canvas id="cv" aria-label="Image viewer"></canvas>
+      <div class="prompt" id="prompt"></div>
+      <div class="vlabel" id="vlabel"></div>
+      <div class="vtools">
+        <button id="delPt" hidden>Delete point</button>
+        <button id="fit">Fit</button>
+        <button id="zin" aria-label="Zoom in">+</button>
+        <button id="zout" aria-label="Zoom out">−</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <button class="grab" id="grab" aria-label="Resize panel"><i></i></button>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-t="rec" aria-selected="false">Record</button>
+        <button class="tab" role="tab" data-t="pt" aria-selected="false">Patient</button>
+        <button class="tab" role="tab" data-t="fx" aria-selected="true">Fracture</button>
+        <button class="tab" role="tab" data-t="img" aria-selected="false">Imaging</button>
+        <button class="tab" role="tab" data-t="dec" aria-selected="false">Decision</button>
+      </div>
+      <div class="pane" id="p-rec" hidden></div>
+      <div class="pane" id="p-pt" hidden></div>
+      <div class="pane" id="p-fx"></div>
+      <div class="pane" id="p-img" hidden>
+        <div class="group"><h3>Measure on X-ray / CT · <span id="imgFx"></span></h3>
+          <div class="modes" id="modes"></div>
+          <div class="row"><label class="btn primary" for="file">Open image</label><input id="file" type="file" accept="image/*" hidden><button class="btn" id="hideViewer">Hide viewer</button></div>
+          <p class="fine" id="modeHint"></p>
+        </div>
+        <div class="steps" id="steps"></div>
+        <div class="row"><button class="btn danger" id="delPt2" hidden>Delete selected point</button></div>
+        <div class="group" id="calBox"><h3>Scale</h3>
+          <div class="form"><label for="calmm">Known length (mm)</label><input id="calmm" type="number" min="1" step="any"></div>
+          <p class="fine" id="scaleout"></p>
+        </div>
+        <div class="group" id="screwBox" hidden><h3>Lag screw</h3>
+          <div class="form"><label for="screwmm">True screw / blade diameter (mm)</label><input id="screwmm" type="number" min="1" step="0.1"></div>
+          <p class="fine">Used to correct magnification of the tip–apex distance.</p>
+        </div>
+        <div class="group" id="measOut"></div>
+        <p class="fine">For CT, export or screenshot the key slice (axial, coronal or sagittal reconstruction) and open it here. Values feed the Fracture tab and the Decision.</p>
+      </div>
+      <div class="pane" id="p-dec" hidden></div>
+    </aside>
+  </main>
+</div>
+
+<div class="sheet" id="casesSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Patients">
+    <div class="sheet-head"><b>Patients</b><span class="fine" id="caseCount"></span><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <div class="row"><input id="caseName" type="text" placeholder="Name for the current case" class="inp"><button class="btn primary" id="saveCase">Save current</button></div>
+      <input id="caseSearch" type="search" placeholder="Search name, file number, phone, surgery date" class="inp">
+      <div id="caseList" class="group"></div>
+      <h3>Export and backup</h3>
+      <div class="row"><button class="btn" id="exportCsv">Export all to Excel (CSV)</button><button class="btn" id="backupBtn">Back up</button><label class="btn" for="restoreFile">Restore</label><input id="restoreFile" type="file" accept=".json,application/json" hidden></div>
+      <p class="fine">Records are stored only on this device. Back up regularly and keep the file somewhere safe; it contains patient-identifiable data.</p>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="menuSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="More">
+    <div class="sheet-head"><b>More</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn" id="newCase">New patient (clear the screen)</button>
+      <button class="btn primary" id="shareApp">Share this app with colleagues</button>
+      <button class="btn" id="setBtn">Letterhead for printing</button>
+      <button class="btn" id="installMenu" hidden>Install on this computer / phone</button>
+      <p class="fine pcOnly">On a computer: drag an X-ray / CT image onto the window or paste it (Ctrl+V) from PACS · Delete removes the selected point · Ctrl+S saves the patient · Ctrl+P prints · Esc closes panels.</p>
+      <h3>Demo cases</h3>
+      <div id="demoList" class="group"></div>
+      <p class="fine">Decision aid only. Recommendations summarise AO principles, BOA/BOAST and NICE guidance and key trials (see Decision → References). Confirm every measurement on the original images. Not a certified medical device.</p>
+      <p class="fine">Version 1.0</p>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="printSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Print">
+    <div class="sheet-head"><b>Print / PDF</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <button class="btn primary" data-print="full">Full patient record</button>
+      <button class="btn" data-print="preop">Assessment and treatment plan</button>
+      <button class="btn" data-print="op">Operative note</button>
+      <button class="btn" data-print="fu">Follow-up and union</button>
+      <p class="fine">Creates an A4 PDF you can print, save or send. Set your name and clinic under ⋮ → Letterhead for printing.</p>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="setSheet" hidden>
+  <div class="sheet-card" role="dialog" aria-label="Letterhead">
+    <div class="sheet-head"><b>Letterhead</b><button class="btn" data-close>Close</button></div>
+    <div class="sheet-body">
+      <input id="set_doctor" class="inp" placeholder="Doctor name (e.g. Dr. Elsayed Elforse)">
+      <input id="set_title" class="inp" placeholder="Title">
+      <input id="set_clinic" class="inp" placeholder="Clinic or hospital">
+      <input id="set_address" class="inp" placeholder="Address">
+      <input id="set_phone" class="inp" placeholder="Phone">
+      <button class="btn primary" id="setSave">Save</button>
+    </div>
+  </div>
+</div>
+<div id="printRoot" aria-hidden="true"></div>
+<div class="iosHint" id="iosHint" hidden><div><b>Install on your iPhone</b><span>Tap <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-label="Share"><path d="M12 3v13M7 8l5-5 5 5M5 13v7h14v-7"/></svg> Share, then <b>Add to Home Screen</b>. It then opens full-screen and works offline.</span></div><button id="iosHintX" aria-label="Dismiss">✕</button></div>
+<script>
+(()=>{
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const cv=$('#cv'),ctx=cv.getContext('2d');
+const isNative=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+const COL={pt:'#ffc247',line:'#7fd0ff',ghost:'rgba(127,208,255,.55)',meas:'#4fe3b4',alt:'#ff9f6b',bad:'#ff7a7a'};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>v===''||v==null||isNaN(+v)?null:+v;
+const f1=v=>v==null||isNaN(v)?'—':(+v).toFixed(1),f0=v=>v==null||isNaN(v)?'—':Math.round(+v)+'';
+
+/* ---------- geometry ---------- */
+const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y}),add=(a,b)=>({x:a.x+b.x,y:a.y+b.y}),mul=(a,k)=>({x:a.x*k,y:a.y*k}),mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+const dot=(a,b)=>a.x*b.x+a.y*b.y,len=a=>Math.hypot(a.x,a.y),norm=a=>mul(a,1/(len(a)||1)),perp=a=>({x:-a.y,y:a.x});
+const DEG=180/Math.PI;
+const angLines=(a,b,c,d)=>{const u=norm(sub(b,a)),v=norm(sub(d,c));let t=Math.acos(Math.max(-1,Math.min(1,Math.abs(dot(u,v)))))*DEG;return t};// acute angle between two lines
+const ang3=(a,b,c)=>{const u=sub(a,b),v=sub(c,b);return Math.acos(Math.max(-1,Math.min(1,dot(u,v)/(len(u)*len(v)||1))))*DEG};
+const distToLineAlong=(p,o,dir)=>dot(sub(p,o),norm(dir));// signed projection along dir
+
+/* ---------- measurement templates ---------- */
+const CAL=[['cal1','Scale bar end 1','One end of a scale bar or known length'],['cal2','Scale bar end 2','Other end; enter its length below']];
+const MEAS={
+ dr_ap:{name:'Distal radius – PA',sub:'inclination · height · ulnar variance',cal:true,hint:'PA wrist view. Two points on the radial shaft axis, the tip of the radial styloid, the ulnar corner of the lunate fossa and the distal articular surface of the ulnar head.',pts:[...CAL,['A1','Radial shaft axis – proximal','Centre of the radial shaft, proximal'],['A2','Radial shaft axis – distal','Centre of the shaft, nearer the wrist'],['RS','Radial styloid tip',''],['UC','Ulnar corner of the lunate fossa',''],['UH','Ulnar head – distal articular surface','For ulnar variance']],
+  lines:[['A1','A2'],['RS','UC'],['UC','UH',1]],
+  calc:(q,k)=>{const r={};if(q.A1&&q.A2&&q.RS&&q.UC){const ax=norm(sub(q.A2,q.A1));const art=sub(q.RS,q.UC);r.incl=90-Math.acos(Math.min(1,Math.abs(dot(norm(art),ax))))*DEG;r.incl=Math.abs(r.incl);
+     if(k){r.rheight=Math.abs(dot(art,ax))*k;if(q.UH)r.uv=dot(sub(q.UH,q.UC),ax)*k}}return r}},
+ dr_lat:{name:'Distal radius – lateral',sub:'volar / dorsal tilt',cal:false,hint:'True lateral wrist view. Two points on the radial shaft axis, then the volar and dorsal lips of the radial articular surface. Positive = volar tilt (normal ≈ 11°), negative = dorsal tilt.',pts:[['A1','Radial shaft axis – proximal',''],['A2','Radial shaft axis – distal',''],['VL','Volar lip of the radius',''],['DL','Dorsal lip of the radius','']],
+  lines:[['A1','A2'],['VL','DL']],
+  calc:q=>{const r={};if(q.A1&&q.A2&&q.VL&&q.DL){const ax=norm(sub(q.A2,q.A1));const art=sub(q.DL,q.VL);const along=dot(art,ax);const across=len(sub(art,mul(ax,along)));r.tilt=Math.atan2(along,across)*DEG}return r}},
+ tad_ap:{name:'Tip–apex – AP',sub:'lag screw position',cal:false,hint:'AP hip after fixation: screw tip, apex of the femoral head (where the neck axis meets the head), and the two edges of the screw (corrects magnification). Set the true screw diameter below.',pts:[['T','Lag-screw tip',''],['X','Femoral head apex',''],['D1','Screw edge 1',''],['D2','Screw edge 2','']],lines:[['T','X'],['D1','D2']],
+  calc:(q,k,S)=>{const r={};if(q.T&&q.X&&q.D1&&q.D2)r.tadap=len(sub(q.T,q.X))*(S.cal.screw||10.5)/len(sub(q.D1,q.D2));return r}},
+ tad_lat:{name:'Tip–apex – lateral',sub:'lag screw position',cal:false,hint:'Lateral hip: same four points. TAD = AP + lateral distance (≤ 25 mm).',pts:[['T','Lag-screw tip',''],['X','Femoral head apex',''],['D1','Screw edge 1',''],['D2','Screw edge 2','']],lines:[['T','X'],['D1','D2']],
+  calc:(q,k,S)=>{const r={};if(q.T&&q.X&&q.D1&&q.D2)r.tadlat=len(sub(q.T,q.X))*(S.cal.screw||10.5)/len(sub(q.D1,q.D2));return r}},
+ pauwels:{name:'Pauwels angle',sub:'femoral neck fracture verticality',cal:false,hint:'AP hip. Two points on the femoral shaft axis and two along the fracture line. Pauwels = angle of the fracture line to the horizontal (perpendicular to the shaft).',pts:[['A1','Femoral shaft axis – distal',''],['A2','Femoral shaft axis – proximal',''],['F1','Fracture line – end 1',''],['F2','Fracture line – end 2','']],
+  lines:[['A1','A2'],['F1','F2']],
+  calc:q=>{const r={};if(q.A1&&q.A2&&q.F1&&q.F2)r.pauwels=90-angLines(q.A1,q.A2,q.F1,q.F2);return r}},
+ bohler:{name:'Böhler angle',sub:'calcaneus, lateral view',cal:false,hint:'Lateral calcaneus: highest point of the tuberosity, highest point of the posterior facet, highest point of the anterior process. Normal 20–40°.',pts:[['T','Top of the tuberosity',''],['P','Top of the posterior facet',''],['A','Top of the anterior process','']],
+  lines:[['T','P'],['P','A']],
+  calc:q=>{const r={};if(q.T&&q.P&&q.A)r.bohler=180-ang3(q.T,q.P,q.A);return r}},
+ ankle:{name:'Ankle mortise',sub:'medial clear space · syndesmosis',cal:true,hint:'Mortise / AP ankle. Calibrate, then the medial clear space (medial malleolus to talus at the talar dome level), tibiofibular clear space (1 cm above the plafond) and tibiofibular overlap.',pts:[...CAL,['M1','Medial clear space – malleolus',''],['M2','Medial clear space – talus',''],['C1','Tib-fib clear space – tibia (incisura)',''],['C2','Tib-fib clear space – fibula',''],['O1','Tib-fib overlap – fibula medial border',''],['O2','Tib-fib overlap – tibia lateral border','']],
+  lines:[['M1','M2'],['C1','C2'],['O1','O2']],
+  calc:(q,k)=>{const r={};if(!k)return r;if(q.M1&&q.M2)r.mcs=len(sub(q.M1,q.M2))*k;if(q.C1&&q.C2)r.tfcs=len(sub(q.C1,q.C2))*k;if(q.O1&&q.O2)r.ovl=len(sub(q.O1,q.O2))*k;return r}},
+ kyph:{name:'Vertebral body',sub:'kyphosis · height loss',cal:false,hint:'Lateral spine. Superior endplate of the vertebra above and inferior endplate of the vertebra below (segmental Cobb), then the anterior heights of the fractured vertebra and the two neighbours.',pts:[['U1','Upper endplate (vertebra above) – anterior',''],['U2','Upper endplate (vertebra above) – posterior',''],['L1','Lower endplate (vertebra below) – anterior',''],['L2','Lower endplate (vertebra below) – posterior',''],['H1','Fractured body – anterior top',''],['H2','Fractured body – anterior bottom',''],['N1','Vertebra above – anterior top',''],['N2','Vertebra above – anterior bottom',''],['N3','Vertebra below – anterior top',''],['N4','Vertebra below – anterior bottom','']],
+  lines:[['U1','U2'],['L1','L2'],['H1','H2'],['N1','N2',1],['N3','N4',1]],
+  calc:q=>{const r={};if(q.U1&&q.U2&&q.L1&&q.L2)r.kyph=angLines(q.U1,q.U2,q.L1,q.L2);if(q.H1&&q.H2&&q.N1&&q.N2&&q.N3&&q.N4){const h=len(sub(q.H1,q.H2)),n=(len(sub(q.N1,q.N2))+len(sub(q.N3,q.N4)))/2;r.ahl=(1-h/n)*100}return r}},
+ plateau:{name:'Tibial plateau',sub:'depression · widening',cal:true,hint:'AP knee (or coronal CT). Calibrate; articular step / depression (intact joint line to the deepest depressed fragment) and condylar widening (tibial plateau width vs femoral condyle width).',pts:[...CAL,['S1','Intact articular surface',''],['S2','Deepest depressed fragment',''],['P1','Tibial plateau – medial edge',''],['P2','Tibial plateau – lateral edge',''],['F1','Femoral condyles – medial edge',''],['F2','Femoral condyles – lateral edge','']],
+  lines:[['S1','S2'],['P1','P2'],['F1','F2',1]],
+  calc:(q,k)=>{const r={};if(!k)return r;if(q.S1&&q.S2)r.step=len(sub(q.S1,q.S2))*k;if(q.P1&&q.P2&&q.F1&&q.F2)r.widen=(len(sub(q.P1,q.P2))-len(sub(q.F1,q.F2)))*k;return r}},
+ baumann:{name:'Baumann / shaft–physeal',sub:'paediatric elbow',cal:false,hint:'AP elbow. Two points on the humeral shaft axis and two along the capitellar (lateral condylar) physis. Compare with the other elbow (difference > 5° = malreduction).',pts:[['A1','Humeral shaft axis – proximal',''],['A2','Humeral shaft axis – distal',''],['B1','Capitellar physis – lateral',''],['B2','Capitellar physis – medial','']],
+  lines:[['A1','A2'],['B1','B2']],
+  calc:q=>{const r={};if(q.A1&&q.A2&&q.B1&&q.B2)r.baumann=angLines(q.A1,q.A2,q.B1,q.B2);return r}},
+ len:{name:'Length / shortening',sub:'distance',cal:true,hint:'Any distance: displacement, shortening, gap, fragment size. Calibrate first.',pts:[...CAL,['D1','Point 1',''],['D2','Point 2','']],
+  lines:[['D1','D2']],
+  calc:(q,k)=>{const r={};if(k&&q.D1&&q.D2)r.dist=len(sub(q.D1,q.D2))*k;return r}},
+ angle:{name:'Angle',sub:'angulation between two lines',cal:false,hint:'Angulation: two points on each fragment axis (or any two lines).',pts:[['A1','Line 1 – point 1',''],['A2','Line 1 – point 2',''],['B1','Line 2 – point 1',''],['B2','Line 2 – point 2','']],
+  lines:[['A1','A2'],['B1','B2']],
+  calc:q=>{const r={};if(q.A1&&q.A2&&q.B1&&q.B2)r.angle=angLines(q.A1,q.A2,q.B1,q.B2);return r}}};
+
+/* ---------- patient (general) fields ---------- */
+const G_FORM=[
+ ['Patient',[
+  {k:'age',l:'Age',t:'num',u:'y'},{k:'sex',l:'Sex',t:'seg',o:[['M','Male'],['F','Female']]},{k:'side',l:'Side',t:'seg',o:[['R','Right'],['L','Left'],['B','Bilateral / midline']]},
+  {k:'dom',l:'Dominant limb',t:'chk'},
+  {k:'demand',l:'Activity level',t:'sel',o:[['high','High – manual worker / athlete'],['mod','Normal – independent, active'],['low','Low – limited walking, housebound'],['frail','Frail / bed-bound / nursing home']]},
+  {k:'cog',l:'Cognitive impairment',t:'chk'}]],
+ ['Injury',[
+  {k:'energy',l:'Mechanism',t:'seg',o:[['low','Low energy (fall from standing)'],['high','High energy']]},
+  {k:'hours',l:'Time since injury',t:'num',u:'h'},
+  {k:'open',l:'Open fracture (Gustilo–Anderson)',t:'sel',o:[['no','Closed'],['I','I – wound < 1 cm, clean'],['II','II – 1–10 cm, moderate soft-tissue damage'],['IIIA','IIIA – adequate soft-tissue cover'],['IIIB','IIIB – periosteal stripping, needs flap'],['IIIC','IIIC – arterial injury needing repair']]},
+  {k:'skin',l:'Closed soft-tissue injury',t:'sel',o:[['ok','No significant swelling'],['swell','Marked swelling / fracture blisters'],['threat','Skin under threat (tenting, dislocation)']]},
+  {k:'vasc',l:'Absent / reduced pulses or ischaemia',t:'chk'},
+  {k:'nerve',l:'Nerve deficit',t:'chk'},
+  {k:'comp',l:'Signs of compartment syndrome',t:'chk'},
+  {k:'poly',l:'Polytrauma',t:'sel',o:[['no','No'],['stable','Yes – physiologically stable'],['border','Borderline'],['unstable','Unstable / in extremis']]},
+  {k:'path',l:'Pathological fracture (tumour / metastasis)',t:'chk'},
+  {k:'peri',l:'Periprosthetic / around an implant',t:'chk'}]],
+ ['Health',[
+  {k:'child',l:'Open growth plates (child)',t:'chk'},
+  {k:'osteo',l:'Osteoporosis / fragility fracture',t:'chk'},
+  {k:'diab',l:'Diabetes (peripheral neuropathy?)',t:'chk'},
+  {k:'smoke',l:'Smoker',t:'chk'},
+  {k:'anticoag',l:'Anticoagulant / antiplatelet',t:'chk'},
+  {k:'asa',l:'ASA grade',t:'seg',o:[['1','1'],['2','2'],['3','3'],['4','4']]}]]];
+const G_BLANK={age:'',sex:'M',side:'R',dom:false,demand:'mod',cog:false,energy:'low',hours:'',open:'no',skin:'ok',vasc:false,nerve:false,comp:false,poly:'no',path:false,peri:false,child:false,osteo:false,diab:false,smoke:false,anticoag:false,asa:'2'};
+
+/* ---------- fracture registry (filled by kb files) ---------- */
+const FX={};const FX_ORDER=[];
+const REGIONS=[['upper','Upper limb'],['axial','Pelvis & hip'],['lower','Lower limb'],['spine','Spine']];
+function defFx(o){FX[o.id]=o;FX_ORDER.push(o.id)}
+/* builder for decisions */
+function R0(){return{head:'',cls:[],acc:[],opts:[],timing:[],approach:[],implant:[],fu:[],img:[],notes:[],comp:[],status:'acc'}}
+const opt=(R,name,st,why,pro,con)=>R.opts.push({name,st,why:why||'',pro:pro||[],con:con||[]});
+const accept=(R,label,val,unit,ok,limit)=>R.acc.push({label,val,unit,ok,limit});
+const lowDemand=P=>P.demand==='low'||P.demand==='frail';
+const old=(P,a)=>P.age!=null&&P.age>=(a||65);
+const young=(P,a)=>P.age!=null&&P.age<(a||60);
+
+/* ================= UPPER LIMB ================= */
+defFx({id:'clav',reg:'upper',name:'Clavicle – midshaft',ao:'AO/OTA 15.2',meas:['len'],
+ fields:[
+  {k:'disp',l:'Displacement',t:'seg',o:[['none','Undisplaced'],['part','< 100 %'],['full','≥ 100 % (no contact)']]},
+  {k:'short',l:'Shortening',t:'num',u:'mm',m:'dist'},
+  {k:'comm',l:'Comminuted / Z-shaped butterfly',t:'chk'},
+  {k:'tent',l:'Skin tenting',t:'chk'},
+  {k:'float',l:'Floating shoulder (with scapular neck / glenoid fracture)',t:'chk'},
+  {k:'overhead',l:'Overhead athlete / manual worker',t:'chk'}],
+ decide(f,P,R){const sh=num(f.short);R.cls.push(`Allman I / Robinson 2${f.disp==='full'?'B':'A'} – ${f.disp==='full'?'completely displaced':f.disp==='part'?'partly displaced':'undisplaced'}${f.comm?', comminuted':''}`);
+  if(sh!=null)accept(R,'Shortening',sh,'mm',sh<20,'< 15–20 mm');
+  const ind=f.tent||P.open!=='no'||P.vasc||f.float;const rel=f.disp==='full'&&(sh!=null&&sh>=15||f.comm)&&!lowDemand(P);
+  if(ind||rel){opt(R,'Open reduction and plate fixation','ind',ind?'Open fracture, skin tenting, neurovascular injury or floating shoulder.':'Completely displaced, shortened or comminuted in an active adult: plating lowers non-union and symptomatic malunion and gives faster recovery (COTS 2007).',['Union ≈ 16 vs 28 weeks','Non-union ≈ 3 % vs 14 %'],['Hardware irritation – removal is the commonest re-operation','Infraclavicular numbness']);
+    opt(R,'Sling and early movement','consider','Acceptable after discussion: most unite; ~15 % non-union and some symptomatic malunion.')}
+  else opt(R,'Sling and early movement','ind','Undisplaced / minimally displaced or low-demand patient.');
+  if(f.disp==='full'&&f.overhead)R.notes.push('Overhead or manual workers notice shortening and weakness more – lower threshold for fixation.');
+  R.timing.push(f.tent?'Skin tenting: fix within 24–48 h before the skin breaks down.':'Elective, ideally within 1–2 weeks (easier reduction).');
+  R.approach.push('Superior or anteroinferior approach; protect the supraclavicular nerves where possible.','Anteroinferior plating: less prominent hardware and safer drilling direction (away from subclavian vessels).');
+  R.implant.push('Pre-contoured 3.5 mm superior or anteroinferior locking plate (≥ 3 bicortical screws each side) or dual mini-plates','Intramedullary pin/nail for simple transverse patterns');
+  R.fu.push('Sling for comfort 2–3 weeks; pendulum then active movement as pain allows','No lifting > 2–3 kg and no contact sport until union (≈ 12 weeks)','X-rays at 2, 6 and 12 weeks');
+  R.comp.push('Non-union (higher with displacement, shortening, smoking, women, older age)','Hardware prominence','Subclavian vessel injury during drilling');
+  R.img.push('AP clavicle and 15–30° cephalic tilt view','CT only for medial-end or complex patterns')}});
+
+defFx({id:'clavlat',reg:'upper',name:'Clavicle – lateral end',ao:'Neer / Robinson 3',meas:['len'],
+ fields:[{k:'neer',l:'Neer type',t:'sel',o:[['I','I – lateral to intact CC ligaments, undisplaced'],['IIa','IIa – medial to both CC ligaments, displaced'],['IIb','IIb – between conoid and trapezoid / conoid torn'],['III','III – into the AC joint, ligaments intact'],['IV','IV – paediatric, periosteal sleeve'],['V','V – comminuted, only an inferior fragment attached to the CC ligaments']]},
+  {k:'gap',l:'Displacement',t:'num',u:'mm',m:'dist'}],
+ decide(f,P,R){R.cls.push('Neer type '+f.neer);const unst=['IIa','IIb','V'].includes(f.neer);
+  if(unst&&!lowDemand(P)){opt(R,'Fixation (stabilise against the CC ligaments)','ind','Neer II and V are unstable: the medial fragment is pulled up by trapezius; high non-union rate if left.',['Union in most'],['Hook plates often need removal; subacromial impingement']);opt(R,'Sling','consider','Low-demand or elderly: non-union is frequent but often painless.')}
+  else opt(R,'Sling and early movement','ind',unst?'Low demand: accept a possibly painless non-union.':'Stable pattern (types I, III, IV).');
+  if(f.neer==='III')R.notes.push('Type III can lead to AC joint arthritis – later distal clavicle excision if painful.');
+  R.timing.push('Within 1–2 weeks if fixing.');R.approach.push('Superior approach over the distal clavicle / AC joint.');
+  R.implant.push('Lateral locking plate with distal screws ± coracoclavicular suture-button/tape augmentation','Hook plate (remove at ≈ 3 months)','Arthroscopically assisted CC fixation for small lateral fragments');
+  R.fu.push('Sling 3–4 weeks; no lifting above shoulder for 6 weeks','X-rays at 2, 6, 12 weeks; hook plate removal after union');R.img.push('AP and Zanca view; stress views rarely needed')}});
+
+defFx({id:'phum',reg:'upper',name:'Proximal humerus',ao:'AO/OTA 11 · Neer',meas:['angle','len'],
+ fields:[{k:'parts',l:'Neer parts (displacement > 1 cm or > 45°)',t:'seg',o:[['1','1-part'],['2','2-part'],['3','3-part'],['4','4-part']]},
+  {k:'two',l:'2-part type',t:'sel',o:[['sn','Surgical neck'],['gt','Greater tuberosity'],['lt','Lesser tuberosity'],['an','Anatomical neck']],show:f=>f.parts==='2'},
+  {k:'gtdisp',l:'Greater tuberosity displacement',t:'num',u:'mm',m:'dist'},
+  {k:'split',l:'Head-split / impression > 40 %',t:'chk'},{k:'disl',l:'Fracture–dislocation',t:'chk'},
+  {k:'valg',l:'Head alignment',t:'seg',o:[['ok','Normal'],['valgus','Valgus impacted'],['varus','Varus']]},
+  {k:'calcar',l:'Medial calcar extension < 8 mm',t:'chk'},{k:'hinge',l:'Medial hinge disrupted (> 2 mm)',t:'chk'},
+  {k:'bone',l:'Poor bone quality',t:'chk'}],
+ decide(f,P,R){const pts=+f.parts;const gt=num(f.gtdisp);const elderly=old(P,65);
+  R.cls.push(`Neer ${pts}-part${pts===2?' ('+{sn:'surgical neck',gt:'greater tuberosity',lt:'lesser tuberosity',an:'anatomical neck'}[f.two]+')':''}${f.valg!=='ok'?', '+f.valg:''}${f.disl?', fracture–dislocation':''}${f.split?', head-split':''}`);
+  if(f.calcar&&f.hinge)R.cls.push('Hertel: short calcar + disrupted medial hinge → high risk of head ischaemia (PPV up to 97 %).');
+  if(gt!=null)accept(R,'Greater tuberosity displacement',gt,'mm',gt<5,'< 5 mm (< 3 mm in overhead athletes)');
+  if(pts===1)opt(R,'Sling, early pendulum exercises','ind','Undisplaced: excellent results without surgery.');
+  else if(pts===2&&f.two==='gt'){if(gt!=null&&gt>=(P.demand==='high'?3:5))opt(R,'Fixation of the greater tuberosity','ind','Displaced tuberosity causes impingement and cuff weakness.',[],[]);else opt(R,'Sling, early movement','ind','Tuberosity displacement within limits.')}
+  else if(pts===2&&f.two==='sn'){if(elderly||lowDemand(P))opt(R,'Sling and supervised rehabilitation','ind','PROFHER: no benefit of surgery for displaced surgical-neck fractures in adults (mean age 66).');
+    else{opt(R,'Locking plate or intramedullary nail','consider','Younger active patient with substantial displacement or translation.');opt(R,'Sling and rehabilitation','consider','Many unite with acceptable function.')}}
+  else{const replace=((f.split||f.disl||(f.calcar&&f.hinge)||f.bone)&&(elderly||P.age>=60))||(pts===4&&old(P,70));
+    if(elderly&&lowDemand(P)&&!f.disl)opt(R,'Sling and rehabilitation','ind','Frail or low demand: non-operative care is reasonable even for 3–4-part fractures.');
+    if(replace){opt(R,'Reverse shoulder arthroplasty','ind','Older patient with complex 3–4-part, head-split or dislocated fracture: reliable function, independent of tuberosity healing.',['Predictable elevation'],['Limited rotation','Dislocation, notching']);opt(R,'Locking plate ORIF','consider','If the head is reconstructable and bone quality good.');if(elderly&&!f.disl&&!lowDemand(P))opt(R,'Sling and rehabilitation','consider','PROFHER included 3–4-part fractures: no difference in Oxford score at 2 years vs surgery.')}
+    else{opt(R,'Open reduction and locking plate (with calcar screws)','ind','Reconstructable fracture in a younger patient.',['Retains the native joint'],['Screw cut-out, AVN, varus collapse']);
+      if(f.valg==='valgus')R.notes.push('Valgus-impacted 4-part fractures have a lower AVN rate and often do well with fixation or even non-operatively.')}
+    if(f.split&&young(P,60))opt(R,'ORIF; hemiarthroplasty if unreconstructable','consider','Young head-split: attempt anatomical reduction.')}
+  if(f.disl)R.timing.push('Fracture–dislocation: urgent reduction (often open) – avoid repeated closed attempts that displace the neck.');
+  R.timing.push('Fixation ideally within 1–2 weeks; arthroplasty within 2–3 weeks (tuberosities heal less well later).');
+  R.approach.push('Deltopectoral (standard for plates and arthroplasty)','Deltoid-split (lateral) for tuberosity and minimally invasive plating – protect the axillary nerve ≈ 5 cm below the acromion');
+  R.implant.push('Proximal humeral locking plate with inferomedial (calcar) screws ± fibular strut allograft','Short proximal humeral nail for 2-part surgical-neck fractures','Reverse shoulder arthroplasty with tuberosity repair','Screws / suture-bridge for isolated tuberosities');
+  R.fu.push('Sling 2–4 weeks; pendulum from the first week; active-assisted at 3–6 weeks; strengthening from 8–12 weeks','X-rays at 2, 6, 12 weeks and 1 year (AVN, screw cut-out)');
+  R.comp.push('Avascular necrosis','Screw cut-out / varus collapse','Stiffness','Axillary nerve injury');
+  R.img.push('True AP (Grashey), scapular Y and axillary views','CT with 3D for 3–4-part, head-split or when planning fixation')}});
+
+defFx({id:'hshaft',reg:'upper',name:'Humeral shaft',ao:'AO/OTA 12',meas:['angle','len'],
+ fields:[{k:'pat',l:'Pattern',t:'sel',o:[['A','A – simple (transverse / oblique / spiral)'],['B','B – wedge'],['C','C – multifragmentary / segmental']]},
+  {k:'loc',l:'Level',t:'seg',o:[['prox','Proximal third'],['mid','Middle third'],['dist','Distal third']]},
+  {k:'radial',l:'Radial nerve palsy',t:'sel',o:[['no','None'],['primary','Present at injury'],['secondary','After manipulation / splinting']]},
+  {k:'ang',l:'Angulation',t:'num',u:'°',m:'angle'},{k:'shortn',l:'Shortening',t:'num',u:'mm',m:'dist'},
+  {k:'floatel',l:'Floating elbow (with forearm fracture)',t:'chk'},{k:'bilat',l:'Bilateral / needs arms for crutches',t:'chk'},{k:'obese',l:'Obesity / large breasts (brace fails)',t:'chk'}],
+ decide(f,P,R){const a=num(f.ang),s=num(f.shortn);R.cls.push(`AO 12-${f.pat}, ${({prox:'proximal',mid:'middle',dist:'distal'})[f.loc]} third${f.radial!=='no'?', radial nerve palsy':''}`);
+  if(a!=null)accept(R,'Angulation',a,'°',a<=20,'≤ 20° anterior, ≤ 30° varus');if(s!=null)accept(R,'Shortening',s,'mm',s<=30,'≤ 3 cm');
+  const surg=P.open!=='no'||P.vasc||f.floatel||f.bilat||P.poly!=='no'||P.path||(a!=null&&a>30)||(s!=null&&s>30)||f.pat==='C'&&f.loc!=='mid';
+  if(surg){opt(R,'Plate fixation','ind','Open fracture, vascular injury, floating elbow, polytrauma, bilateral, pathological or unacceptable alignment.',['Highest union rate','Allows nerve exploration'],['Radial nerve at risk (anterolateral / posterior)']);opt(R,'Antegrade intramedullary nail','consider','Pathological, segmental or obese patients.',[],['Shoulder pain','Higher non-union than plating'])}
+  else{opt(R,'Functional brace (Sarmiento)','ind','Most closed shaft fractures unite in a brace (≈ 90 %).',['Avoids surgery'],['Non-union ≈ 10 % (higher in proximal-third and transverse)','Skin problems, compliance']);opt(R,'Plate fixation','consider','Faster function; consider for transverse/proximal-third patterns, obesity, or patient preference.')}
+  if(f.obese)R.notes.push('Obesity / large breasts push the fracture into varus in a brace – consider surgery.');
+  if(f.radial==='primary')R.notes.push('Primary radial nerve palsy: ≈ 70–90 % recover – observe; wrist splint; EMG at 6–12 weeks; explore if no recovery by 4–6 months (or immediately if open fracture or you are operating anyway).');
+  if(f.radial==='secondary')R.notes.push('Palsy after manipulation: many surgeons explore; at minimum early nerve studies.');
+  if(f.loc==='dist'&&f.pat==='A')R.notes.push('Distal-third spiral (Holstein–Lewis): radial nerve is tethered at the lateral intermuscular septum – check it carefully.');
+  R.timing.push('Coaptation (U-slab) splint now; brace at 1–2 weeks when swelling settles.','Surgery electively within the first 1–2 weeks (urgent if open / vascular).');
+  R.approach.push('Anterolateral (proximal and middle third; brachialis split)','Posterior triceps-split or paratricipital (distal third) – identify the radial nerve','Medial for vascular repair');
+  R.implant.push('4.5 mm (or 3.5 mm in small humeri) compression / locking plate, ≥ 6–8 cortices each side','Antegrade locked humeral nail');
+  R.fu.push('Brace until union (≈ 10–12 weeks); shoulder pendulum and elbow movement in the brace','X-rays at 1, 2, 6 and 12 weeks; consider surgery if no callus by 6–8 weeks (high risk of non-union)');
+  R.comp.push('Non-union','Radial nerve palsy','Malunion (well tolerated up to 20–30°)');R.img.push('AP and lateral of the whole humerus including shoulder and elbow')}});
+
+defFx({id:'dhum',reg:'upper',name:'Distal humerus (adult)',ao:'AO/OTA 13',meas:['angle','len'],
+ fields:[{k:'type',l:'AO type',t:'sel',o:[['A','A – extra-articular'],['B','B – partial articular (single column / capitellum)'],['C1','C1 – simple articular, simple metaphyseal'],['C2','C2 – simple articular, comminuted metaphysis'],['C3','C3 – comminuted articular']]},
+  {k:'low',l:'Very low (transcondylar) fracture',t:'chk'},{k:'ulnar',l:'Ulnar nerve symptoms',t:'chk'}],
+ decide(f,P,R){R.cls.push('AO 13-'+f.type+(f.low?', low transcondylar':''));const elderly=old(P,70);
+  if(lowDemand(P)&&P.demand==='frail')opt(R,'“Bag of bones” – collar & cuff, early movement','ind','Frail, very low-demand patient unfit for surgery.');
+  if(elderly&&(f.type==='C3'||f.low)&&P.osteo)opt(R,'Total elbow arthroplasty','ind','Elderly osteoporotic comminuted or very low fracture: more reliable than fixation.',['Immediate movement'],['Lifelong 5 kg lifting limit','Loosening, infection']);
+  opt(R,'Open reduction and dual (parallel or orthogonal) plating','ind','Standard for displaced intra-articular fractures – aim for stable fixation that allows early movement.',['Anatomical joint'],['Stiffness, ulnar neuritis, heterotopic ossification']);
+  R.timing.push('Within 1–7 days; splint in extension-ish with elevation meanwhile.');
+  R.approach.push(f.type==='A'?'Paratricipital (triceps-sparing) or triceps-split':'Olecranon chevron osteotomy for articular (C) fractures; triceps-reflecting or paratricipital alternatives','Identify and protect (± transpose) the ulnar nerve');
+  R.implant.push('Pre-contoured 3.5 mm medial + posterolateral (orthogonal) or medial + lateral (parallel) locking plates','Headless compression screws for capitellum / trochlea shear fractures','Semi-constrained total elbow arthroplasty');
+  R.fu.push('Active movement from day 1–3 (stiffness is the main enemy)','X-rays at 2, 6, 12 weeks','Watch ulnar nerve function');R.comp.push('Stiffness','Ulnar neuropathy','Heterotopic ossification','Osteotomy non-union');
+  R.img.push('AP and lateral; traction views help','CT with 3D reconstruction for all articular fractures')}});
+
+defFx({id:'scond',reg:'upper',name:'Supracondylar humerus (child)',ao:'Gartland',meas:['baumann','angle'],
+ fields:[{k:'gart',l:'Gartland type (extension)',t:'sel',o:[['I','I – undisplaced'],['IIa','IIa – posterior cortex intact, no rotation'],['IIb','IIb – posterior hinge, with rotation / translation'],['III','III – completely displaced'],['IV','IV – multidirectionally unstable'],['flex','Flexion type']]},
+  {k:'ahl',l:'Anterior humeral line misses the capitellum',t:'chk'},{k:'baum',l:'Baumann angle difference to other side',t:'num',u:'°'},
+  {k:'pulse',l:'Hand perfusion',t:'sel',o:[['ok','Normal pulse'],['pink','Pink, pulseless'],['white','White / cold, pulseless']]},
+  {k:'ain',l:'Nerve injury (AIN / radial / ulnar)',t:'chk'},{k:'medcom',l:'Medial column comminution',t:'chk'}],
+ decide(f,P,R){R.cls.push('Gartland '+f.gart);const disp=['IIb','III','IV','flex'].includes(f.gart)||(f.gart==='IIa'&&f.ahl)||f.medcom;
+  if(f.pulse==='white'){opt(R,'Emergency closed reduction and pinning','ind','Ischaemic hand: reduce immediately; if still white / no flow after reduction → explore the brachial artery.');R.timing.push('EMERGENCY – theatre now.')}
+  else if(f.pulse==='pink'){opt(R,'Urgent closed reduction and percutaneous pinning','ind','Pink pulseless hand: reduce and pin; then observe closely for 24–48 h (pulse often returns).');R.timing.push('Urgent – same night.')}
+  if(f.gart==='I'||(f.gart==='IIa'&&!f.ahl&&!f.medcom))opt(R,'Above-elbow cast at ~90° for 3 weeks','ind','Stable: anterior humeral line through the capitellum, no rotation.');
+  else if(disp&&f.pulse==='ok')opt(R,'Closed reduction and percutaneous K-wire pinning','ind','Displaced / unstable fracture.',['Two or three divergent lateral wires are usually enough'],['Medial wire risks the ulnar nerve – use a mini-open technique with elbow < 90°']);
+  if(f.gart==='III'||f.gart==='IV')opt(R,'Open reduction','consider','If closed reduction fails (interposed brachialis / neurovascular bundle; puckered skin).');
+  if(f.pulse==='ok'&&disp)R.timing.push('No neurovascular compromise: next available daytime list is acceptable (within ~12–24 h), keeping the arm elevated and checking circulation.');
+  if(f.ain)R.notes.push('Nerve palsies (AIN commonest in extension type, ulnar in flexion type) usually recover in 3–6 months.');
+  const b=num(f.baum);if(b!=null)accept(R,'Baumann angle difference',b,'°',b<=5,'≤ 5° (avoids cubitus varus)');
+  R.approach.push('Closed reduction: traction, correct medial/lateral, flex with pressure on the olecranon, pronate','Open: anterior approach (or lateral / medial) if needed');
+  R.implant.push('1.6–2.0 mm K-wires: 2–3 lateral divergent; crossed if unstable (ulnar nerve protected)');
+  R.fu.push('Above-elbow backslab 3–4 weeks; wires removed in clinic at 3–4 weeks','Check X-rays at 1 week for loss of reduction','Compartment syndrome check the first night','Movement returns over months; no physiotherapy usually needed');
+  R.comp.push('Cubitus varus (malreduction)','Compartment syndrome / Volkmann','Nerve palsy','Pin-site infection');R.img.push('AP and true lateral (anterior humeral line, Baumann angle); compare with the other side if unsure')}});
+
+defFx({id:'olec',reg:'upper',name:'Olecranon',ao:'Mayo',meas:['len'],
+ fields:[{k:'mayo',l:'Mayo type',t:'sel',o:[['I','I – undisplaced'],['IIA','IIA – displaced, stable, non-comminuted'],['IIB','IIB – displaced, stable, comminuted'],['III','III – unstable (with dislocation)']]},
+  {k:'gap',l:'Displacement / gap',t:'num',u:'mm',m:'dist'},{k:'obl',l:'Oblique fracture distal to the coronoid midpoint',t:'chk'}],
+ decide(f,P,R){R.cls.push('Mayo '+f.mayo);const g=num(f.gap);if(g!=null)accept(R,'Displacement',g,'mm',g<2,'< 2 mm');
+  if(f.mayo==='I')opt(R,'Splint 1–2 weeks then active movement','ind','Undisplaced, intact extensor mechanism.');
+  else{if(old(P,75)&&lowDemand(P))opt(R,'Non-operative – sling, early movement','ind','Elderly low-demand: function is good despite displacement and fibrous union.');
+    if(f.mayo==='IIA'&&!f.obl)opt(R,'Tension-band wiring','ind','Simple transverse fracture.',['Cheap, effective'],['Prominent wires – removal often needed']);
+    else opt(R,'Plate fixation (pre-contoured posterior plate)','ind',f.mayo==='III'?'Unstable fracture–dislocation: restore the trochlear notch and treat associated injuries.':'Comminuted or oblique fracture – tension band is not appropriate.')}
+  R.timing.push('Within 1 week; urgent if open or dislocated.');R.approach.push('Posterior approach (ulnar nerve medially)');R.implant.push('K-wires + tension-band wire','Pre-contoured olecranon locking plate','Fragment excision + triceps advancement (small comminuted proximal fragments in the elderly)');
+  R.fu.push('Active movement within 1–2 weeks after stable fixation','X-rays at 2 and 6 weeks');R.comp.push('Prominent hardware','Stiffness','Ulnar neuritis');R.img.push('True lateral elbow; CT if comminuted')}});
+
+defFx({id:'rhead',reg:'upper',name:'Radial head',ao:'Mason (Johnston / Hotchkiss)',meas:['len'],
+ fields:[{k:'mason',l:'Mason type',t:'sel',o:[['I','I – undisplaced (< 2 mm)'],['II','II – displaced partial head (> 2 mm)'],['III','III – comminuted whole head'],['IV','IV – with elbow dislocation']]},
+  {k:'block',l:'Mechanical block to rotation (after aspiration / local)',t:'chk'},{k:'frags',l:'Fragments',t:'seg',o:[['1','1–2'],['3','3'],['4','> 3']]},
+  {k:'triad',l:'Coronoid fracture + dislocation (terrible triad)',t:'chk'},{k:'essex',l:'Wrist pain / DRUJ (Essex-Lopresti)',t:'chk'}],
+ decide(f,P,R){R.cls.push('Mason '+f.mason+(f.triad?' – terrible triad':''));
+  if(f.mason==='I')opt(R,'Sling 2–3 days, early active movement','ind','Undisplaced: excellent outcome.');
+  if(f.mason==='II')opt(R,f.block?'ORIF with screws / small plate in the safe zone':'Early movement (non-operative)','ind',f.block?'Mechanical block to rotation.':'No block: non-operative results are as good as fixation.');
+  if(f.mason==='III'||f.mason==='IV'){if(f.frags!=='4')opt(R,'ORIF','consider','≤ 3 large fragments and good bone.');opt(R,'Radial head arthroplasty','ind','Comminuted (> 3 fragments) or unstable elbow – the radial head is an important stabiliser; do not excise in an unstable elbow.',[],['Overstuffing – check lateral ulnohumeral joint space'])}
+  if(f.triad)R.notes.push('Terrible triad: fix/replace the radial head, fix the coronoid (or anterior capsule), repair the LCL; add MCL repair or hinged external fixator if still unstable.');
+  if(f.essex)R.notes.push('Essex-Lopresti injury: never excise the radial head – fix or replace, assess the DRUJ and interosseous membrane.');
+  R.timing.push('Non-operative: movement now. Surgery within 1–2 weeks (urgent if dislocated / unstable).');R.approach.push('Kocher (anconeus–ECU) or EDC-split lateral approach; forearm pronated to protect the PIN');R.implant.push('Headless compression screws / mini-plate in the safe zone','Modular metal radial head arthroplasty');
+  R.fu.push('Active movement from day 1–3','X-rays at 1, 2 and 6 weeks');R.comp.push('Stiffness','PIN injury','Instability if under-treated');R.img.push('AP, lateral and radiocapitellar views; CT for comminuted / associated injuries')}});
+
+defFx({id:'forearm',reg:'upper',name:'Forearm shaft (both bone / Monteggia / Galeazzi)',ao:'AO/OTA 2R2 / 2U2',meas:['angle','len'],
+ fields:[{k:'pat',l:'Pattern',t:'sel',o:[['both','Both-bone fracture'],['ulna','Isolated ulna (nightstick)'],['radius','Isolated radius'],['monteggia','Monteggia (ulna + radial head dislocation)'],['galeazzi','Galeazzi (radius + DRUJ disruption)']]},
+  {k:'ang',l:'Angulation',t:'num',u:'°',m:'angle'},{k:'disp50',l:'Displacement > 50 % of the shaft width',t:'chk'}],
+ decide(f,P,R){const a=num(f.ang);R.cls.push({both:'Both-bone forearm fracture',ulna:'Isolated ulnar shaft',radius:'Isolated radial shaft',monteggia:'Monteggia (Bado classification by radial head direction)',galeazzi:'Galeazzi'}[f.pat]);
+  if(a!=null)accept(R,'Angulation',a,'°',P.child?a<=15:a<=10,P.child?'≤ 10–15° (age-dependent)':'≤ 10°');
+  if(P.child){opt(R,'Closed reduction and above-elbow cast','ind','Children remodel well; accept angulation per age.');opt(R,'Elastic stable intramedullary nails','consider','Unstable, older child, or unacceptable alignment.');if(f.pat==='monteggia')R.notes.push('Paediatric Monteggia: reduce the ulna (length + alignment) and the radial head reduces; plate if unstable.')}
+  else if(f.pat==='ulna'&&!f.disp50&&(a==null||a<=10))opt(R,'Functional brace / short splint','ind','Isolated ulna with < 50 % displacement and < 10° angulation.');
+  else opt(R,'ORIF with compression plates','ind',f.pat==='monteggia'?'Anatomical ulnar fixation reduces the radial head; check radiocapitellar line.':f.pat==='galeazzi'?'Anatomical radius fixation, then assess DRUJ stability; pin in supination if unstable.':'Adult forearm fractures need anatomical length, alignment and radial bow for rotation.',['Restores rotation'],['Refracture after plate removal; synostosis']);
+  R.timing.push('Within 24 h if open; otherwise within the first week.');R.approach.push('Radius: volar Henry (distal/middle) or dorsal Thompson (proximal)','Ulna: subcutaneous border between ECU and FCU','Separate incisions to reduce synostosis');
+  R.implant.push('3.5 mm compression plates (LC-DCP), ≥ 6 cortices each side','Elastic nails in children');R.fu.push('Early wrist/elbow movement after stable fixation','X-rays at 2, 6, 12 weeks','Avoid contact sport 3 months; plate removal not routine');
+  R.comp.push('Non-union','Synostosis','Compartment syndrome','PIN / AIN injury','Refracture');R.img.push('AP and lateral of the whole forearm including elbow and wrist')}});
+
+defFx({id:'drad',reg:'upper',name:'Distal radius',ao:'AO/OTA 2R3 · Frykman',meas:['dr_ap','dr_lat'],
+ fields:[{k:'ao',l:'AO type',t:'sel',o:[['A','A – extra-articular'],['B','B – partial articular (Barton / radial styloid / die-punch)'],['C','C – complete articular']]},
+  {k:'dir',l:'Displacement',t:'seg',o:[['dorsal','Dorsal (Colles)'],['volar','Volar (Smith)'],['none','Minimal']]},
+  {k:'tilt',l:'Volar tilt (+) / dorsal tilt (−)',t:'num',u:'°',m:'tilt'},{k:'incl',l:'Radial inclination',t:'num',u:'°',m:'incl'},{k:'rheight',l:'Radial height',t:'num',u:'mm',m:'rheight'},
+  {k:'uv',l:'Ulnar variance (+ = ulna longer)',t:'num',u:'mm',m:'uv'},{k:'step',l:'Articular step-off',t:'num',u:'mm'},
+  {k:'dcomm',l:'Dorsal metaphyseal comminution',t:'chk'},{k:'ulnar',l:'Ulnar styloid base / neck fracture',t:'chk'},{k:'postred',l:'Values are after reduction',t:'chk'}],
+ decide(f,P,R){const t=num(f.tilt),inc=num(f.incl),h=num(f.rheight),uv=num(f.uv),st=num(f.step);
+  R.cls.push(`AO 2R3-${f.ao}, ${({dorsal:'dorsally displaced (Colles type)',volar:'volarly displaced (Smith type)',none:'minimally displaced'})[f.dir]}`);
+  if(t!=null)accept(R,'Tilt',t,'°',t>=-10&&t<=20,'dorsal tilt ≤ 10° (normal volar ≈ 11°)');if(inc!=null)accept(R,'Radial inclination',inc,'°',inc>=15,'≥ 15° (normal ≈ 22°)');
+  if(h!=null)accept(R,'Radial height',h,'mm',h>=8,'shortening ≤ 3 mm (normal ≈ 11–12 mm)');if(uv!=null)accept(R,'Ulnar variance',uv,'mm',uv<=2,'≤ +2 mm / ≤ 3 mm vs other side');if(st!=null)accept(R,'Articular step-off',st,'mm',st<2,'< 2 mm');
+  const bad=(t!=null&&t<-10)||(st!=null&&st>=2)||(uv!=null&&uv>3)||(inc!=null&&inc<15)||f.dir==='volar'||f.ao==='B';
+  const lafon=[f.dcomm,t!=null&&t<-20,f.ao==='C',f.ulnar,old(P,60)].filter(Boolean).length;
+  if(lafon>=3)R.notes.push(`Lafontaine instability factors: ${lafon} – high risk of re-displacement in a cast.`);
+  if(old(P,65)&&(lowDemand(P)||P.demand==='mod')&&f.ao!=='B'){opt(R,'Closed reduction and cast (or splint)','ind','Over 65: functional results of non-operative care are similar to fixation for most fractures, despite worse X-ray alignment.');if(bad)opt(R,'Volar locking plate','consider','Active older patient with marked deformity, articular step or volar displacement.')}
+  else if(bad){opt(R,'Volar locking plate','ind',f.ao==='B'?'Shear (Barton) fractures are unstable and need buttress plating.':'Unacceptable alignment or articular step after reduction.',['Early movement'],['Tendon irritation / EPL or FPL rupture']);opt(R,'K-wires (± cast) / external fixator','consider','Extra-articular in children / young bone, or as temporary fixation in severe soft tissue injury.')}
+  else opt(R,'Closed reduction and below-elbow cast','ind','Acceptable alignment.'+(lafon>=3?' Re-check X-rays at 1 and 2 weeks – re-displacement likely.':''));
+  if(!f.postred&&f.dir!=='none')R.notes.push('Measure again after closed reduction – decisions are based on post-reduction alignment.');
+  R.timing.push('Reduce now under haematoma block; surgery within 1–2 weeks (before early union, ideally < 10 days).');R.approach.push('Volar FCR (modified Henry) approach – pronator quadratus elevated','Dorsal approach for dorsal shear / die-punch fragments');
+  R.implant.push('Volar locking plate (distal screws just short of the dorsal cortex; plate proximal to the watershed line)','K-wires (Kapandji / radial styloid)','Bridging external fixator or dorsal spanning plate for comminuted / polytrauma','Fragment-specific fixation');
+  R.fu.push('Cast 5–6 weeks (or splint 2 weeks after plating, then movement)','Finger movement immediately; elevation','X-rays at 1 and 2 weeks if non-operative (re-displacement), then at 6 weeks','Fragility fracture → bone health (DEXA, osteoporosis treatment)');
+  R.comp.push('Re-displacement / malunion','Median nerve compression / acute carpal tunnel','EPL rupture (after undisplaced fractures too)','CRPS','Tendon irritation from screws');R.img.push('PA and true lateral wrist','CT for intra-articular (AO C) fractures before fixation')}});
+
+defFx({id:'scaph',reg:'upper',name:'Scaphoid',ao:'Herbert / Russe',meas:['len','angle'],
+ fields:[{k:'site',l:'Location',t:'seg',o:[['tub','Tubercle / distal'],['waist','Waist'],['prox','Proximal pole']]},
+  {k:'disp',l:'Displacement',t:'num',u:'mm',m:'dist'},{k:'hump',l:'Humpback / intrascaphoid angle > 35°',t:'chk'},{k:'occult',l:'Clinically suspected, X-ray negative',t:'chk'},
+  {k:'weeks',l:'Weeks since injury',t:'num',u:'wk'},{k:'athlete',l:'Wants early return (athlete / manual)',t:'chk'}],
+ decide(f,P,R){const d=num(f.disp),w=num(f.weeks);R.cls.push((f.occult?'Suspected ':'')+{tub:'distal / tubercle',waist:'waist',prox:'proximal pole'}[f.site]+' scaphoid fracture');
+  if(d!=null)accept(R,'Displacement',d,'mm',d<=1,'≤ 1 mm');
+  if(f.occult){opt(R,'Splint and MRI (or CT) within ~1 week','ind','Do not cast everyone for weeks: MRI confirms or excludes fracture early.');R.img.push('MRI is most sensitive; CT if MRI unavailable')}
+  else if(f.site==='prox'||(d!=null&&d>1)||f.hump||(w!=null&&w>4))opt(R,'Headless compression screw fixation','ind',f.site==='prox'?'Proximal pole: high non-union and AVN risk.':'Displaced, humpback or late-presenting fracture.');
+  else{opt(R,'Below-elbow cast 6 (–8) weeks','ind','Undisplaced waist / distal fracture: thumb immobilisation not required.');if(f.athlete&&f.site==='waist')opt(R,'Percutaneous screw fixation','consider','Faster return to sport/work; similar union.')}
+  R.timing.push('Fix acute displaced fractures within 1–2 weeks.');R.approach.push('Waist: percutaneous volar (or dorsal) approach','Proximal pole: dorsal approach');R.implant.push('Headless compression screw along the central axis','Vascularised bone graft for non-union with AVN');
+  R.fu.push('CT at 6–8 weeks to confirm union before stopping immobilisation / returning to contact sport','Non-union risk: proximal pole, displacement, smoking, delayed treatment');R.comp.push('Non-union → SNAC wrist','AVN of the proximal pole');if(!f.occult)R.img.push('Scaphoid series (PA ulnar deviation, lateral, obliques); CT to assess displacement')}});
+
+/* ================= PELVIS, ACETABULUM, HIP ================= */
+defFx({id:'pelvis',reg:'axial',name:'Pelvic ring',ao:'Young–Burgess · Tile · FFP',meas:['len'],
+ fields:[{k:'yb',l:'Young–Burgess',t:'sel',o:[['APC1','APC I – symphysis < 2.5 cm'],['APC2','APC II – symphysis > 2.5 cm, anterior SI open'],['APC3','APC III – complete SI disruption'],['LC1','LC I – sacral buckle + rami'],['LC2','LC II – crescent fracture'],['LC3','LC III – windswept'],['VS','Vertical shear'],['CM','Combined mechanism']]},
+  {k:'haem',l:'Haemodynamically unstable',t:'chk'},{k:'sym',l:'Symphyseal diastasis',t:'num',u:'mm',m:'dist'},{k:'fragility',l:'Elderly low-energy fragility fracture (FFP)',t:'chk'},
+  {k:'mobil',l:'Unable to mobilise after 3–5 days of analgesia',t:'chk'},{k:'uro',l:'Urethral / bladder injury',t:'chk'}],
+ decide(f,P,R){R.cls.push('Young–Burgess '+f.yb+' – Tile '+({APC1:'A',APC2:'B1',APC3:'C',LC1:'B2 (stable if minimally displaced)',LC2:'B2',LC3:'B3',VS:'C',CM:'C'})[f.yb]);
+  if(f.haem){opt(R,'Resuscitation: pelvic binder at the greater trochanters, massive transfusion protocol','ind','ATLS: then pre-peritoneal packing and/or angioembolisation; anterior external fixator / C-clamp.');R.timing.push('Immediate – binder in the field / ED; do not remove until mechanically stabilised.')}
+  const unst=['APC2','APC3','LC2','LC3','VS','CM'].includes(f.yb);
+  if(f.fragility){const fail=f.mobil;opt(R,'Mobilise as pain allows with analgesia',fail?'consider':'ind','FFP I–II usually heal; check the posterior ring on CT.');opt(R,'Percutaneous sacroiliac / transsacral screws (± anterior fixation)',fail?'ind':'consider',fail?'Failure to mobilise after a few days of adequate analgesia – fixation restores mobility and avoids complications of bed rest.':'FFP III–IV, progressive displacement or failure to mobilise.');if(fail)R.img.push('CT pelvis (± MRI) to detect occult posterior ring / sacral fractures');R.notes.push('Fragility pelvis: treat osteoporosis; re-image if pain persists (progression to FFP III/IV).')}
+  else if(f.yb==='APC1'||f.yb==='LC1'){opt(R,'Weight bearing as tolerated','ind','Stable injury.');if(f.mobil)opt(R,'Fixation (e.g. iliosacral screw)','consider','Persistent pain preventing mobilisation; examination under anaesthesia may reveal instability.')}
+  else{const post=['APC3','VS','CM','LC3','LC2'].includes(f.yb);opt(R,'Anterior fixation (symphyseal plate / ramus screws / INFIX / ex-fix)','ind','Rotationally unstable ring.');if(post)opt(R,'Posterior fixation (iliosacral / transsacral screws or plates)','ind','Posterior ring disruption – vertically / completely unstable.')}
+  if(f.uro)R.notes.push('Urethral injury: suprapubic catheter (not transurethral); coordinate with urology; symphyseal plating soon after repair.');
+  R.timing.push('Definitive fixation when physiologically stable (typically day 2–5).');R.approach.push('Pfannenstiel / modified Stoppa for symphysis and anterior ring','Percutaneous iliosacral / transsacral screws under fluoroscopy (requires good sacral imaging)','Posterior approach for sacral fractures / SI dislocation if closed reduction fails');
+  R.implant.push('Symphyseal 3.5 mm plate','Cannulated 7.0–7.3 mm iliosacral / transsacral screws','Supra-acetabular external fixator / INFIX','Lumbopelvic fixation for unstable sacral U-type');
+  R.fu.push('Touch / partial weight-bearing on the injured side 6–8 weeks after posterior fixation','X-rays (AP, inlet, outlet) at 2, 6, 12 weeks','VTE prophylaxis');R.comp.push('Haemorrhage','VTE','Loss of fixation','Sexual / urinary dysfunction','L5 nerve injury (screws)');
+  R.img.push('AP pelvis (+ inlet/outlet views)','CT pelvis with reconstructions for all ring injuries')}});
+
+defFx({id:'acet',reg:'axial',name:'Acetabulum',ao:'Letournel–Judet',meas:['angle','len'],
+ fields:[{k:'let',l:'Letournel type',t:'sel',o:[['PW','Posterior wall'],['PC','Posterior column'],['AW','Anterior wall'],['AC','Anterior column'],['T','Transverse'],['PCPW','Posterior column + wall'],['TPW','Transverse + posterior wall'],['TT','T-type'],['ACPHT','Anterior column + posterior hemitransverse'],['BC','Both column']]},
+  {k:'gap',l:'Displacement in the weight-bearing dome',t:'num',u:'mm',m:'dist'},{k:'roof',l:'Roof arc angles all > 45° (dome intact)',t:'chk'},
+  {k:'pwsize',l:'Posterior wall size > 40–50 % (CT)',t:'chk',show:f=>['PW','PCPW','TPW'].includes(f.let)},{k:'disl',l:'Hip dislocation',t:'chk'},
+  {k:'impact',l:'Marginal impaction / femoral head damage',t:'chk'},{k:'gull',l:'Gull-wing sign (superomedial dome impaction)',t:'chk'},{k:'sciatic',l:'Sciatic nerve palsy',t:'chk'},{k:'sec',l:'Secondary congruence (both column)',t:'chk',show:f=>f.let==='BC'}],
+ decide(f,P,R){const g=num(f.gap);R.cls.push('Letournel '+f.let);if(g!=null)accept(R,'Dome displacement',g,'mm',g<2,'< 2 mm');
+  const nonop=(g!=null&&g<2&&f.roof&&!f.disl&&!f.pwsize)||(f.let==='BC'&&f.sec);
+  if(f.disl){opt(R,'Emergency closed reduction of the hip','ind','Reduce within 6 h to reduce AVN risk; skeletal traction if unstable after reduction.');R.timing.push('Hip dislocation: reduce within 6 hours.')}
+  if(old(P,65)&&(f.gull||f.impact)&&f.let!=='PW'){opt(R,'Acute total hip arthroplasty ± column fixation ("fix and replace")','ind','Elderly with dome impaction / head damage: high failure of ORIF alone.');opt(R,'ORIF','consider','If good bone and reconstructable joint.')}
+  else if(nonop||lowDemand(P)&&P.demand==='frail')opt(R,'Non-operative – protected weight-bearing','ind',nonop?'Dome intact (roof arc > 45°), displacement < 2 mm, stable, congruent hip.':'Unfit for major surgery.');
+  else opt(R,'Open reduction and internal fixation','ind','Displaced dome, unstable hip or incongruence – anatomical reduction is the main determinant of outcome.',[],['Heterotopic ossification (Kocher–Langenbeck)','Sciatic nerve injury']);
+  R.timing.push('Definitive fixation ideally within 5–10 days (by 2–3 weeks at most – reduction becomes much harder).');
+  R.approach.push(['PW','PC','PCPW','TPW'].includes(f.let)?'Kocher–Langenbeck (posterior), lateral decubitus or prone':['AW','AC','ACPHT','BC'].includes(f.let)?'Anterior intrapelvic (modified Stoppa) ± lateral window, or ilioinguinal':'Transverse / T-type: Kocher–Langenbeck ± anterior approach (based on displacement)');
+  R.implant.push('3.5 mm reconstruction plates, lag screws, spring plates for small wall fragments','Column screws (percutaneous for minimally displaced)','Acetabular cup with cage / augments for acute THA');
+  R.fu.push('Touch-down weight-bearing 6–12 weeks','HO prophylaxis (indomethacin or radiotherapy) after posterior approach – consider','VTE prophylaxis','X-rays at 2, 6, 12 weeks; long-term for post-traumatic arthritis / AVN');R.comp.push('Post-traumatic arthritis','AVN','Heterotopic ossification','Sciatic nerve palsy','VTE');
+  R.img.push('AP pelvis + Judet (iliac and obturator oblique) views','CT with 3D reconstructions (femoral head subtraction)')}});
+
+defFx({id:'neck',reg:'axial',name:'Femoral neck',ao:'Garden · Pauwels',meas:['pauwels','angle'],
+ fields:[{k:'garden',l:'Garden',t:'sel',o:[['I','I – incomplete / valgus impacted'],['II','II – complete, undisplaced'],['III','III – complete, partially displaced'],['IV','IV – completely displaced']]},
+  {k:'pauwels',l:'Pauwels angle',t:'num',u:'°',m:'pauwels'},{k:'ptilt',l:'Posterior tilt on lateral',t:'num',u:'°',m:'angle'},
+  {k:'walker',l:'Walks independently outdoors with ≤ 1 stick',t:'chk'},{k:'oa',l:'Pre-existing hip arthritis / inflammatory arthritis',t:'chk'}],
+ decide(f,P,R){const disp=['III','IV'].includes(f.garden);const pw=num(f.pauwels),pt=num(f.ptilt);
+  R.cls.push(`Garden ${f.garden} – ${disp?'displaced':'undisplaced'}`+(pw!=null?`; Pauwels ${pw<30?'I':pw<=50?'II':'III'} (${f0(pw)}°)`:''));
+  if(pt!=null)accept(R,'Posterior tilt',pt,'°',pt<=20,'≤ 20° for fixation of undisplaced fractures');
+  const yng=young(P,60)&&!lowDemand(P);
+  if(yng){opt(R,'Urgent anatomical reduction and internal fixation','ind','Young patient: preserve the head – reduction quality is key.',[],['AVN','Non-union (higher in vertical Pauwels III)']);
+    R.implant.push(pw!=null&&pw>50?'Pauwels III: sliding hip screw + anti-rotation screw, or femoral neck system (FNS)':'3 cannulated screws (inverted triangle) or femoral neck system');R.timing.push('Young displaced: urgent (as soon as safely possible, ideally < 12–24 h).')}
+  else if(!disp){if(pt!=null&&pt>20&&old(P,60))opt(R,'Hemiarthroplasty / THA','consider','Posterior tilt > 20° increases fixation failure in older patients.');
+    opt(R,'Internal fixation (cannulated screws or SHS)','ind','Undisplaced fracture in an older patient.');R.implant.push('3 parallel cannulated screws or sliding hip screw')}
+  else{const tha=f.walker&&!P.cog&&+P.asa<=2||f.oa&&!P.cog;
+    opt(R,'Total hip arthroplasty',tha?'ind':'consider','Displaced fracture in a patient who walks independently outdoors, is not cognitively impaired and is medically fit (NICE).');
+    opt(R,'Cemented hemiarthroplasty',tha?'consider':'ind','Displaced fracture in less mobile, cognitively impaired or less fit patients.');
+    R.implant.push('Cemented femoral stem (NICE), dual-mobility or standard THA','Cemented hemiarthroplasty (bipolar or unipolar)')}
+  if(!yng)R.timing.push('Surgery on the day of, or the day after, admission (NICE / BOAST) – correct reversible problems quickly, do not wait for DOAC washout beyond ≈ 24–48 h.');
+  R.approach.push('Fixation: lateral approach, closed reduction on traction table','Arthroplasty: lateral (Hardinge) or posterior approach (repair short external rotators)');
+  R.fu.push('Full weight-bearing as tolerated immediately after arthroplasty or fixation in the elderly','Orthogeriatric care, delirium prevention, falls and bone health assessment','X-rays at 6 weeks and 3 months after fixation; AVN can appear up to 2 years');R.comp.push('AVN, non-union (fixation)','Dislocation, periprosthetic fracture (arthroplasty)','Delirium, VTE, pneumonia; 30-day mortality ≈ 6–7 %');
+  R.img.push('AP pelvis + lateral hip','MRI (or CT) if suspected but X-ray negative')}});
+
+defFx({id:'troch',reg:'axial',name:'Intertrochanteric',ao:'AO/OTA 31A',meas:['tad_ap','tad_lat','angle'],
+ fields:[{k:'ao',l:'AO type',t:'sel',o:[['A1','A1 – simple pertrochanteric (stable)'],['A2','A2 – multifragmentary, lateral wall thin'],['A3','A3 – intertrochanteric / reverse oblique']]},
+  {k:'lw',l:'Lateral wall thickness < 20.5 mm',t:'chk'},{k:'tad',l:'Tip–apex distance (post-op)',t:'num',u:'mm',m:'tad'}],
+ decide(f,P,R){R.cls.push('AO 31'+f.ao+(f.ao==='A1'?' – stable':' – unstable'));const t=num(f.tad);if(t!=null)accept(R,'Tip–apex distance',t,'mm',t<=25,'≤ 25 mm (no cut-outs in Baumgaertner)');
+  if(f.ao==='A1'&&!f.lw)opt(R,'Sliding hip screw','ind','Stable trochanteric fracture (NICE).');
+  else opt(R,'Cephalomedullary nail','ind',f.ao==='A3'?'Reverse oblique / transverse: a sliding hip screw fails (fragment medialises).':'Unstable / thin lateral wall: nail controls collapse.',[],['Cut-out if TAD > 25 mm or varus reduction']);
+  if(f.ao==='A2'&&!f.lw)opt(R,'Sliding hip screw','consider','NICE accepts SHS for A2 – many prefer a nail.');
+  R.timing.push('Surgery on the day of, or the day after, admission.');R.approach.push('Closed reduction on traction table; lateral approach (SHS) or percutaneous nail entry at the trochanteric tip');
+  R.implant.push('Sliding hip screw 135° ± trochanteric stabilising plate','Short or long cephalomedullary nail; lag screw / blade centre–centre or slightly inferior, TAD ≤ 25 mm');
+  R.fu.push('Full weight-bearing as tolerated','X-rays at 6 and 12 weeks','Bone health and falls assessment');R.comp.push('Cut-out','Excessive collapse / medialisation','Periprosthetic (nail tip) fracture');R.img.push('AP pelvis, lateral hip; CT if fracture pattern unclear')}});
+
+defFx({id:'subtroch',reg:'axial',name:'Subtrochanteric',ao:'AO/OTA 32 (proximal) · Russell–Taylor',meas:['angle','len'],
+ fields:[{k:'piri',l:'Extends into the piriformis fossa',t:'chk'},{k:'aff',l:'Atypical femoral fracture (bisphosphonate, transverse lateral cortex, beaking)',t:'chk'},{k:'comm',l:'Comminuted',t:'chk'}],
+ decide(f,P,R){R.cls.push('Subtrochanteric fracture'+(f.aff?' – atypical (bisphosphonate-associated)':'')+(f.piri?', piriformis extension':''));
+  opt(R,'Long cephalomedullary nail','ind','Strong deforming forces (flexion, abduction, external rotation of the proximal fragment) – avoid varus; open/clamp-assisted reduction if needed.',[],['Varus malreduction → non-union']);
+  if(f.piri)opt(R,'Proximal femoral locking plate','consider','If the entry point is compromised.');
+  if(f.aff)R.notes.push('Atypical femoral fracture: stop bisphosphonate, image the other femur (prophylactic nail if prodromal pain / lucency), consider teriparatide; slow healing.');
+  R.timing.push('Within 24–36 h.');R.approach.push('Trochanteric / piriformis entry; percutaneous or open clamp reduction');R.implant.push('Long cephalomedullary nail (reconstruction mode)');
+  R.fu.push('Weight-bearing as tolerated (protected if comminuted / open reduction)','X-rays at 6, 12 weeks; union often slow');R.comp.push('Non-union / implant failure','Varus malunion');R.img.push('AP pelvis and full-length femur')}});
+
+/* ================= SPINE ================= */
+defFx({id:'odont',reg:'spine',name:'Odontoid (dens)',ao:'Anderson–D’Alonzo · Grauer',meas:['len','angle'],
+ fields:[{k:'type',l:'Type',t:'sel',o:[['I','I – tip avulsion'],['IIA','II A – undisplaced, transverse'],['IIB','II B – displaced, anterosuperior → posteroinferior line'],['IIC','II C – anteroinferior → posterosuperior line or comminuted'],['III','III – into the C2 body']]},
+  {k:'disp',l:'Displacement',t:'num',u:'mm',m:'dist'},{k:'neuro',l:'Neurological deficit',t:'chk'}],
+ decide(f,P,R){const d=num(f.disp);R.cls.push('Anderson–D’Alonzo '+f.type);if(d!=null)accept(R,'Displacement',d,'mm',d<5,'< 5 mm');const elder=old(P,65);
+  if(f.type==='I'||f.type==='III')opt(R,'Rigid collar (8–12 weeks)','ind','Type I and III usually unite (exclude occipitocervical instability in type I).');
+  else{const hi=(d!=null&&d>=5)||f.neuro||f.type==='IIC';
+    if(elder&&lowDemand(P))opt(R,'Rigid collar','ind','Frail elderly: stable fibrous union is common and acceptable; halo poorly tolerated.');
+    if(f.type==='IIB'&&!P.osteo)opt(R,'Anterior odontoid screw','ind','Fracture line suited to lag screw, good bone, reducible.',['Preserves C1–C2 rotation'],['Dysphagia in elderly']);
+    if(f.type==='IIC'||P.osteo||(hi&&f.type!=='IIB'))opt(R,'Posterior C1–C2 fusion (Harms / Magerl)','ind','Comminuted / unfavourable obliquity, poor bone or irreducible.',['High fusion rate'],['Loss of ≈ 50 % neck rotation','Vertebral artery risk']);
+    if(f.type==='IIA'&&!elder)opt(R,'Rigid collar or halo','consider','Undisplaced in younger patients; non-union risk rises with age > 50, displacement > 5 mm, delay.')}
+  R.timing.push('Collar immediately; surgery electively within days when indicated.');R.approach.push('Anterior (submandibular) for odontoid screw','Posterior midline for C1–C2 fixation');R.implant.push('Cannulated lag screw(s)','C1 lateral mass + C2 pars / pedicle screws with rods, or transarticular screws');
+  R.fu.push('Upright X-rays at 2, 6, 12 weeks; flexion–extension views at 3 months','CT if union uncertain');R.comp.push('Non-union','Dysphagia (elderly, anterior screw)');R.img.push('CT cervical spine (C1–C2); MRI if neurological signs; CT angiography if transverse foramen involved')}});
+
+defFx({id:'cspine',reg:'spine',name:'Subaxial cervical spine (C3–C7)',ao:'SLIC · AOSpine',meas:['kyph','len'],
+ fields:[{k:'morph',l:'Morphology',t:'sel',o:[['0','None'],['1','Compression'],['2','Burst'],['3','Distraction (facet perch, hyperextension)'],['4','Rotation / translation (facet dislocation, fracture-dislocation)']]},
+  {k:'dlc',l:'Disco-ligamentous complex',t:'seg',o:[['0','Intact'],['1','Indeterminate'],['2','Disrupted']]},
+  {k:'neuro',l:'Neurology',t:'sel',o:[['0','Intact'],['1','Root injury'],['2','Complete cord injury'],['3','Incomplete cord injury']]},
+  {k:'comp',l:'Continuous cord compression with deficit (+1)',t:'chk'}],
+ decide(f,P,R){const sc=+f.morph+ +f.dlc+ +f.neuro+(f.comp&&+f.neuro>0?1:0);R.cls.push(`SLIC ${sc} (morphology ${f.morph}, DLC ${f.dlc}, neurology ${f.neuro}${f.comp?', +1 compression':''})`);
+  accept(R,'SLIC score',sc,'',sc<=3,'≤ 3 non-operative · 4 either · ≥ 5 surgery');
+  if(sc<=3)opt(R,'Rigid collar','ind','SLIC ≤ 3.');else if(sc===4)opt(R,'Collar or surgery','consider','SLIC 4: individual decision (e.g. central cord syndrome).');
+  if(sc>=4)opt(R,f.morph==='4'?'Posterior or combined anterior–posterior stabilisation':'Anterior decompression and fusion (ACDF / corpectomy)',sc>=5?'ind':'consider','Algorithm: burst/compression and distraction → usually anterior; translation/rotation → posterior or combined (Dvorak 2007).');
+  if(+f.neuro>=2){R.notes.push('Spinal cord injury: early decompression (≤ 24 h) is suggested regardless of level (AOSpine 2017); keep MAP ≥ 85 mmHg for 5–7 days.');R.timing.push('Cord injury: decompression within 24 h.')}
+  if(f.morph==='4')R.notes.push('Facet dislocation: awake, cooperative patient → closed traction reduction is acceptable; obtunded / failed reduction → MRI first to exclude a disc herniation.');
+  R.timing.push('Without deficit: early surgery (within days) when indicated.');R.approach.push('Anterior Smith–Robinson','Posterior midline (lateral mass screws)');R.implant.push('Anterior cage/graft + plate','Posterior lateral mass / pedicle screws and rods');
+  R.fu.push('Collar 6–12 weeks','Upright X-rays at 2, 6, 12 weeks; flexion–extension at 3 months for ligamentous injuries');R.comp.push('Neurological deterioration','Dysphagia','Adjacent instability');R.img.push('CT cervical spine; MRI for neurological deficit, DLC assessment or before reducing an obtunded patient')}});
+
+defFx({id:'tlspine',reg:'spine',name:'Thoracolumbar spine',ao:'TLICS · AOSpine TL',meas:['kyph'],
+ fields:[{k:'morph',l:'Morphology',t:'sel',o:[['1','Compression (AO A1/A2)'],['2','Burst (AO A3/A4)'],['3','Translation / rotation (AO C)'],['4','Distraction (AO B)']]},
+  {k:'plc',l:'Posterior ligamentous complex',t:'seg',o:[['0','Intact'],['2','Indeterminate'],['3','Injured']]},
+  {k:'neuro',l:'Neurology',t:'sel',o:[['0','Intact'],['2','Nerve root'],['2c','Complete cord / conus'],['3i','Incomplete cord / conus'],['3ce','Cauda equina']]},
+  {k:'kyph',l:'Segmental kyphosis',t:'num',u:'°',m:'kyph'},{k:'ahl',l:'Anterior height loss',t:'num',u:'%',m:'ahl'},{k:'canal',l:'Canal compromise',t:'num',u:'%'},
+  {k:'osteo',l:'Osteoporotic low-energy fracture',t:'chk'},{k:'as',l:'Ankylosed spine (AS / DISH)',t:'chk'}],
+ decide(f,P,R){const nv={'0':0,'2':2,'2c':2,'3i':3,'3ce':3}[f.neuro];const sc=+f.morph+ +f.plc+nv;const k=num(f.kyph),a=num(f.ahl);
+  R.cls.push(`TLICS ${sc} (morphology ${f.morph}, PLC ${f.plc}, neurology ${nv})`);accept(R,'TLICS',sc,'',sc<=3,'≤ 3 non-operative · 4 either · ≥ 5 surgery');
+  if(k!=null)accept(R,'Segmental kyphosis',k,'°',k<25,'< 25–30°');if(a!=null)accept(R,'Anterior height loss',a,'%',a<50,'< 50 %');
+  if(f.as){opt(R,'Long posterior instrumentation (≥ 2–3 levels above and below)','ind','Ankylosed spine fractures behave like long-bone fractures – highly unstable, often missed; MRI/CT whole spine.');}
+  else if(f.osteo&&sc<=3){opt(R,'Analgesia, early mobilisation ± brace; osteoporosis treatment','ind','Osteoporotic compression fracture.');opt(R,'Vertebral augmentation (kypho/vertebroplasty)','consider','Persistent severe pain after a trial of conservative care (evidence mixed).');}
+  else if(sc<=3){opt(R,'Early mobilisation – brace optional','ind',f.morph==='2'?'Neurologically intact burst, PLC intact: no brace is equivalent to TLSO (Bailey 2014).':'Stable injury.');}
+  else{opt(R,'Posterior instrumented stabilisation',sc>=5?'ind':'consider',sc>=5?'TLICS ≥ 5.':'TLICS 4 – individual decision.',['Percutaneous short-segment in neurologically intact'],[]);
+    if(nv===3)opt(R,'Decompression (posterior or anterior) ± anterior column reconstruction','ind','Incomplete deficit with canal compromise.')}
+  if(nv>=2)R.timing.push('Neurological deficit: decompression and stabilisation within 24 h.');R.timing.push('Unstable injury without deficit: within 24–72 h.');
+  R.approach.push('Posterior midline or percutaneous pedicle screws','Anterior (thoracotomy / retroperitoneal) for corpectomy and reconstruction');R.implant.push('Short-segment (1 above/1 below, + index screws) or long-segment pedicle screw–rod constructs','Expandable cage for anterior column','PMMA cement augmentation in osteoporotic bone');
+  R.fu.push('Upright X-rays before mobilising and at 6, 12 weeks (kyphosis progression)','Return to light work 6–12 weeks');R.comp.push('Progressive kyphosis','Neurological deterioration','Implant failure');R.img.push('CT of the injured region (whole spine if high energy)','MRI for neurology or to assess the PLC')}});
+
+/* ================= LOWER LIMB ================= */
+defFx({id:'fshaft',reg:'lower',name:'Femoral shaft',ao:'AO/OTA 32 · Winquist',meas:['angle','len'],
+ fields:[{k:'pat',l:'AO pattern',t:'sel',o:[['A','A – simple'],['B','B – wedge'],['C','C – multifragmentary / segmental']]},
+  {k:'ipsineck',l:'Ipsilateral femoral neck fracture (check CT)',t:'chk'},{k:'floatk',l:'Floating knee (ipsilateral tibia)',t:'chk'}],
+ decide(f,P,R){R.cls.push('AO 32-'+f.pat);const age=P.age;
+  if(P.child&&age!=null){if(age<0.5)opt(R,'Pavlik harness','ind','Infant.');else if(age<6)opt(R,'Hip spica cast','ind','Under 5–6 years: early spica.');else if(age<=11)opt(R,'Elastic stable intramedullary nails','ind','5–11 years, length-stable pattern, weight < 45–50 kg.');else opt(R,'Rigid lateral-entry nail or submuscular plate','ind','Adolescent or heavy child (avoid piriformis entry – AVN risk).')}
+  else{if(P.poly==='unstable'||P.poly==='border')opt(R,'Damage-control external fixation, nail at day 4–14','ind','Unstable / borderline polytrauma: avoid the “second hit” of reaming.');
+    opt(R,'Reamed antegrade (or retrograde) intramedullary nail',P.poly==='unstable'?'consider':'ind','Gold standard: union > 95 %, early mobilisation; fix within 24 h in stable patients (early total care reduces pulmonary complications).',[],['Fat embolism','Malrotation – check against the other side']);
+    if(f.ipsineck)R.notes.push('Ipsilateral neck fracture: fix the neck first (screws / SHS) then the shaft (retrograde nail or plate) – neck takes priority.');if(f.floatk)R.notes.push('Floating knee: retrograde femoral nail + tibial nail through one knee incision.')}
+  R.timing.push('Stable patient: within 24 h. Skin/Thomas splint traction until then.');R.approach.push('Antegrade: piriformis or trochanteric entry','Retrograde: intercondylar notch entry (useful in obesity, pregnancy, floating knee, bilateral)');R.implant.push('Locked reamed IM nail (static locking)','Submuscular bridge plate if nailing is impossible');
+  R.fu.push('Weight-bearing as tolerated (length-stable) or protected (comminuted)','X-rays at 2, 6, 12 weeks; union ≈ 3–6 months','Check rotation clinically / CT if in doubt');R.comp.push('Fat embolism','Malrotation','Non-union','Infection','Pudendal nerve (traction)');R.img.push('AP/lateral femur incl. hip and knee; CT femoral neck in high-energy trauma')}});
+
+defFx({id:'dfem',reg:'lower',name:'Distal femur',ao:'AO/OTA 33',meas:['angle','len'],
+ fields:[{k:'type',l:'AO type',t:'sel',o:[['A','A – extra-articular'],['B','B – partial articular (unicondylar, Hoffa)'],['C','C – complete articular']]},{k:'peri',l:'Above a knee replacement',t:'chk'},{k:'low',l:'Very distal / short distal segment',t:'chk'}],
+ decide(f,P,R){R.cls.push('AO 33-'+f.type+(f.peri||P.peri?' – periprosthetic':''));const elderly=old(P,70);
+  if(lowDemand(P)&&P.demand==='frail')opt(R,'Non-operative (brace / traction)','consider','Only for non-ambulant or unfit patients – high complication rate.');
+  if((f.peri||P.peri)&&elderly&&f.low)opt(R,'Distal femoral replacement','consider','Very distal / osteoporotic periprosthetic fracture or loose implant – immediate weight-bearing.');
+  if(f.type==='C'||f.type==='B')opt(R,'ORIF: articular reduction + lateral locking plate (± medial plate)','ind','Anatomical joint, then relative stability for the metaphysis.');
+  else{opt(R,'Retrograde intramedullary nail','ind','Extra-articular (or simple articular after lag screws); also through open-box knee replacements.');opt(R,'Lateral locking plate (bridging)','ind','Alternative – especially very distal or around implants.')}
+  if(elderly&&P.osteo)R.notes.push('Elderly osteoporotic: nail-plate combination or dual plating allows early full weight-bearing.');
+  R.timing.push('Within 24–48 h (elderly like a hip fracture); spanning ex-fix first if open / soft tissues poor.');R.approach.push('Lateral (sub-vastus) MIPO for A types','Lateral parapatellar / swashbuckler for C types','Posteromedial / posterolateral for Hoffa fragments');
+  R.implant.push('Distal femoral locking plate (long working length)','Retrograde nail','Medial plate augmentation','Distal femoral replacement');R.fu.push('Touch / partial weight-bearing 6–12 weeks (unless nail-plate / DFR)','Early knee movement','X-rays at 2, 6, 12 weeks');
+  R.comp.push('Non-union (stiff constructs)','Malalignment','Knee stiffness');R.img.push('AP / lateral knee and femur','CT for all intra-articular (Hoffa fractures are easily missed)')}});
+
+defFx({id:'pat',reg:'lower',name:'Patella',ao:'AO/OTA 34',meas:['len'],
+ fields:[{k:'type',l:'Pattern',t:'sel',o:[['trans','Transverse'],['comm','Comminuted / stellate'],['pole','Inferior pole'],['vert','Vertical'],['osteo','Osteochondral']]},
+  {k:'gap',l:'Fracture gap',t:'num',u:'mm',m:'dist'},{k:'step',l:'Articular step',t:'num',u:'mm'},{k:'slr',l:'Cannot straight-leg raise (extensor mechanism disrupted)',t:'chk'}],
+ decide(f,P,R){const g=num(f.gap),st=num(f.step);R.cls.push({trans:'Transverse',comm:'Comminuted',pole:'Inferior pole',vert:'Vertical',osteo:'Osteochondral'}[f.type]+' patellar fracture');
+  if(g!=null)accept(R,'Gap',g,'mm',g<3,'< 3 mm');if(st!=null)accept(R,'Articular step',st,'mm',st<2,'< 2 mm');
+  const op=f.slr||(g!=null&&g>=3)||(st!=null&&st>=2);
+  if(!op||f.type==='vert'&&!f.slr)opt(R,'Knee brace / cylinder cast in extension, full weight-bearing','ind','Intact extensor mechanism and minimal displacement.');
+  else if(f.type==='pole')opt(R,'Partial patellectomy + tendon reattachment, or basket plate','ind','Comminuted inferior pole.');
+  else opt(R,'ORIF','ind','Extensor mechanism disrupted or articular step / gap.',[],['Symptomatic hardware (common)']);
+  R.timing.push('Within 1–2 weeks (urgent if open).');R.approach.push('Longitudinal midline incision; repair retinacular tears');R.implant.push('Cannulated screws + tension band (anterior figure-of-eight)','Anterior fixed-angle / mesh plate for comminution','Suture / wire cerclage');
+  R.fu.push('Brace locked in extension for walking; range limits increased progressively (e.g. 0–30° → 90° by 6 weeks)','X-rays at 2 and 6 weeks');R.comp.push('Symptomatic hardware','Loss of fixation','Patellofemoral arthritis');R.img.push('AP, lateral and skyline views; CT for comminution')}});
+
+defFx({id:'plat',reg:'lower',name:'Tibial plateau',ao:'Schatzker · AO/OTA 41',meas:['plateau','angle'],
+ fields:[{k:'sch',l:'Schatzker',t:'sel',o:[['I','I – lateral split'],['II','II – lateral split-depression'],['III','III – pure lateral depression'],['IV','IV – medial plateau'],['V','V – bicondylar'],['VI','VI – with metaphyseal–diaphyseal dissociation']]},
+  {k:'step',l:'Articular step / depression',t:'num',u:'mm',m:'step'},{k:'widen',l:'Condylar widening',t:'num',u:'mm',m:'widen'},{k:'instab',l:'Varus / valgus instability > 10° in extension',t:'chk'},{k:'post',l:'Posterior (posteromedial / posterolateral) fragment',t:'chk'}],
+ decide(f,P,R){const st=num(f.step),w=num(f.widen);const hi=['IV','V','VI'].includes(f.sch);R.cls.push('Schatzker '+f.sch+(f.post?', posterior column involved':''));
+  if(st!=null)accept(R,'Articular step / depression',st,'mm',st<3,'< 2–3 mm');if(w!=null)accept(R,'Condylar widening',w,'mm',w<5,'< 5 mm');
+  const op=(st!=null&&st>=3)||(w!=null&&w>=5)||f.instab||hi;
+  if(!op)opt(R,'Hinged brace, early movement, touch weight-bearing','ind','Stable, minimally displaced.');
+  else{if(hi&&(P.energy==='high'||P.skin!=='ok')){opt(R,'Spanning external fixator now, ORIF when soft tissues allow','ind','High-energy / swollen: staged treatment lowers wound complications.');R.timing.push('Ex-fix within 24 h; definitive ORIF typically at 7–14 days (wrinkle sign).')}
+    opt(R,'ORIF with buttress / raft plating',hi&&P.skin!=='ok'?'consider':'ind','Restore articular surface, axis and stability.',[],['Infection','Post-traumatic arthritis']);
+    if(old(P,70)&&P.osteo&&f.sch==='VI')opt(R,'Primary total knee arthroplasty','consider','Elderly with pre-existing OA / severe osteoporotic comminution.');
+    if(f.sch==='VI')opt(R,'Circular (hybrid) external fixation','consider','Severe soft-tissue injury.')}
+  if(hi)R.notes.push('Schatzker IV–VI: high risk of compartment syndrome and popliteal / peroneal injury – serial checks.');R.notes.push('Look for meniscal (lateral) and ligament injuries; repair the meniscus at ORIF.');
+  if(!R.timing.length)R.timing.push('Within 1–2 weeks when skin allows.');
+  R.approach.push('Anterolateral (sub-meniscal arthrotomy) for lateral plateau','Posteromedial (Lobenhoffer / Galla) for medial and posteromedial fragments','Dual incisions (skin bridge ≥ 7 cm) for bicondylar');
+  R.implant.push('Lateral locking plate with subchondral raft screws','Medial / posteromedial buttress plate','Bone graft or substitute under elevated fragments','Percutaneous screws (Schatzker I–III, arthroscopic-assisted)');
+  R.fu.push('Early ROM (0–90° by 6 weeks); touch weight-bearing 8–12 weeks','X-rays at 2, 6, 12 weeks (watch subsidence)');R.comp.push('Compartment syndrome','Wound breakdown / infection','Subsidence','Arthritis, stiffness');R.img.push('AP / lateral knee','CT with reconstructions (essential for planning); MRI if ligament / meniscus injury suspected')}});
+
+defFx({id:'tshaft',reg:'lower',name:'Tibial shaft',ao:'AO/OTA 42',meas:['angle','len'],
+ fields:[{k:'pat',l:'AO pattern',t:'sel',o:[['A','A – simple'],['B','B – wedge'],['C','C – multifragmentary / segmental']]},
+  {k:'level',l:'Level',t:'seg',o:[['prox','Proximal third'],['mid','Middle'],['dist','Distal third']]},
+  {k:'ang',l:'Angulation (varus/valgus)',t:'num',u:'°',m:'angle'},{k:'shortn',l:'Shortening',t:'num',u:'mm',m:'dist'},{k:'fibula',l:'Fibula intact',t:'chk'}],
+ decide(f,P,R){const a=num(f.ang),s=num(f.shortn);R.cls.push(`AO 42-${f.pat}, ${({prox:'proximal',mid:'middle',dist:'distal'})[f.level]} third${P.open!=='no'?' – open Gustilo '+P.open:''}`);
+  if(a!=null)accept(R,'Angulation',a,'°',a<=5,'≤ 5° varus/valgus, ≤ 10° sagittal');if(s!=null)accept(R,'Shortening',s,'mm',s<=10,'≤ 1 cm');
+  const ok=(a==null||a<=5)&&(s==null||s<=10)&&P.open==='no'&&f.pat==='A'&&P.energy==='low';
+  if(P.child)opt(R,'Long-leg cast','ind','Most paediatric tibial fractures are treated in a cast; elastic nails if unstable.');
+  else{opt(R,'Reamed locked intramedullary nail','ind','Standard for displaced or unstable adult fractures (closed or open after debridement).',['Early weight-bearing'],['Anterior knee pain (infrapatellar)']);
+    if(ok)opt(R,'Long-leg cast → functional (Sarmiento) brace','consider','Low-energy, stable, acceptable alignment – needs close follow-up.');
+    if(f.level==='prox')R.notes.push('Proximal third: valgus and procurvatum malalignment is common – suprapatellar (semi-extended) nailing, blocking (Poller) screws or plate.');
+    if(f.level==='dist')R.notes.push('Distal third: consider fibular fixation / blocking screws for alignment; plate (MIPO) is an alternative.')}
+  if(f.fibula)R.notes.push('Intact fibula: risk of varus malunion and delayed union in non-operative care.');
+  R.timing.push((P.open==='no'?'Closed fracture: nail within 24–48 h':'After debridement, definitive nailing as soon as the wound allows (≤ 72 h with cover)')+'; monitor for compartment syndrome (leg pain out of proportion, pain on passive stretch).');
+  R.approach.push('Suprapatellar (semi-extended) or infrapatellar nail entry','MIPO medial plate for distal metaphyseal fractures');R.implant.push('Reamed locked tibial nail','Medial / anterolateral locking plate','External fixator (temporary or definitive circular frame)');
+  R.fu.push('Weight-bearing as tolerated after nailing of stable patterns','X-rays at 2, 6, 12 weeks; RUST / mRUST to judge union (≈ 4–6 months)','Dynamisation or exchange nailing for delayed union');R.comp.push('Compartment syndrome','Non-union (open, smokers)','Malalignment','Infection');R.img.push('Full-length AP / lateral tibia including knee and ankle')}});
+
+defFx({id:'pilon',reg:'lower',name:'Tibial pilon',ao:'AO/OTA 43 · Rüedi–Allgöwer',meas:['len','angle'],
+ fields:[{k:'ra',l:'Rüedi–Allgöwer',t:'sel',o:[['I','I – undisplaced articular'],['II','II – displaced articular, little comminution'],['III','III – comminuted / impacted']]},{k:'fib',l:'Fibula fractured',t:'chk'},{k:'step',l:'Articular step',t:'num',u:'mm'}],
+ decide(f,P,R){const st=num(f.step);R.cls.push('Rüedi–Allgöwer '+f.ra);if(st!=null)accept(R,'Articular step',st,'mm',st<2,'< 2 mm');
+  if(f.ra==='I'&&P.energy==='low')opt(R,'Cast / boot, non-weight-bearing','ind','Undisplaced.');
+  else{opt(R,'Staged: spanning external fixator (± fibular fixation) → CT → ORIF','ind','Soft tissues dictate timing; staged protocol reduces wound complications.');opt(R,'Definitive circular frame ± limited internal fixation','consider','Severe soft tissue injury or comminution.');if(lowDemand(P)||P.diab&&P.smoke)opt(R,'Ex-fix / hindfoot nail or primary arthrodesis','consider','Poor host.')}
+  R.timing.push('Span within 24 h; definitive fixation when wrinkles return (≈ 7–21 days).');R.approach.push('Anterolateral, anteromedial or posterolateral – choose by fragment location on CT; respect skin bridges ≥ 7 cm');R.implant.push('Anterior / anterolateral / medial pre-contoured distal tibial plates','Fibular plate (restores length)','Circular frame');
+  R.fu.push('Non-weight-bearing 8–12 weeks; early ankle movement','X-rays at 2, 6, 12 weeks');R.comp.push('Wound breakdown / infection','Post-traumatic arthritis','Malunion');R.img.push('AP / lateral / mortise ankle','CT after spanning ex-fix for planning')}});
+
+defFx({id:'ankle',reg:'lower',name:'Ankle (malleolar)',ao:'Weber · Lauge-Hansen · AO/OTA 44',meas:['ankle','len'],
+ fields:[{k:'weber',l:'Weber',t:'seg',o:[['A','A – below syndesmosis'],['B','B – at syndesmosis'],['C','C – above syndesmosis']]},
+  {k:'pattern',l:'Pattern',t:'sel',o:[['uni','Isolated lateral malleolus'],['bimal','Bimalleolar / bimalleolar equivalent'],['tri','Trimalleolar'],['medial','Isolated medial malleolus']]},
+  {k:'mcs',l:'Medial clear space',t:'num',u:'mm',m:'mcs'},{k:'tfcs',l:'Tibiofibular clear space',t:'num',u:'mm',m:'tfcs'},{k:'ovl',l:'Tibiofibular overlap (AP)',t:'num',u:'mm',m:'ovl'},
+  {k:'stress',l:'Stress / weight-bearing view',t:'sel',o:[['na','Not done'],['stable','Stable (MCS not widened)'],['unstable','Unstable (MCS widens)']]},
+  {k:'pm',l:'Posterior malleolus > 25 % or displaced',t:'chk',show:f=>f.pattern==='tri'},{k:'disl',l:'Dislocated / talar shift',t:'chk'}],
+ decide(f,P,R){const m=num(f.mcs),t=num(f.tfcs),o=num(f.ovl);R.cls.push(`Weber ${f.weber}, ${({uni:'isolated lateral malleolus',bimal:'bimalleolar',tri:'trimalleolar',medial:'isolated medial malleolus'})[f.pattern]}`);
+  if(m!=null)accept(R,'Medial clear space',m,'mm',m<=4,'≤ 4 mm (and ≤ superior clear space)');if(t!=null)accept(R,'Tibiofibular clear space',t,'mm',t<6,'< 6 mm');if(o!=null)accept(R,'Tibiofibular overlap',o,'mm',o>=1,'≥ 1 mm on mortise (≥ 6 mm AP)');
+  const unstable=f.pattern==='bimal'||f.pattern==='tri'||f.weber==='C'||f.stress==='unstable'||(m!=null&&m>4)||f.disl;
+  if(f.disl){opt(R,'Immediate closed reduction and splint','ind','Dislocated ankle: reduce in ED to protect skin and neurovascular status.');R.timing.push('Reduce immediately.')}
+  if(!unstable)opt(R,'Walking boot / cast, weight-bearing as tolerated','ind',f.weber==='A'?'Weber A is stable.':'Stable Weber B (no medial widening on stress / weight-bearing view).');
+  else{const poor=old(P,60)&&(lowDemand(P)||P.diab||P.skin!=='ok');
+    if(poor){opt(R,'Close contact casting','ind','Over 60: close contact casting gave equivalent function at 6 months to surgery with far fewer wound infections (AIM trial).');opt(R,'ORIF / hindfoot (TTC) nail','consider','If reduction cannot be held.')}
+    else opt(R,'ORIF','ind','Unstable ankle: restore fibular length and rotation, medial malleolus and syndesmosis.',[],['Wound problems, especially diabetics and smokers']);
+    if(f.weber==='C'||(t!=null&&t>=6)||(o!=null&&o<1))R.notes.push('Syndesmotic injury: test intra-operatively (Cotton / hook test); fix with screw(s) or suture button; reduce under direct vision.');
+    if(f.pm)R.notes.push('Posterior malleolus > 25 % or displaced / incisural: fix it (posterolateral approach) – often stabilises the syndesmosis.');
+    if(P.diab)R.notes.push('Diabetic (neuropathic) ankle: augmented fixation (syndesmotic screws, longer constructs), prolonged non-weight-bearing.')}
+  R.timing.push('Operate within 24 h, or wait for swelling to settle (7–10 days) with elevation.');R.approach.push('Lateral approach to the fibula; medial approach to the malleolus','Posterolateral (between FHL and peroneals) for the posterior malleolus');
+  R.implant.push('One-third tubular or pre-contoured lateral fibular plate + lag screw','Two 4.0 mm partially threaded screws / tension band for the medial malleolus','Syndesmotic screw or suture-button','Posterior antiglide plate / screws');
+  R.fu.push('Boot; weight-bearing 2–6 weeks depending on fixation (early weight-bearing is safe after stable ORIF)','X-rays at 2 and 6 weeks','Removal of syndesmotic screws not routinely required');R.comp.push('Wound infection','Malreduction of the syndesmosis','Post-traumatic arthritis');R.img.push('AP, mortise and lateral; gravity / weight-bearing stress view for isolated Weber B','CT for trimalleolar / posterior malleolus')}});
+
+defFx({id:'calc',reg:'lower',name:'Calcaneus',ao:'Sanders · Essex-Lopresti',meas:['bohler'],
+ fields:[{k:'sand',l:'Sanders (CT)',t:'sel',o:[['I','I – undisplaced'],['II','II – 2-part posterior facet'],['III','III – 3-part with depression'],['IV','IV – comminuted']]},
+  {k:'el',l:'Essex-Lopresti',t:'seg',o:[['joint','Joint depression'],['tongue','Tongue type']]},{k:'bohler',l:'Böhler angle',t:'num',u:'°',m:'bohler'},{k:'skinthreat',l:'Posterior skin threatened by tuberosity',t:'chk'}],
+ decide(f,P,R){const b=num(f.bohler);R.cls.push(`Sanders ${f.sand}, ${f.el==='tongue'?'tongue-type':'joint-depression'}`);if(b!=null)accept(R,'Böhler angle',b,'°',b>=20,'20–40°');
+  if(f.skinthreat||f.el==='tongue'&&f.sand!=='I'){opt(R,'Emergency reduction of the tongue fragment (percutaneous Essex-Lopresti)','ind','Skin over the heel at risk of necrosis.');R.timing.push('Threatened skin: within hours.')}
+  const poor=P.smoke||P.diab||old(P,65)||lowDemand(P);
+  if(f.sand==='I')opt(R,'Non-operative – early movement, non-weight-bearing 6–8 weeks','ind','Undisplaced.');
+  else{opt(R,'Non-operative (functional)',poor?'ind':'consider','UK HeFT trial: no functional benefit of ORIF over non-operative care at 2 years for typical displaced fractures, with more complications.');
+    if(!poor)opt(R,'Reduction and fixation (sinus tarsi or percutaneous)','consider','Young, non-smoking patient with marked displacement / loss of height and width.',['Restores heel shape'],['Wound complications (extensile approach)']);
+    if(f.sand==='IV'&&!poor)opt(R,'ORIF + primary subtalar arthrodesis','consider','Severe comminution.')}
+  R.timing.push('Fixation after swelling subsides (wrinkle sign, ≈ 7–14 days); percutaneous earlier.');R.approach.push('Sinus tarsi (minimally invasive) approach – fewer wound problems than the extensile lateral','Percutaneous screw fixation');R.implant.push('Sinus tarsi plate / screws','Percutaneous cannulated screws','Subtalar fusion screws');
+  R.fu.push('Non-weight-bearing 8–12 weeks; early ankle/subtalar movement','X-rays (lateral, axial) at 2, 6, 12 weeks');R.comp.push('Wound necrosis / infection','Subtalar arthritis','Heel widening, peroneal impingement','Compartment syndrome of the foot');
+  R.img.push('Lateral, axial (Harris) and AP foot; CT (coronal / axial) for Sanders classification','Check the lumbar spine (associated fractures)')}});
+
+defFx({id:'talus',reg:'lower',name:'Talar neck',ao:'Hawkins (Canale)',meas:['len'],
+ fields:[{k:'hawk',l:'Hawkins',t:'sel',o:[['I','I – undisplaced'],['II','II – subtalar subluxation / dislocation'],['III','III – subtalar + tibiotalar dislocation'],['IV','IV – plus talonavicular dislocation']]}],
+ decide(f,P,R){R.cls.push('Hawkins '+f.hawk+' – AVN risk '+({I:'0–15 %',II:'20–50 %',III:'20–100 %',IV:'70–100 %'})[f.hawk]);
+  if(f.hawk==='I')opt(R,'Non-weight-bearing cast 6–8 weeks (or percutaneous screws for early movement)','ind','Confirm on CT that it is truly undisplaced.');
+  else{opt(R,'Urgent reduction of dislocation; ORIF','ind','Displaced talar neck: anatomical reduction (avoid varus malunion).');R.timing.push('Dislocated: reduce emergently (skin, neurovascular); definitive ORIF can follow within days if reduced.')}
+  R.approach.push('Dual anteromedial + anterolateral approaches to judge reduction');R.implant.push('Lag screws (anterior-to-posterior or posterior-to-anterior) + medial / lateral mini-fragment plates for comminution');
+  R.fu.push('Non-weight-bearing 8–12 weeks','Hawkins sign (subchondral lucency of the dome at 6–8 weeks) indicates revascularisation','MRI if AVN suspected');R.comp.push('AVN','Post-traumatic arthritis','Varus malunion');R.img.push('AP / lateral ankle and Canale view; CT')}});
+
+defFx({id:'lisfranc',reg:'lower',name:'Lisfranc (tarsometatarsal) injury',ao:'Myerson',meas:['len'],
+ fields:[{k:'diast',l:'Diastasis between 1st and 2nd metatarsal bases (weight-bearing)',t:'num',u:'mm',m:'dist'},{k:'fleck',l:'Fleck sign',t:'chk'},{k:'lig',l:'Purely ligamentous',t:'chk'},{k:'stable',l:'Stable on weight-bearing / stress views',t:'chk'}],
+ decide(f,P,R){const d=num(f.diast);R.cls.push('Tarsometatarsal injury'+(f.lig?' – purely ligamentous':'')+(f.fleck?' (fleck sign)':''));if(d!=null)accept(R,'1st–2nd metatarsal diastasis',d,'mm',d<2,'< 2 mm vs other foot');
+  if(f.stable&&(d==null||d<2))opt(R,'Boot, non-weight-bearing 6 weeks','ind','Stable sprain on weight-bearing views.');
+  else{opt(R,'Open reduction and screw / bridge-plate fixation','ind','Unstable TMT joint – anatomical reduction is essential.');if(f.lig)opt(R,'Primary partial arthrodesis (1st–3rd TMT)','consider','Purely ligamentous injuries: some evidence of fewer re-operations than ORIF.')}
+  R.timing.push('After swelling settles (usually within 2 weeks); open / compartment syndrome urgently.');R.approach.push('Dorsal approaches (medial between EHL and EHB / lateral over 3rd–4th)');R.implant.push('Lisfranc screw (medial cuneiform → 2nd MT base)','Dorsal bridge plates','K-wires for 4th–5th TMT');
+  R.fu.push('Non-weight-bearing 6–8 weeks','Hardware removal of transarticular screws at 4–6 months (not after fusion)');R.comp.push('Post-traumatic midfoot arthritis','Missed diagnosis');R.img.push('Weight-bearing AP, oblique and lateral foot (compare both feet)','CT for fracture pattern; MRI for subtle ligamentous injury')}});
+
+defFx({id:'mt5',reg:'lower',name:'Fifth metatarsal base',ao:'Lawrence & Botte zones',meas:['len'],
+ fields:[{k:'zone',l:'Zone',t:'sel',o:[['1','Zone 1 – tuberosity avulsion'],['2','Zone 2 – metaphyseal–diaphyseal junction (Jones)'],['3','Zone 3 – proximal diaphysis (stress)']]},{k:'ath',l:'Athlete',t:'chk'}],
+ decide(f,P,R){R.cls.push('5th metatarsal base – zone '+f.zone);
+  if(f.zone==='1')opt(R,'Supportive shoe / boot, weight-bearing as tolerated','ind','Avulsion: unites or forms a painless fibrous union.');
+  else{opt(R,'Intramedullary screw fixation',f.ath||f.zone==='3'?'ind':'consider','Faster union and return to sport; stress fractures heal poorly without surgery.');opt(R,'Non-weight-bearing cast 6–8 weeks',f.ath?'consider':'ind','Non-athlete acute Jones fracture.')}
+  R.timing.push('Elective.');R.approach.push('Percutaneous proximal approach');R.implant.push('Solid / cannulated intramedullary screw (4.5–6.5 mm)');R.fu.push('X-rays at 6 and 12 weeks; return to sport after radiological union');R.comp.push('Non-union / refracture (zones 2–3)');R.img.push('AP, oblique and lateral foot')}});
+
+/* ---------- state ---------- */
+const MODES=MEAS;
+let S={d:{...G_BLANK,fx:'drad'},f:{},P:{},cal:{screw:10.5},tab:'fx',mode:'dr_ap',active:null,noViewer:false,rec:null,caseId:null};
+let imgs={},blobs={},view={s:1,tx:0,ty:0};
+const KM=m=>S.d.fx+'|'+(m||S.mode);
+const P=(m,k)=>S.P[KM(m)]&&S.P[KM(m)][k];
+function mmpp(m){const a=P(m,'cal1'),b=P(m,'cal2');const c=S.cal[m]||10;return a&&b?c/len(sub(a,b)):null}
+const curFx=()=>FX[S.d.fx]||FX.drad;
+function fxDefaults(fx){const o={};for(const f of fx.fields)o[f.k]=f.t==='chk'?false:(f.t==='seg'||f.t==='sel')?f.o[0][0]:'';return o}
+function fvals(){const fx=curFx();return{...fxDefaults(fx),...(S.f[fx.id]||{})}}
+function computeImage(){const r={};for(const m of curFx().meas){const md=MEAS[m];const q=S.P[KM(m)]||{};try{Object.assign(r,md.calc(q,md.cal?mmpp(m):null,S))}catch{}}
+  if(r.tadap!=null&&r.tadlat!=null)r.tad=r.tadap+r.tadlat;return r}
+function vals(){const im=computeImage(),fv=fvals(),fx=curFx();const out={...fv};for(const f of fx.fields)if(f.m&&num(fv[f.k])==null&&im[f.m]!=null)out[f.k]=im[f.m];out._im=im;return out}
+function patient(){const d=S.d;return{...d,age:num(d.age),hours:num(d.hours)}}
+
+/* ---------- decision ---------- */
+function decide(){const fx=curFx();const R=R0();const Pt=patient();const v=vals();
+  try{fx.decide(v,Pt,R)}catch(e){console.error(e);R.notes.push('Decision error: '+e.message)}
+  const lowerOrPelvis=['lower','axial'].includes(fx.reg);
+  if(Pt.comp){R.opts.unshift({name:'Emergency fasciotomy (all compartments)',st:'ind',why:'Compartment syndrome is a surgical emergency – decompress within the hour, then stabilise the fracture.',pro:[],con:[]});R.timing.unshift('Compartment syndrome: fasciotomy NOW.')}
+  if(Pt.vasc){R.notes.unshift('Vascular injury / ischaemia: revascularise within 3–6 h of warm ischaemia – temporary shunt, skeletal stabilisation (often ex-fix), definitive vascular repair; prophylactic fasciotomy.');R.img.unshift('CT angiography (or on-table angiography) if pulses abnormal after reduction / ABPI < 0.9')}
+  if(Pt.open!=='no'){R.timing.unshift('Open fracture (BOAST 4): IV antibiotics within 1 h (e.g. cefazolin; add gram-negative cover for Gustilo III), tetanus, photograph, saline-moist dressing, splint.','Debridement: immediately if grossly contaminated or vascular injury; within 12 h for high-energy; within 24 h for other open fractures.','Definitive fixation and soft-tissue cover within 72 h (joint orthoplastic team).');
+    if(['IIIB','IIIC'].includes(Pt.open))R.notes.unshift(`Gustilo ${Pt.open}: involve plastic surgery from the start (local / free flap); consider temporary spanning ex-fix if definitive fixation and cover cannot be done together.`);
+    R.comp.push('Deep infection (≈ 2 % type I → > 10–30 % type III)')}
+  if(Pt.poly==='unstable'||Pt.poly==='border')R.notes.unshift('Polytrauma, physiologically unstable / borderline: damage-control orthopaedics (external fixation), definitive fixation at day 4–14 when stable.');
+  if(Pt.skin==='threat')R.timing.unshift('Skin under threat: reduce / splint immediately.');else if(Pt.skin==='swell'&&!R.timing.some(t=>/wrinkle/i.test(t)))R.timing.push('Marked swelling / blisters: elevate, ± spanning ex-fix; operate through healthy skin when wrinkles return.');
+  if(Pt.path)R.notes.unshift('Pathological fracture: do not fix a solitary lesion before diagnosis (could be a primary sarcoma) – stage first; metastases: fix with long devices ± cement, then radiotherapy (Mirels score for impending fractures).');
+  if(Pt.peri)R.notes.push('Periprosthetic fracture: classify (Vancouver / Su / Rorabeck); is the implant loose? – revision vs fixation.');
+  if(Pt.child&&!['scond'].includes(fx.id))R.notes.push('Open growth plates: classify physeal injuries (Salter–Harris), accept more angulation in younger children (remodelling), avoid crossing the physis with rigid implants.');
+  if(Pt.anticoag)R.notes.push('Anticoagulant / antiplatelet: plan reversal or timing (warfarin – vitamin K/PCC; DOACs – consider levels / ≈ 24–48 h); aspirin alone does not delay surgery.');
+  if(Pt.osteo)R.fu.push('Fragility fracture: falls assessment, vitamin D/calcium, DEXA and osteoporosis treatment (fracture liaison service).');
+  if(Pt.smoke)R.notes.push('Smoking doubles non-union and wound complication risk – advise stopping.');
+  if(Pt.diab)R.notes.push('Diabetes: check glycaemic control and neuropathy (prolonged protection / non-weight-bearing if neuropathic).');
+  if(lowerOrPelvis&&!Pt.child)R.fu.push('VTE prophylaxis (LMWH / DOAC) per risk assessment while mobility is reduced.');
+  if(Pt.nerve&&!R.notes.some(n=>/nerve/i.test(n)))R.notes.push('Document the nerve deficit before and after any manipulation.');
+  const ind=R.opts.filter(o=>o.st==='ind');R.head=ind.length?ind.map(o=>o.name).slice(0,2).join(' + '):(R.opts[0]?R.opts[0].name:'Complete the assessment');
+  R.status=R.acc.some(a=>a.ok===false)?'warn':'ok';R.v=v;R.fx=fx;return R}
+
+/* ---------- forms ---------- */
+function fieldHTML(f,d,meas,attr){
+  if(f.show&&!f.show(d))return'';const a=attr||'data-k';
+  if(f.t==='chk')return`<label class="tog"><input type="checkbox" ${a}="${f.k}" ${d[f.k]?'checked':''}> ${f.l}</label>`;
+  if(f.t==='seg')return`<div class="full"><span>${f.l}</span><div class="seg">${f.o.map(([v,l])=>`<button ${a}="${f.k}" data-v="${v}" class="${String(d[f.k])===v?'on':''}">${l}</button>`).join('')}</div></div>`;
+  if(f.t==='sel')return`<label for="f_${f.k}">${f.l}</label><select id="f_${f.k}" ${a}="${f.k}">${f.o.map(([v,l])=>`<option value="${v}" ${String(d[f.k])===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  const ph=f.m&&meas[f.m]!=null?f1(meas[f.m]):'';
+  return`<label for="f_${f.k}">${f.l}</label><input id="f_${f.k}" type="number" inputmode="decimal" step="any" ${a}="${f.k}" value="${esc(d[f.k]??'')}" placeholder="${ph}"><span class="u">${f.u||''}</span>`}
+function renderPt(){const el=$('#p-pt');const d=S.d;el.innerHTML=G_FORM.map(([t,fs])=>`<div class="group"><h3>${t}</h3><div class="fgrid">${fs.map(f=>fieldHTML(f,d,{})).join('')}</div></div>`).join('')+liveBox()}
+function renderFx(){const el=$('#p-fx');const fx=curFx();const reg=fx.reg;const fv=fvals();const meas=computeImage();
+  let h=`<div class="seg" id="regSeg">${REGIONS.map(([k,l])=>`<button data-reg="${k}" class="${S.regView===k||(!S.regView&&reg===k)?'on':''}">${l}</button>`).join('')}</div>`;
+  const rv=S.regView||reg;h+=`<div class="fxgrid">${FX_ORDER.filter(id=>FX[id].reg===rv).map(id=>`<button data-fx="${id}" class="${id===fx.id?'on':''}"><b>${esc(FX[id].name)}</b><span>${esc(FX[id].ao)}</span></button>`).join('')}</div>`;
+  h+=`<div class="group"><h3>${esc(fx.name)} <span class="badge">${esc(fx.ao)}</span></h3><div class="fgrid">${fx.fields.map(f=>fieldHTML(f,fv,meas,'data-fk')).join('')}</div><p class="h fine">Blue numbers come from your image measurements; typing a value overrides them.</p></div>`+liveBox();
+  const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;
+  $$('#regSeg [data-reg]').forEach(b=>b.onclick=()=>{S.regView=b.dataset.reg;renderFx()});
+  $$('#p-fx [data-fx]').forEach(b=>b.onclick=()=>{S.d.fx=b.dataset.fx;S.regView=null;S.mode=curFx().meas[0];S.active=null;renderFx();autosave()})}
+function liveBox(){const R=decide();return`<div class="banner"><b>${esc(R.head)}</b><br><span class="fine">${esc(R.cls[0]||'')}</span><br><button class="btn" data-goto="dec" style="margin-top:6px">Open decision</button></div>`}
+function renderTab(tab){if(tab==='rec'){renderRecord();return}if(tab==='pt'){const st=$('#p-pt').scrollTop;renderPt();$('#p-pt').scrollTop=st;return}if(tab==='fx'){renderFx();return}if(tab==='dec'){renderDec();return}if(tab==='img')renderImg()}
+document.addEventListener('click',e=>{const g=e.target.closest('[data-goto]');if(g){selectTab(g.dataset.goto);return}
+  const b=e.target.closest('.seg button[data-k]');if(b){S.d[b.dataset.k]=b.dataset.v;renderTab(S.tab);autosave();return}
+  const c=e.target.closest('.seg button[data-fk]');if(c){setF(c.dataset.fk,c.dataset.v);renderTab(S.tab);autosave()}});
+function setF(k,v){const id=S.d.fx;(S.f[id]=S.f[id]||{})[k]=v}
+document.addEventListener('change',e=>{const i=e.target;if(!i.dataset)return;
+  if(i.dataset.k){S.d[i.dataset.k]=i.type==='checkbox'?i.checked:i.value;renderTab(S.tab);autosave()}
+  else if(i.dataset.fk){setF(i.dataset.fk,i.type==='checkbox'?i.checked:i.value);renderTab(S.tab);autosave()}});
+document.addEventListener('input',e=>{const i=e.target;if(!i.dataset||i.type!=='number')return;if(i.dataset.k){S.d[i.dataset.k]=i.value;autosave()}else if(i.dataset.fk){setF(i.dataset.fk,i.value);autosave()}});
+
+/* ---------- decision tab ---------- */
+const STATE={ind:['acc','Indicated'],consider:['warn','Consider'],contra:['bad','Not advised']};
+let lastSummary='';
+const list=(arr,ord)=>arr.length?`<${ord?'ol':'ul'}>${arr.map(x=>`<li>${esc(x)}</li>`).join('')}</${ord?'ol':'ul'}>`:'';
+function renderDec(){const R=decide();const fx=R.fx;let h='';
+  h+=`<div class="rec"><span class="l">${esc(fx.name)} · ${esc(fx.ao)}</span><span class="h">${esc(R.head)}</span>${R.cls.map(c=>`<span class="fine">${esc(c)}</span>`).join('')}</div>`;
+  if(R.acc.length)h+=`<div class="card"><div class="hd"><b>Measurements vs acceptable limits</b><span class="pill ${R.status==='warn'?'warn':'ok'}">${R.status==='warn'?'outside limits':'within limits'}</span></div><table class="mt"><tr><th>Parameter</th><th>Value</th><th>Limit</th></tr>${R.acc.map(a=>`<tr><td>${esc(a.label)}</td><td class="n"><span class="pill ${a.ok?'ok':'bad'}">${f1(a.val)}${a.unit?' '+a.unit:''}</span></td><td class="n ref">${esc(a.limit)}</td></tr>`).join('')}</table></div>`;
+  const ord={ind:0,consider:1,contra:2};
+  h+=[...R.opts].sort((a,b)=>ord[a.st]-ord[b.st]).map(o=>`<div class="card ${o.st==='ind'?'ind':''}"><div class="hd"><b>${esc(o.name)}</b><span class="pill ${STATE[o.st][0]}">${STATE[o.st][1]}</span></div>${o.why?`<p class="why">${esc(o.why)}</p>`:''}${o.pro.length?`<ul class="lst pro">${o.pro.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}${o.con.length?`<ul class="lst con">${o.con.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</div>`).join('');
+  const card=(t,arr,ord)=>arr.length?`<div class="card"><div class="hd"><b>${t}</b></div>${list(arr,ord)}</div>`:'';
+  h+=card('Timing of surgery',R.timing,true)+card('Approach',R.approach)+card('Implants',R.implant)+card('Follow-up and rehabilitation',R.fu)+card('Imaging and work-up',R.img)+card('Special considerations',R.notes)+card('Complications to watch for',R.comp);
+  h+=`<div class="row"><button class="btn primary" id="decPrint">Print / PDF</button><button class="btn" id="copy">Copy summary</button><button class="btn" id="share">Share</button></div>`;
+  h+=`<details><summary>References</summary><ol class="refs">${REFS.map(([t,doi])=>doi?`<li>${t} <a href="https://doi.org/${doi}" target="_blank" rel="noopener">doi:${doi}</a></li>`:`<li>${t}</li>`).join('')}</ol></details>`;
+  h+=`<p class="fine">Decision aid for trained surgeons: it summarises common, guideline-based practice from the data you enter. Individual patients, local resources and your judgement decide.</p>`;
+  const el=$('#p-dec');const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;lastSummary=summary(R);
+  $('#decPrint').onclick=openPrintSheet;$('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(lastSummary);toast('Summary copied')}catch{toast('Copy not available here')}};$('#share').onclick=()=>shareText('Fracture plan',lastSummary)}
+const REFS=[
+ ['AO Surgery Reference / AO/OTA Fracture and Dislocation Classification Compendium 2018. J Orthop Trauma 32 Suppl 1.',''],
+ ['BOAST – Open fractures (British Orthopaedic Association / BAPRAS, 2017).',''],
+ ['NICE CG124 – Hip fracture: management (updated 2023).',''],
+ ['Canadian Orthopaedic Trauma Society 2007. Nonoperative treatment vs plate fixation of displaced midshaft clavicular fractures. J Bone Joint Surg Am 89:1–10.','10.2106/JBJS.F.00020'],
+ ['Rangan et al. 2015. PROFHER: surgical vs nonsurgical treatment of displaced proximal humerus fractures. JAMA 313:1037–47.','10.1001/jama.2015.1629'],
+ ['Hertel et al. 2004. Predictors of humeral head ischemia after intracapsular fracture of the proximal humerus. J Shoulder Elbow Surg 13:427–33.','10.1016/j.jse.2004.01.034'],
+ ['Baumgaertner et al. 1995. The value of the tip-apex distance in predicting failure of fixation of peritrochanteric fractures. J Bone Joint Surg Am 77:1058–64.','10.2106/00004623-199507000-00012'],
+ ['Willett et al. 2016. Close contact casting vs surgery for unstable ankle fractures in older adults (AIM). JAMA 316:1455–63.','10.1001/jama.2016.14719'],
+ ['Griffin et al. 2014. Operative vs non-operative treatment for displaced intra-articular calcaneal fractures (UK HeFT). BMJ 349:g4483.','10.1136/bmj.g4483'],
+ ['Vaccaro et al. 2007. The subaxial cervical spine injury classification system (SLIC). Spine 32:2365–74.','10.1097/BRS.0b013e3181557b92'],
+ ['Dvorak et al. 2007. The surgical approach to subaxial cervical spine injuries: an algorithm based on SLIC. Spine 32:2620–9.','10.1097/BRS.0b013e318158ce16'],
+ ['Lee et al. 2005. Thoracolumbar injury classification and severity score (TLICS). J Orthop Sci 10:671–5.','10.1007/s00776-005-0956-y'],
+ ['Bailey et al. 2014. Orthosis vs no orthosis for thoracolumbar burst fractures without neurologic injury. Spine J 14:2557–64.','10.1016/j.spinee.2013.10.017'],
+ ['Fehlings et al. 2017. Clinical practice guideline: timing of decompressive surgery in acute spinal cord injury. Global Spine J 7(3 Suppl):195S–202S.','10.1177/2192568217706367']];
+function summary(R){const d=S.d,L=[];L.push(`${R.fx.name} (${R.fx.ao}) · ${d.age||'?'} y ${d.sex} · ${{R:'right',L:'left',B:'bilateral / midline'}[d.side]}${d.open!=='no'?' · open Gustilo '+d.open:''}`);
+  R.cls.forEach(c=>L.push(c));if(R.acc.length)L.push('Measurements: '+R.acc.map(a=>`${a.label} ${f1(a.val)}${a.unit?' '+a.unit:''}${a.ok?'':' (outside limit)'}`).join('; '));
+  L.push('Plan: '+R.head);R.opts.forEach(o=>L.push(`- ${o.name}: ${STATE[o.st][1]}${o.why?' – '+o.why:''}`));
+  const sec=(t,a)=>{if(a.length){L.push(t+':');a.forEach(x=>L.push('- '+x))}};sec('Timing',R.timing);sec('Approach',R.approach);sec('Implants',R.implant);sec('Follow-up',R.fu);sec('Work-up',R.img);sec('Notes',R.notes);return L.join('\n')}
+
+/* ---------- image handling + viewer (shared with the other planners) ---------- */
+/* ---------- image handling ---------- */
+function curImg(){return imgs[KM()]||null}
+function blobToCanvas(blob){return new Promise((res,rej)=>{const url=URL.createObjectURL(blob);const im=new Image();
+  im.onload=()=>{const MAX=3000,sc=Math.min(1,MAX/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c)};
+  im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('bad'))};im.src=url})}
+async function loadImageFile(f){if(!f)return;
+  try{const c=await blobToCanvas(f);imgs[KM()]=c;blobs[KM()]=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+    S.P[KM()]={};S.active=MODES[S.mode].pts[0][0];S.noViewer=false;layout();fit();update();toast(`${MODES[S.mode].name} image loaded`)}
+  catch{toast('That file could not be opened. Export the image as JPEG or PNG.')}}
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';loadImageFile(f)});
+['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{if(!e.dataTransfer||![...e.dataTransfer.types].includes('Files'))return;e.preventDefault();
+  if(ev==='drop'){const f=[...e.dataTransfer.files].find(x=>x.type.startsWith('image/'));if(!f)return;if(S.tab!=='img')selectTab('img');loadImageFile(f)}}));
+document.addEventListener('paste',e=>{const it=[...(e.clipboardData||{}).items||[]].find(x=>x.type&&x.type.startsWith('image/'));if(!it)return;e.preventDefault();if(S.tab!=='img')selectTab('img');loadImageFile(it.getAsFile())});
+document.addEventListener('keydown',e=>{const tag=(e.target.tagName||'').toLowerCase();const typing=['input','textarea','select'].includes(tag);
+  if(e.key==='Escape'){$$('.sheet').forEach(s=>s.hidden=true);return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='p'){e.preventDefault();openPrintSheet();return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveCase(false);return}
+  if(typing)return;
+  if((e.key==='Delete'||e.key==='Backspace')&&S.tab==='img'){e.preventDefault();deletePoint()}});
+let installEvt=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('#installBtn').hidden=false;$('#installMenu').hidden=false});
+const doInstall=async()=>{if(!installEvt){toast('Use the browser menu → Install app');return}installEvt.prompt();try{await installEvt.userChoice}catch{}installEvt=null;$('#installBtn').hidden=true;$('#installMenu').hidden=true};
+$('#installBtn').onclick=doInstall;$('#installMenu').onclick=()=>{$('#menuSheet').hidden=true;doInstall()};
+window.addEventListener('appinstalled',()=>{$('#installBtn').hidden=true;$('#installMenu').hidden=true;toast('Installed: open it from the desktop or Start menu')});
+
+/* ---------- viewer ---------- */
+function resize(){const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));draw()}
+function fit(){const im=curImg();const r=cv.getBoundingClientRect();if(!im||!r.width){draw();return}
+  const top=56,bot=50,s=Math.min(r.width/im.width,(r.height-top-bot)/im.height)*.96;view={s,tx:(r.width-im.width*s)/2,ty:top+(r.height-top-bot-im.height*s)/2};draw()}
+let lastSize='';new ResizeObserver(()=>{const r=cv.getBoundingClientRect();const k=Math.round(r.width)+'x'+Math.round(r.height);if(k===lastSize)return;lastSize=k;resize();fit()}).observe($('#viewer'));
+$('#fit').onclick=fit;
+const zoomAt=(k,x,y)=>{const ns=Math.max(.05,Math.min(40,view.s*k));const kk=ns/view.s;view.tx=x-(x-view.tx)*kk;view.ty=y-(y-view.ty)*kk;view.s=ns;draw()};
+$('#zin').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1.4,r.width/2,r.height/2)};
+$('#zout').onclick=()=>{const r=cv.getBoundingClientRect();zoomAt(1/1.4,r.width/2,r.height/2)};
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-r.left,e.clientY-r.top)},{passive:false});
+const toS=p=>({x:p.x*view.s+view.tx,y:p.y*view.s+view.ty}),toI=(x,y)=>({x:(x-view.tx)/view.s,y:(y-view.ty)/view.s});
+const ptrs=new Map();let G=null,dragId=null;
+const loc=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+function hit(x,y){const pts=S.P[KM()]||{};let best=null,bd=24;for(const k in pts){const s=toS(pts[k]);const dd=Math.hypot(s.x-x,s.y-y);if(dd<bd){bd=dd;best=k}}return best}
+cv.addEventListener('pointerdown',e=>{if(!curImg())return;cv.setPointerCapture(e.pointerId);const p=loc(e);ptrs.set(e.pointerId,p);
+  if(ptrs.size===1){const h=hit(p.x,p.y);G={type:h?'drag':'tap',id:h,sx:p.x,sy:p.y,lx:p.x,ly:p.y}}
+  else if(ptrs.size===2){const [a,b]=[...ptrs.values()];G={type:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y),c0:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},v0:{...view}};dragId=null}});
+cv.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId)||!G)return;const p=loc(e);ptrs.set(e.pointerId,p);
+  if(G.type==='pinch'&&ptrs.size>=2){const [a,b]=[...ptrs.values()];const c={x:(a.x+b.x)/2,y:(a.y+b.y)/2},dd=Math.hypot(a.x-b.x,a.y-b.y);
+    const s=Math.max(.05,Math.min(40,G.v0.s*dd/G.d0));const I={x:(G.c0.x-G.v0.tx)/G.v0.s,y:(G.c0.y-G.v0.ty)/G.v0.s};view={s,tx:c.x-I.x*s,ty:c.y-I.y*s};draw();return}
+  if(G.type==='drag'){if(Math.hypot(p.x-G.sx,p.y-G.sy)>3||dragId){const q=S.P[KM()][G.id];q.x+=(p.x-G.lx)/view.s;q.y+=(p.y-G.ly)/view.s;dragId=G.id;G.lx=p.x;G.ly=p.y;update()}return}
+  if(G.type==='tap'&&Math.hypot(p.x-G.sx,p.y-G.sy)>8)G.type='pan';
+  if(G.type==='pan'){view.tx+=p.x-G.lx;view.ty+=p.y-G.ly;G.lx=p.x;G.ly=p.y;draw()}});
+function up(e){if(!ptrs.has(e.pointerId))return;const p=loc(e);ptrs.delete(e.pointerId);
+  if(G&&G.type==='tap'&&ptrs.size===0)place(toI(p.x,p.y));
+  if(G&&G.type==='drag'&&!dragId&&ptrs.size===0){S.active=G.id;update()}
+  if(ptrs.size===0){G=null;if(dragId){dragId=null;update()}}}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+function place(p){const md=MODES[S.mode];if(!S.active)return;(S.P[KM()]=S.P[KM()]||{})[S.active]=p;
+  const ids=md.pts.map(x=>x[0]);const i=ids.indexOf(S.active);const next=ids.slice(i+1).find(k=>!S.P[KM()][k])||ids.find(k=>!S.P[KM()][k]);
+  if(next)S.active=next;update();if(navigator.vibrate)try{navigator.vibrate(8)}catch{}}
+function deletePoint(){const pts=S.P[KM()];if(!pts||!pts[S.active])return;delete pts[S.active];toast('Point deleted. Tap the image to place it again');update()}
+$('#delPt').onclick=deletePoint;$('#delPt2').onclick=deletePoint;
+
+let raf=0;function draw(){if(!raf)raf=requestAnimationFrame(render)}
+function line(a,b,col,w=1.6,dash=null){const A=toS(a),B=toS(b);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=w;if(dash)ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore()}
+function circleS(c,r,col,w=1.6,dash=null){const s=toS(c);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=w;if(dash)ctx.setLineDash(dash);ctx.beginPath();ctx.arc(s.x,s.y,r*view.s,0,7);ctx.stroke();ctx.restore()}
+function tag(p,text,col,dx=10,dy=-10){const s=toS(p);ctx.save();ctx.font='600 11.5px "IBM Plex Mono", monospace';const w=ctx.measureText(text).width+10;let x=s.x+dx,y=s.y+dy;if(dx<0)x-=w;ctx.fillStyle='rgba(5,8,11,.86)';ctx.fillRect(x,y-13,w,18);ctx.fillStyle=col;ctx.fillText(text,x+5,y);ctx.restore()}
+function render(){raf=0;const dpr=window.devicePixelRatio||1;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#05080b';ctx.fillRect(0,0,cv.width,cv.height);
+  const im=curImg();ctx.setTransform(dpr,0,0,dpr,0,0);
+  if(!im){ctx.fillStyle='#8a98a4';ctx.font='14px Archivo, sans-serif';ctx.fillText('Open an image for this measurement',20,90);return}
+  ctx.setTransform(dpr*view.s,0,0,dpr*view.s,dpr*view.tx,dpr*view.ty);ctx.drawImage(im,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
+  overlays();if(dragId&&S.P[KM()][dragId])loupe(S.P[KM()][dragId],dpr,im)}
+function loupe(p,dpr,im){const r=cv.getBoundingClientRect();const s=toS(p);const R=62,Z=3;const cx=s.x<r.width/2?r.width-R-14:R+14,cy=R+60;
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.clip();ctx.fillStyle='#000';ctx.fillRect(cx-R,cy-R,2*R,2*R);const k=view.s*Z;
+  ctx.setTransform(dpr*k,0,0,dpr*k,dpr*(cx-p.x*k),dpr*(cy-p.y*k));ctx.drawImage(im,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.strokeStyle=COL.pt;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx-6,cy);ctx.moveTo(cx+6,cy);ctx.lineTo(cx+R,cy);ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy-6);ctx.moveTo(cx,cy+6);ctx.lineTo(cx,cy+R);ctx.stroke();ctx.restore();
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.stroke()}
+
+
+/* ---------- overlays ---------- */
+const OUT={incl:['Radial inclination','°'],rheight:['Radial height','mm'],uv:['Ulnar variance','mm'],tilt:['Volar tilt (+) / dorsal (−)','°'],tadap:['TAD – AP','mm'],tadlat:['TAD – lateral','mm'],tad:['Tip–apex distance','mm'],pauwels:['Pauwels angle','°'],bohler:['Böhler angle','°'],mcs:['Medial clear space','mm'],tfcs:['Tib-fib clear space','mm'],ovl:['Tib-fib overlap','mm'],kyph:['Segmental kyphosis','°'],ahl:['Anterior height loss','%'],step:['Articular step / depression','mm'],widen:['Condylar widening','mm'],baumann:['Baumann angle','°'],dist:['Distance','mm'],angle:['Angle','°']};
+function modeOut(m){const md=MEAS[m];const q=S.P[KM(m)]||{};let r={};try{r=md.calc(q,md.cal?mmpp(m):null,S)}catch{}return r}
+function overlays(){const m=S.mode,md=MODES[m],pts=S.P[KM()]||{};
+  if(pts.cal1&&pts.cal2)line(pts.cal1,pts.cal2,'#fff',1.4);
+  (md.lines||[]).forEach(([a,b,dash],i)=>{if(pts[a]&&pts[b])line(pts[a],pts[b],dash?COL.ghost:[COL.line,COL.alt,COL.meas][i%3],dash?1.2:2.2,dash?[6,4]:null)});
+  if(m==='bohler'&&pts.T&&pts.P&&pts.A){const d=sub(pts.P,pts.T);line(pts.P,add(pts.P,d),COL.ghost,1,[4,4])}
+  const r=modeOut(m);const ks=Object.keys(r).filter(k=>r[k]!=null&&isFinite(r[k]));
+  if(ks.length){const dpr=1;ctx.save();ctx.font='600 12px "IBM Plex Mono", monospace';const L=ks.map(k=>`${(OUT[k]||[k])[0]}: ${f1(r[k])} ${(OUT[k]||['',''])[1]}`);
+    const w=Math.max(...L.map(t=>ctx.measureText(t).width))+16,h=L.length*18+10;const rr=cv.getBoundingClientRect();const x=10,y=rr.height-h-54;
+    ctx.fillStyle='rgba(5,8,11,.86)';ctx.fillRect(x,y,w,h);ctx.fillStyle=COL.meas;L.forEach((t,i)=>ctx.fillText(t,x+8,y+20+i*18));ctx.restore()}
+  if(md.cal&&!mmpp(m)&&Object.keys(pts).length>2){const rr=cv.getBoundingClientRect();ctx.save();ctx.font='12px Archivo, sans-serif';ctx.fillStyle=COL.bad;ctx.fillText('Place the scale bar for mm values',10,rr.height-40);ctx.restore()}
+  for(const k in pts){const s=toS(pts[k]);const on=k===S.active;ctx.save();ctx.lineWidth=on?2.4:1.6;ctx.strokeStyle=on?'#fff':COL.pt;ctx.fillStyle='rgba(5,8,11,.5)';
+    ctx.beginPath();ctx.arc(s.x,s.y,on?8:6,0,7);ctx.fill();ctx.stroke();ctx.fillStyle=on?'#fff':COL.pt;ctx.beginPath();ctx.arc(s.x,s.y,1.6,0,7);ctx.fill();
+    ctx.font='600 10px "IBM Plex Mono", monospace';ctx.fillText(k,s.x+9,s.y+14);ctx.restore()}}
+
+/* ---------- imaging pane ---------- */
+function renderImg(){const fx=curFx();if(!fx.meas.includes(S.mode))S.mode=fx.meas[0];const md=MODES[S.mode];
+  $('#imgFx').textContent=fx.name;
+  $('#modes').innerHTML=fx.meas.map(k=>{const r=modeOut(k);const ks=Object.keys(r).filter(x=>r[x]!=null);return`<button class="sl ${k===S.mode?'on':''}" data-m="${k}"><b>${MODES[k].name}</b><span>${ks.length?ks.map(x=>f1(r[x])+' '+OUT[x][1]).join(' · '):MODES[k].sub}</span></button>`}).join('');
+  $$('#modes .sl').forEach(b=>b.onclick=()=>chooseMode(b.dataset.m));
+  $('#modeHint').textContent=md.hint;$('#hideViewer').textContent=S.noViewer?'Show viewer':'Hide viewer';
+  $('#steps').innerHTML=md.pts.map(([id,l])=>`<button class="step ${P(S.mode,id)?'done':''} ${id===S.active?'on':''}" data-id="${id}"><span class="dot"></span><span>${l}</span><span class="gl">${id.indexOf('cal')===0?'Scale':id}</span></button>`).join('');
+  $$('#steps .step').forEach(b=>b.onclick=()=>{S.active=b.dataset.id;update()});
+  const can=!!(curImg()&&P(S.mode,S.active));$('#delPt').hidden=!can;$('#delPt2').hidden=!can;
+  $('#calBox').hidden=!md.cal;if(md.cal){$('#calmm').value=S.cal[S.mode]||10;const k=mmpp(S.mode);$('#scaleout').textContent=k?`${k.toFixed(3)} mm/px`:'No scale yet: place both ends of a ruler, calibration ball or known implant.'}
+  $('#screwBox').hidden=!/^tad/.test(S.mode);$('#screwmm').value=S.cal.screw||10.5;
+  $('#measOut').innerHTML=measHTML();renderPrompt()}
+function measHTML(){const im=computeImage();const fx=curFx();const ks=Object.keys(im).filter(k=>im[k]!=null&&isFinite(im[k]));
+  const used=new Set(fx.fields.filter(f=>f.m).map(f=>f.m));
+  if(!ks.length)return'<p class="fine">No measurements yet. Open an image and place the points; values flow into the Fracture tab and the decision.</p>';
+  return`<h3>Measurements</h3><table class="mt">${ks.map(k=>`<tr><td>${(OUT[k]||[k])[0]}${used.has(k)?'':' <span class="fine">(reference)</span>'}</td><td class="n">${f1(im[k])} ${(OUT[k]||['',''])[1]}</td></tr>`).join('')}</table>`}
+$('#calmm').addEventListener('input',e=>{const x=num(e.target.value);if(x){S.cal[S.mode]=x;update()}});
+$('#screwmm').addEventListener('input',e=>{const x=num(e.target.value);if(x){S.cal.screw=x;update()}});
+$('#hideViewer').onclick=()=>{S.noViewer=!S.noViewer;layout();update()};
+function chooseMode(m){S.mode=m;const ids=MODES[m].pts.map(x=>x[0]);S.active=ids.find(k=>!P(m,k)&&k.indexOf('cal')!==0)||ids.find(k=>k.indexOf('cal')!==0);fit();update()}
+function renderPrompt(){const md=MODES[S.mode];const st=md.pts.find(p=>p[0]===S.active)||md.pts[0];
+  $('#vlabel').textContent=md.name;
+  $('#prompt').innerHTML=!curImg()?`<span class="k">Image</span><span>Open the ${md.name} image<small>${md.hint}</small></span>`:`<span class="k">${P(S.mode,S.active)?'Adjust':'Tap'}</span><span>${st[1]}<small>${st[2]||''}</small></span>`}
+
+/* ---------- demo cases ---------- */
+const DEMOS=[
+ {t:'68 F · distal radius, dorsal tilt 22°',d:{age:68,sex:'F',side:'L',demand:'mod',osteo:true},fx:'drad',f:{ao:'A',dir:'dorsal',tilt:-22,incl:14,rheight:8,uv:3.5,dcomm:true}},
+ {t:'32 M · intra-articular distal radius (AO C)',d:{age:32,sex:'M',side:'R',dom:true,demand:'high',energy:'high'},fx:'drad',f:{ao:'C',dir:'dorsal',tilt:-10,incl:18,rheight:10,uv:1,step:3}},
+ {t:'82 F · displaced femoral neck (Garden IV)',d:{age:82,sex:'F',side:'R',demand:'mod',osteo:true,anticoag:true,asa:'3',hours:6},fx:'neck',f:{garden:'IV',walker:true}},
+ {t:'78 F · unstable trochanteric (AO A2)',d:{age:78,sex:'F',side:'L',demand:'low',osteo:true,asa:'3',hours:10},fx:'troch',f:{ao:'A2',lw:true}},
+ {t:'45 M · Weber B bimalleolar ankle',d:{age:45,sex:'M',side:'R',demand:'mod',skin:'swell'},fx:'ankle',f:{weber:'B',pattern:'bimal',mcs:6,tfcs:5,ovl:4}},
+ {t:'28 M · open tibial shaft, Gustilo IIIA',d:{age:28,sex:'M',side:'L',demand:'high',energy:'high',open:'IIIA',hours:2,smoke:true},fx:'tshaft',f:{pat:'B',level:'mid',ang:12,shortn:8,fibula:true}},
+ {t:'52 M · bicondylar plateau (Schatzker VI)',d:{age:52,sex:'M',side:'R',demand:'high',energy:'high',skin:'swell'},fx:'plat',f:{sch:'VI',step:5,widen:7,instab:true}},
+ {t:'6 y · Gartland III supracondylar, pink pulseless',d:{age:6,sex:'M',side:'L',child:true,demand:'high',nerve:true},fx:'scond',f:{gart:'III',pulse:'pink',ain:true}},
+ {t:'35 M · L1 burst, intact neurology',d:{age:35,sex:'M',side:'B',demand:'high',energy:'high'},fx:'tlspine',f:{morph:'2',plc:'0',neuro:'0',kyph:14,ahl:35}},
+ {t:'74 F · 4-part proximal humerus',d:{age:74,sex:'F',side:'R',dom:true,demand:'mod',osteo:true},fx:'phum',f:{parts:'4',valg:'varus',calcar:true}},
+ {t:'24 M · displaced midshaft clavicle',d:{age:24,sex:'M',side:'R',dom:true,demand:'high'},fx:'clav',f:{disp:'full',short:22,comm:true,overhead:true}},
+ {t:'48 M · joint-depression calcaneus, smoker',d:{age:48,sex:'M',side:'L',demand:'high',energy:'high',smoke:true,diab:true,skin:'swell'},fx:'calc',f:{sand:'III',el:'joint',bohler:5}},
+ {t:'86 F · fragility pelvis (LC1), cannot mobilise',d:{age:86,sex:'F',side:'B',demand:'low',osteo:true,asa:'3'},fx:'pelvis',f:{yb:'LC1',fragility:true,mobil:true}}];
+function openDemo(i){const x=DEMOS[i];S={...S,d:{...G_BLANK,...x.d,fx:x.fx},f:{[x.fx]:{...x.f}},P:{},cal:{screw:10.5},mode:FX[x.fx].meas[0],active:null,noViewer:false,rec:blankRec(),caseId:null,regView:null};
+  for(const k in S.d)if(typeof S.d[k]==='number')S.d[k]=String(S.d[k]);for(const k in S.f[x.fx])if(typeof S.f[x.fx][k]==='number')S.f[x.fx][k]=String(S.f[x.fx][k]);
+  S.rec.name='Demo – '+x.t;imgs={};blobs={};selectTab('dec');toast('Demo loaded: '+x.t)}
+/* ---------- patient record: identity, injury, operation, follow-up (mRUST), outcome; patient list; export ---------- */
+const O_COMP=[['none','None'],['ssi','Superficial wound infection'],['deep','Deep infection'],['dvt','DVT / PE'],['loss','Loss of reduction / fixation'],['delayed','Delayed union'],['nonunion','Non-union'],['malunion','Malunion'],['hardware','Prominent / broken implant'],['nerve','Nerve injury'],['crps','CRPS'],['stiff','Stiffness'],['avn','Avascular necrosis'],['cutout','Screw cut-out'],['death','Death'],['other','Other (see notes)']];
+const PROC=[['','—'],['nonop','Non-operative (cast / brace / sling)'],['crpp','Closed reduction + K-wires'],['orif','ORIF – plate and screws'],['mipo','MIPO / bridge plating'],['imn','Intramedullary nail'],['screws','Screws only / tension band'],['exfix','External fixator'],['frame','Circular frame'],['hemi','Hemiarthroplasty'],['tha','Total hip arthroplasty'],['rsa','Reverse shoulder arthroplasty'],['rhr','Radial head replacement'],['dhs','Sliding hip screw'],['cmn','Cephalomedullary nail'],['spine','Spinal fixation (± decompression)'],['vertebro','Kyphoplasty / vertebroplasty'],['fasc','Fasciotomy'],['debr','Debridement / washout'],['flap','Soft-tissue cover (flap / graft)'],['amp','Amputation'],['other','Other']];
+const REC_FORM=[
+ ['Patient details',[
+  {p:'name',l:'Name',t:'txt'},{p:'fileNo',l:'File number',t:'txt'},{p:'phone',l:'Phone',t:'tel'},
+  {p:'injDate',l:'Date of injury',t:'date'},{p:'admDate',l:'Admission / first visit',t:'date'},
+  {p:'xrDate',l:'X-ray date',t:'date'},{p:'ctDate',l:'CT date',t:'date'},{p:'mriDate',l:'MRI date',t:'date'},
+  {p:'assoc',l:'Associated injuries',t:'txt'},
+  {p:'notes',l:'Notes',t:'area'}]],
+ ['Operation',[
+  {p:'op.date',l:'Date of surgery',t:'date'},{p:'op.surgeon',l:'Surgeon',t:'txt'},
+  {p:'op.proc',l:'Procedure',t:'sel',o:PROC},{p:'op.proc2',l:'Additional procedure',t:'sel',o:PROC},
+  {p:'op.stage',l:'Stage',t:'sel',o:[['','—'],['def','Definitive (single stage)'],['temp','Temporary / damage control'],['second','Second stage (definitive)']]},
+  {p:'op.approach',l:'Approach',t:'txt'},{p:'op.implant',l:'Implants (type, size, screws)',t:'txt'},
+  {p:'op.reduction',l:'Reduction',t:'sel',o:[['','—'],['anat','Anatomical'],['good','Good (within limits)'],['acc','Acceptable'],['poor','Poor']]},
+  {p:'op.graft',l:'Bone graft / substitute',t:'txt'},{p:'op.tq',l:'Tourniquet time',t:'num',u:'min'},{p:'op.abx',l:'Antibiotics',t:'txt'},
+  {p:'op.notes',l:'Operative notes',t:'area'}]],
+ ['Post-operative protocol',[
+  {p:'op.wb',l:'Weight bearing',t:'sel',o:[['','—'],['nwb','Non-weight bearing'],['ttwb','Touch-toe / protected'],['pwb','Partial'],['wbat','As tolerated / full']]},
+  {p:'op.wbWeeks',l:'Restricted weight bearing for',t:'num',u:'weeks'},
+  {p:'op.immob',l:'Immobilisation (cast / brace / sling)',t:'txt'},{p:'op.immobWeeks',l:'Immobilisation for',t:'num',u:'weeks'},
+  {p:'op.rom',l:'Range-of-motion plan',t:'txt'},{p:'op.vte',l:'VTE prophylaxis',t:'txt'},
+  {p:'op.removal',l:'Planned implant / wire / frame removal',t:'txt'}]],
+ ['Outcome',[
+  {p:'out.union',l:'Union',t:'sel',o:[['','—'],['united','United'],['delayed','Delayed union'],['nonunion','Non-union'],['malunion','Malunion']]},
+  {p:'out.unionDate',l:'Union date',t:'date'},
+  {p:'out.rtw',l:'Return to work / activity',t:'sel',o:[['','—'],['same','Same level'],['lower','Reduced level'],['no','Not returned']]},
+  {p:'out.rtwDate',l:'Return date',t:'date'},
+  {p:'out.removal',l:'Implant removal date',t:'date'},
+  {p:'out.revision',l:'Re-operation / revision',t:'txt'},
+  {p:'out.lastFU',l:'Last follow-up',t:'date'}]]];
+const VISIT_F=[
+ {p:'date',l:'Visit date',t:'date'},
+ {p:'pain',l:'Pain (0–10)',t:'num',u:'/10'},
+ {p:'wound',l:'Wound',t:'sel',o:[['','—'],['healed','Healed'],['ok','Healing'],['ooze','Oozing'],['inf','Infected']]},
+ {p:'wb',l:'Weight bearing',t:'sel',o:[['','—'],['nwb','Non-weight bearing'],['ttwb','Touch-toe'],['pwb','Partial'],['fwb','Full']]},
+ {p:'rom',l:'Range of motion (joint, arc)',t:'txt'},
+ {p:'c1',l:'mRUST cortex 1 (AP medial)',t:'sel',o:[['','—'],['1','1 – callus absent'],['2','2 – callus, line visible'],['3','3 – bridging, line gone'],['4','4 – remodelled']]},
+ {p:'c2',l:'mRUST cortex 2 (AP lateral)',t:'sel',o:[['','—'],['1','1 – callus absent'],['2','2 – callus, line visible'],['3','3 – bridging, line gone'],['4','4 – remodelled']]},
+ {p:'c3',l:'mRUST cortex 3 (lateral anterior)',t:'sel',o:[['','—'],['1','1 – callus absent'],['2','2 – callus, line visible'],['3','3 – bridging, line gone'],['4','4 – remodelled']]},
+ {p:'c4',l:'mRUST cortex 4 (lateral posterior)',t:'sel',o:[['','—'],['1','1 – callus absent'],['2','2 – callus, line visible'],['3','3 – bridging, line gone'],['4','4 – remodelled']]},
+ {p:'xr',l:'X-ray: alignment / implant',t:'sel',o:[['','—'],['ok','Maintained'],['loss','Loss of reduction'],['loose','Implant loosening / failure']]},
+ {p:'comp',l:'Complication',t:'sel',o:O_COMP},
+ {p:'notes',l:'Notes',t:'area'}];
+const mrust=v=>{const c=['c1','c2','c3','c4'].map(k=>num(v[k]));return c.every(x=>x!=null)?c.reduce((a,b)=>a+b,0):null};
+function blankRec(){return{name:'',fileNo:'',phone:'',injDate:'',admDate:'',xrDate:'',ctDate:'',mriDate:'',assoc:'',notes:'',op:{},visits:[],out:{}}}
+const getP=(o,p)=>p.split('.').reduce((a,k)=>a==null?a:a[k],o);
+const setP=(o,p,v)=>{const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++)a=a[ks[i]]=a[ks[i]]||{};a[ks[ks.length-1]]=v};
+const lab=(f,v)=>{if(v===''||v==null)return'';if(f.t==='chk')return v?'Yes':'';if(f.t==='sel'){const o=f.o.find(x=>String(x[0])===String(v));return o?o[1]:v}return String(v)+(f.u&&f.u!=='n'?' '+f.u:'')};
+function weeksPostOp(date){const od=S.rec.op.date;if(!od||!date)return null;return Math.round((new Date(date)-new Date(od))/6048e5*10)/10}
+function rField(f,val,attr){const id='r_'+Math.random().toString(36).slice(2,8);
+  if(f.t==='chk')return`<label class="tog"><input type="checkbox" ${attr} ${val?'checked':''}> ${f.l}</label>`;
+  if(f.t==='area')return`<div class="full"><span>${f.l}</span><textarea ${attr} rows="3" class="ta">${esc(val??'')}</textarea></div>`;
+  if(f.t==='sel')return`<label for="${id}">${f.l}</label><select id="${id}" ${attr}>${f.o.map(([v,l])=>`<option value="${v}" ${String(val??'')===String(v)?'selected':''}>${l}</option>`).join('')}</select>`;
+  if(f.t==='num')return`<label for="${id}">${f.l}</label><input id="${id}" type="number" inputmode="decimal" step="any" ${attr} value="${esc(val??'')}"><span class="u">${f.u||''}</span>`;
+  return`<label for="${id}">${f.l}</label><input id="${id}" type="${f.t==='txt'?'text':f.t}" ${attr} value="${esc(val??'')}" class="wide">`}
+function weeksPostOp(date){const od=S.rec.op.date||S.rec.injDate;if(!od||!date)return null;return Math.round((new Date(date)-new Date(od))/6048e5*10)/10}
+function renderRecord(){const el=$('#p-rec');const R=S.rec;let h='';const fx=curFx();
+  h+=`<div class="rec" style="padding:10px 12px"><span class="l">Patient record</span><span class="h" style="font-size:16px" id="recHead">${esc(R.name||'Unnamed patient')}${R.fileNo?' · #'+esc(R.fileNo):''}</span>
+   <span class="fine">${esc(fx.name)}${S.caseId?' · saved; changes save automatically':' · not in the patient list yet'}${R.op.date?' · Surgery '+esc(R.op.date):''}${R.visits.length?' · '+R.visits.length+' visit'+(R.visits.length>1?'s':''):''}</span>
+   <div class="row">${S.caseId?'':'<button class="btn primary" id="recSave">Add to patient list</button>'}<button class="btn" id="recPrint">Print / PDF</button><button class="btn" id="recShare">Share as text</button></div></div>`;
+  h+=`<p class="fine">Fracture details, measurements and the plan come from the Patient, Fracture, Imaging and Decision tabs. Weeks are counted from surgery (or from injury if non-operative).</p>`;
+  REC_FORM.forEach(([title,fs],gi)=>{h+=`<details class="sec" ${gi<2?'open':''}><summary>${title}</summary><div class="fgrid">${fs.map(f=>rField(f,getP(R,f.p),`data-r="${f.p}"`)).join('')}</div></details>`;
+    if(gi===REC_FORM.length-2){h+=`<details class="sec" open><summary>Follow-up visits · ${R.visits.length}</summary><div class="group" id="visits">${visitsHTML()}</div><div class="row"><button class="btn primary" id="addVisit">Add visit</button></div><p class="fine">mRUST (Litrenta 2015): 4 cortices × 1–4, total 4–16; ≥ 13 is consistent with union of a diaphyseal fracture.</p></details>`}});
+  const st=el.scrollTop;el.innerHTML=h;el.scrollTop=st;bindRecord()}
+function visitsHTML(){const V=S.rec.visits;if(!V.length)return'<div class="empty">No follow-up visits yet.</div>';
+  return V.map((v,i)=>`<details class="visit" ${v._open?'open':''} data-vi="${i}"><summary>${visitSummary(v,i)}</summary>
+   <div class="fgrid">${VISIT_F.map(f=>rField(f,v[f.p],`data-v="${i}.${f.p}"`)).join('')}</div><div class="row"><button class="btn danger" data-vdel="${i}">Delete visit</button></div></details>`).join('')}
+function visitSummary(v,i){const w=weeksPostOp(v.date);const m=mrust(v);return`<b>${v.date?esc(v.date):'Visit '+(i+1)}</b>${w!=null?` <span class="pill mut">${w<0?'pre-op':w+' wk'}</span>`:''}${m!=null?` <span class="pill ${m>=13?'ok':'warn'}">mRUST ${m}</span>`:''}${v.comp&&v.comp!=='none'?` <span class="pill bad">${lab(VISIT_F.find(f=>f.p==='comp'),v.comp)}</span>`:''}`}
+function recHeader(){const R=S.rec,h=$('#recHead');if(h)h.textContent=(R.name||'Unnamed patient')+(R.fileNo?' · #'+R.fileNo:'')}
+function bindRecord(){
+  const sv=$('#recSave');if(sv)sv.onclick=()=>saveCase(true);
+  $('#recPrint').onclick=openPrintSheet;
+  $('#recShare').onclick=()=>shareText('Fracture record',recordReport());
+  $('#addVisit').onclick=()=>{S.rec.visits.forEach(v=>v._open=false);S.rec.visits.push({date:new Date().toISOString().slice(0,10),comp:'none',_open:true});renderRecord();autosave();
+    const last=[...$$('#visits .visit')].pop();if(last)last.scrollIntoView({block:'start'})};
+  $$('#p-rec [data-vdel]').forEach(b=>b.onclick=()=>{if(b.dataset.armed){S.rec.visits.splice(+b.dataset.vdel,1);renderRecord();autosave()}else{b.dataset.armed=1;b.textContent='Tap again to delete'}});
+  $$('#p-rec details.visit').forEach(d=>d.addEventListener('toggle',()=>{S.rec.visits[+d.dataset.vi]._open=d.open}))}
+function recInput(e,commit){const i=e.target;if(!i.closest||!i.closest('#p-rec'))return;
+  const val=i.type==='checkbox'?i.checked:i.value;
+  if(i.dataset.r){setP(S.rec,i.dataset.r,val);recHeader();if(commit&&(i.dataset.r==='op.date'||i.dataset.r==='injDate'))$$('#visits .visit').forEach(d=>{const k=+d.dataset.vi;d.querySelector('summary').innerHTML=visitSummary(S.rec.visits[k],k)});autosave()}
+  else if(i.dataset.v){const [vi,k]=i.dataset.v.split('.');S.rec.visits[+vi][k]=val;if(['date','comp','c1','c2','c3','c4'].includes(k)){const d=i.closest('.visit');if(d)d.querySelector('summary').innerHTML=visitSummary(S.rec.visits[+vi],+vi)}autosave()}}
+document.addEventListener('input',e=>recInput(e,false));document.addEventListener('change',e=>recInput(e,true));
+
+/* ---------- text report ---------- */
+function recordReport(){const R=S.rec,L=[];
+  L.push(`${R.name||'Patient'}${R.fileNo?' · file '+R.fileNo:''}${R.phone?' · '+R.phone:''}`);
+  const fl=(fs,obj)=>fs.map(f=>{const v=lab(f,getP(obj,f.p));return v&&f.t!=='area'?`${f.l}: ${v}`:''}).filter(Boolean);
+  const dets=fl(REC_FORM[0][1].filter(f=>!['name','fileNo','phone'].includes(f.p)),R);if(dets.length)L.push(dets.join(' · '));if(R.notes)L.push('Notes: '+R.notes);
+  L.push('');L.push('ASSESSMENT AND PLAN');L.push(summary(decide()));
+  const grp=(i,title)=>{const x=fl(REC_FORM[i][1],R);if(x.length){L.push('');L.push(title);x.forEach(y=>L.push('- '+y))}};
+  grp(1,'OPERATION');if(R.op.notes)L.push('Notes: '+R.op.notes);grp(2,'POST-OPERATIVE');
+  if(R.visits.length){L.push('');L.push('FOLLOW-UP');R.visits.forEach(v=>{const w=weeksPostOp(v.date);const m=mrust(v);L.push(`- ${v.date||'?'}${w!=null&&w>=0?' ('+w+' wk)':''}: `+[m!=null?'mRUST '+m+'/16':'',...VISIT_F.filter(f=>!['date','notes','c1','c2','c3','c4'].includes(f.p)).map(f=>{const x=lab(f,v[f.p]);return x&&x!=='None'?`${f.l} ${x}`:''})].filter(Boolean).join(', ')+(v.notes?'. '+v.notes:''))})}
+  grp(3,'OUTCOME');
+  return L.join('\n')}
+async function shareText(title,text){try{if(isNative&&window.Capacitor.Plugins.Share){await window.Capacitor.Plugins.Share.share({title,text});return}if(navigator.share){await navigator.share({title,text});return}await navigator.clipboard.writeText(text);toast('Copied')}catch{}}
+
+/* ---------- patient list ---------- */
+async function saveCase(fromRecord){const R=S.rec;const name=(R.name||$('#caseName').value.trim()||('Case '+new Date().toLocaleString([],{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})));
+  if(!R.name)R.name=name;S.caseId=S.caseId||('c'+Date.now());
+  try{await DB.put(caseRow());await saveNow();$('#caseName').value='';toast(`Saved “${name}”`);if(!$('#casesSheet').hidden)renderCases();if(S.tab==='rec')renderRecord()}catch{toast('Could not save on this device')}}
+function caseRow(){return{id:S.caseId,name:S.rec.name||'Unnamed',state:snap(),blobs:{...blobs},demo:isDemoImg(),date:Date.now()}}
+async function renderCases(){let list=[];try{list=(await DB.all()).filter(c=>!String(c.id).startsWith('__')).sort((a,b)=>b.date-a.date)}catch{}
+  const q=($('#caseSearch').value||'').trim().toLowerCase();
+  $('#caseCount').textContent=list.length?`${list.length} patient${list.length>1?'s':''}`:'';
+  if(q)list=list.filter(c=>{const r=c.state.rec||{};const d=c.state.d||{};return[c.name,r.fileNo,r.phone,r.op&&r.op.date,FX[d.fx]&&FX[d.fx].name].join(' ').toLowerCase().includes(q)});
+  const el=$('#caseList');if(!list.length){el.innerHTML=`<div class="empty">${q?'No match.':'No patients saved yet.'}</div>`;return}
+  el.innerHTML=list.map(c=>{const r=c.state.rec||{},d=c.state.d||{};const op=r.op||{};
+    return`<div class="case ${c.id===S.caseId?'cur':''}"><div style="min-width:0"><div class="t"></div><div class="d">${[r.fileNo?'#'+esc(r.fileNo):'',esc(d.age||'?')+' y',FX[d.fx]?esc(FX[d.fx].name):'',op.date?'op '+esc(op.date):'no surgery yet',(r.visits||[]).length?(r.visits.length+' visits'):''].filter(Boolean).join(' · ')}</div></div><div class="row"><button class="btn primary" data-open="${c.id}">Open</button><button class="btn danger" data-del="${c.id}">✕</button></div></div>`}).join('');
+  $$('#caseList .t').forEach((t,i)=>t.textContent=list[i].name);
+  $$('#caseList [data-open]').forEach(b=>b.onclick=async()=>{await saveNow();const r=await DB.get(b.dataset.open);await loadRecord(r);S.caseId=r.id;$('#casesSheet').hidden=true;selectTab('rec')});
+  $$('#caseList [data-del]').forEach(b=>b.onclick=async()=>{if(b.dataset.armed){await DB.del(b.dataset.del);if(S.caseId===b.dataset.del)S.caseId=null;renderCases()}else{b.dataset.armed=1;b.textContent='Delete?'}})}
+
+/* ---------- export / backup ---------- */
+const csvCell=v=>{v=v==null?'':String(v);return/[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+const toCSV=rows=>'﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+async function allCases(){let list=[];try{list=(await DB.all()).filter(c=>!String(c.id).startsWith('__'))}catch{}return list.sort((a,b)=>a.date-b.date)}
+function withState(st,fn){const keep=S;S={...S,d:{...G_BLANK,...st.d},f:st.f||{},P:st.P||{},cal:{screw:10.5,...st.cal},rec:{...blankRec(),...(st.rec||{})}};S.rec.op=S.rec.op||{};try{return fn()}finally{S=keep}}
+async function exportCSV(){const list=await allCases();if(!list.length){toast('No saved patients to export');return}
+  const dKeys=Object.keys(G_BLANK);const recF=REC_FORM.flatMap(([,fs])=>fs).filter(f=>f.t!=='area');
+  const head=['id',...recF.map(f=>f.p),'fracture','classification',...dKeys,'measurements','plan','visits','last_visit','last_mrust','op_notes','notes'];
+  const rows=[head],vrows=[['id','name','file_no','fracture','op_date','weeks',...VISIT_F.map(f=>f.p),'mrust']];
+  for(const c of list)withState(c.state,()=>{const R=decide();const r=S.rec;
+    const vs=r.visits||[];const lastM=[...vs].reverse().map(mrust).find(x=>x!=null);
+    rows.push([c.id,...recF.map(f=>{const x=getP(r,f.p);return f.t==='sel'?lab(f,x):x??''}),R.fx.name,R.cls.join(' | '),...dKeys.map(k=>S.d[k]===true?1:S.d[k]===false?'':S.d[k]),R.acc.map(a=>`${a.label} ${f1(a.val)}${a.unit}`).join('; '),R.head,vs.length,vs.length?vs[vs.length-1].date:'',lastM??'',r.op.notes||'',r.notes||'']);
+    vs.forEach(x=>vrows.push([c.id,r.name,r.fileNo,R.fx.name,r.op.date||'',weeksPostOp(x.date)??'',...VISIT_F.map(f=>f.t==='sel'?lab(f,x[f.p]):x[f.p]??''),mrust(x)??'']))});
+  const day=new Date().toISOString().slice(0,10);
+  await saveFiles([[`Fractures-patients-${day}.csv`,toCSV(rows),'text/csv'],[`Fractures-visits-${day}.csv`,toCSV(vrows),'text/csv']]);toast(`Exported ${list.length} patients`)}
+const blobToDataURL=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b)});
+async function backup(){const list=await allCases();if(!list.length){toast('Nothing to back up yet');return}
+  const out=[];for(const c of list){const b={};for(const k in c.blobs||{}){try{b[k]=await blobToDataURL(c.blobs[k])}catch{}}out.push({...c,blobs:b})}
+  await saveFiles([[`Fractures-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({app:'fracture-planner',v:1,cases:out}),'application/json']]);toast(`Backed up ${list.length} patients`)}
+async function restore(file){try{const j=JSON.parse(await file.text());if(!j.cases)throw 0;let n=0;
+  for(const c of j.cases){const b={};for(const k in c.blobs||{}){try{b[k]=await (await fetch(c.blobs[k])).blob()}catch{}}await DB.put({...c,blobs:b});n++}
+  toast(`Restored ${n} patients`);renderCases()}catch{toast('That is not a Fracture Planner backup file')}}
+async function saveFiles(files){
+  if(isNative&&window.Capacitor.Plugins.Filesystem&&window.Capacitor.Plugins.Share){const {Filesystem,Share}=window.Capacitor.Plugins;const uris=[];
+    for(const [name,text] of files){const w=await Filesystem.writeFile({path:name,data:text,directory:'CACHE',encoding:'utf8'});uris.push(w.uri)}
+    try{await Share.share({title:files.map(f=>f[0]).join(', '),files:uris})}catch{}return}
+  for(const [name,text,type] of files){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);await new Promise(r=>setTimeout(r,400))}}
+$('#saveCase').onclick=()=>saveCase(false);
+$('#caseSearch').addEventListener('input',renderCases);
+$('#exportCsv').onclick=exportCSV;$('#backupBtn').onclick=backup;
+$('#restoreFile').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)restore(f)});
+
+/* ---------- printing: PDF reports ---------- */
+let SET={doctor:'',title:'Consultant Orthopaedic and Trauma Surgeon',clinic:'',phone:'',address:''};
+function loadPdfLib(){if(window.jsPDF)return Promise.resolve();return new Promise((res,rej)=>{const s=document.createElement('script');s.src='pdf.bundle.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+const pe=s=>esc(s==null?'':s);
+function fLabel(f,v){if(v===''||v==null||v===false)return'';if(f.t==='chk')return v?'Yes':'';if(f.t==='seg'||f.t==='sel'){const o=f.o.find(x=>String(x[0])===String(v));return o?o[1]:String(v)}return String(v)+(f.u&&!['n','0–10'].includes(f.u)?' '+f.u:'')}
+function kvTable(pairs){pairs=pairs.filter(p=>p[1]!==''&&p[1]!=null);if(!pairs.length)return'<p class="muted">Not recorded.</p>';
+  const rows=[];for(let i=0;i<pairs.length;i+=2)rows.push(`<tr><th>${pe(pairs[i][0])}</th><td>${pe(pairs[i][1])}</td>${pairs[i+1]?`<th>${pe(pairs[i+1][0])}</th><td>${pe(pairs[i+1][1])}</td>`:'<th></th><td></td>'}</tr>`);
+  return`<table class="kv">${rows.join('')}</table>`}
+function gPairs(){const d=S.d;const out=[];G_FORM.forEach(([,fs])=>fs.forEach(f=>{if(['age','sex','side'].includes(f.k))return;if(f.show&&!f.show(d))return;const v=fLabel(f,d[f.k]);if(v&&!(['no','ok'].includes(d[f.k])))out.push([f.l,v])}));return out}
+function fxPairs(){const fx=curFx();const v=vals();const out=[];fx.fields.forEach(f=>{if(f.show&&!f.show(v))return;let x=v[f.k];if(f.t==='num'&&num(x)!=null)x=f1(num(x));out.push([f.l,fLabel(f,x)])});return out}
+function recPairs(gi){const R=S.rec;return REC_FORM[gi][1].filter(f=>f.t!=='area').map(f=>[f.l,lab(f,getP(R,f.p))])}
+function blk(title,html){return`<div class="blk"><h2>${pe(title)}</h2>${html}</div>`}
+const ul=a=>a.length?`<ul>${a.map(x=>`<li>${pe(x)}</li>`).join('')}</ul>`:'';
+function reportHTML(kind){const d=S.d,R=decide(),r=S.rec;const age=num(d.age);const fx=R.fx;
+  const head=`<div class="blk lh"><div><b>${pe(SET.doctor||'')}</b><span>${pe(SET.title||'')}</span><span>${pe([SET.clinic,SET.address,SET.phone].filter(Boolean).join(' · '))}</span></div><div class="lt">${pe({full:'Fracture record',preop:'Assessment and treatment plan',op:'Operative note',fu:'Follow-up and union'}[kind])}</div></div>
+   <div class="blk pt"><span><b>Patient:</b> ${pe(r.name||'—')}</span><span><b>File:</b> ${pe(r.fileNo||'—')}</span><span><b>Age/Sex:</b> ${age??'—'} / ${d.sex}</span><span><b>Side:</b> ${{R:'Right',L:'Left',B:'Bilateral / midline'}[d.side]}</span>${r.injDate?`<span><b>Injury:</b> ${pe(r.injDate)}</span>`:''}<span><b>Printed:</b> ${new Date().toISOString().slice(0,10)}</span></div>`;
+  let h='';
+  const preop=()=>{
+    h+=blk('Patient and injury',kvTable([...recPairs(0).filter(p=>!['Name','File number','Phone','Date of injury'].includes(p[0])),...gPairs()])+(r.notes?`<p>${pe(r.notes)}</p>`:''));
+    h+=blk(`${fx.name} – classification and imaging`,`<p><b>${pe(R.cls.join(' · '))}</b></p>`+kvTable(fxPairs())+(R.acc.length?`<table class="grid"><tr><th>Parameter</th><th>Value</th><th>Acceptable</th><th></th></tr>${R.acc.map(a=>`<tr><td>${pe(a.label)}</td><td>${f1(a.val)} ${pe(a.unit)}</td><td>${pe(a.limit)}</td><td>${a.ok?'within':'<b>outside</b>'}</td></tr>`).join('')}</table>`:''));
+    let plan=`<p class="big">${pe(R.head)}</p>`;const ord={ind:0,consider:1,contra:2};
+    [...R.opts].sort((a,b)=>ord[a.st]-ord[b.st]).forEach(o=>{plan+=`<h3>${pe(o.name)} – ${pe(STATE[o.st][1])}</h3>${o.why?`<p>${pe(o.why)}</p>`:''}`});
+    if(R.timing.length)plan+=`<h3>Timing</h3>${ul(R.timing)}`;if(R.approach.length)plan+=`<h3>Approach</h3>${ul(R.approach)}`;if(R.implant.length)plan+=`<h3>Implants</h3>${ul(R.implant)}`;
+    if(R.img.length)plan+=`<h3>Imaging and work-up</h3>${ul(R.img)}`;if(R.notes.length)plan+=`<h3>Special considerations</h3>${ul(R.notes)}`;
+    h+=blk('Plan',plan);if(R.fu.length||R.comp.length)h+=blk('Follow-up plan and risks',ul(R.fu)+(R.comp.length?`<h3>Complications to watch for</h3>${ul(R.comp)}`:''))};
+  const op=()=>{h+=blk('Operation',kvTable(recPairs(1))+(r.op.notes?`<h3>Operative notes</h3><p class="pre">${pe(r.op.notes)}</p>`:''));h+=blk('Post-operative protocol',kvTable(recPairs(2)))};
+  const fu=()=>{const V=r.visits||[];
+    h+=blk('Follow-up visits',V.length?`<table class="grid"><tr><th>Date</th><th>Wk</th><th>Pain</th><th>Wound</th><th>WB</th><th>ROM</th><th>mRUST</th><th>X-ray</th><th>Event</th></tr>${V.map(x=>{const w=weeksPostOp(x.date);const Lb=k=>lab(VISIT_F.find(f=>f.p===k),x[k]);const m=mrust(x);
+      return`<tr><td>${pe(x.date||'')}</td><td>${w!=null&&w>=0?Math.round(w):''}</td><td>${pe(x.pain??'')}</td><td>${pe(Lb('wound'))}</td><td>${pe(Lb('wb'))}</td><td>${pe(x.rom||'')}</td><td>${m!=null?m+'/16':''}</td><td>${pe(Lb('xr'))}</td><td>${pe(x.comp&&x.comp!=='none'?Lb('comp'):'')}</td></tr>${x.notes?`<tr><td></td><td colspan="8" class="muted">${pe(x.notes)}</td></tr>`:''}`}).join('')}</table>`:'<p class="muted">No follow-up visits recorded.</p>');
+    h+=blk('Outcome',kvTable(recPairs(3)))};
+  if(kind==='full'){preop();op();fu()}else if(kind==='preop')preop();else if(kind==='op'){h+=blk('Indication',`<p>${pe(fx.name)} (${pe(R.cls.join('; '))}) – ${{R:'right',L:'left',B:'bilateral / midline'}[d.side]}. Plan: ${pe(R.head)}</p>`);op()}else fu();
+  h+=`<div class="blk sig"><span>Signature: ______________________</span><span>${pe(SET.doctor||'')}</span></div>`;
+  return`<div class="page">${head}${h}<div class="foot">${pe(SET.clinic||'Fracture Planner')} · ${pe(r.name||'')} ${r.fileNo?'#'+pe(r.fileNo):''}</div></div>`}
+async function printReport(kind){toast('Preparing PDF…');try{await loadPdfLib();const html=reportHTML(kind);const blob=await htmlToPdf(html);
+  const nm=(S.rec.name||'patient').replace(/[^\w؀-ۿ]+/g,'_');await shareBlob(blob,`${nm}_${kind}_${new Date().toISOString().slice(0,10)}.pdf`)}catch(e){console.error(e);toast('Could not create the PDF')}}
+async function htmlToPdf(html){const root=$('#printRoot');root.innerHTML=html;try{await document.fonts.ready}catch{}const el=root.firstElementChild;
+  const scale=2;const canvas=await window.html2canvas(el,{scale,backgroundColor:'#ffffff'});
+  const top=el.getBoundingClientRect().top;const breaks=[...el.querySelectorAll('.blk, .kv tr, .grid tr, li, p')].map(b=>Math.round((b.getBoundingClientRect().bottom-top)*scale)).sort((a,b)=>a-b);
+  root.innerHTML='';
+  const pdf=new window.jsPDF({unit:'pt',format:'a4'});const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+  const margin=28,usable=Math.floor((ph-2*margin)*canvas.width/pw);let y=0,first=true;
+  while(y<canvas.height-4){let end=Math.min(y+usable,canvas.height);if(end<canvas.height){const cand=breaks.filter(b=>b>y+usable*0.5&&b<=end);if(cand.length)end=cand[cand.length-1]+2}
+    const h=end-y;const c=document.createElement('canvas');c.width=canvas.width;c.height=h;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,h);g.drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);
+    if(!first)pdf.addPage();pdf.addImage(c.toDataURL('image/jpeg',.92),'JPEG',0,margin,pw,h*pw/canvas.width);first=false;y=end}
+  const n=pdf.getNumberOfPages();for(let i=1;i<=n;i++){pdf.setPage(i);pdf.setFontSize(8);pdf.setTextColor(120);pdf.text(`Page ${i} of ${n}`,pw-margin,ph-12,{align:'right'})}
+  return pdf.output('blob')}
+const blobToB64=b=>new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(b)});
+async function shareBlob(blob,name){
+  if(isNative&&window.Capacitor.Plugins.Filesystem){try{const {Filesystem,Share}=window.Capacitor.Plugins;const w=await Filesystem.writeFile({path:name,data:await blobToB64(blob),directory:'CACHE'});await Share.share({title:name,files:[w.uri]});return}catch(e){if(String(e).includes('cancel'))return;console.error(e)}}
+  const file=new File([blob],name,{type:'application/pdf'});if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:name});return}catch(e){if(e.name==='AbortError')return}}
+  const url=URL.createObjectURL(blob);const w=window.open(url,'_blank');if(w)return;const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Saved '+name)}
+function openPrintSheet(){$('#printSheet').hidden=false}
+$$('#printSheet [data-print]').forEach(b=>b.onclick=()=>{$('#printSheet').hidden=true;printReport(b.dataset.print)});
+$('#shareApp').onclick=async()=>{const url='https://eelforse-blip.github.io/Knee-planner/fractures/';const text='Fracture Planner – upper limb, pelvis & hip, lower limb and spine: classification (AO/OTA, Garden, Schatzker, Weber, Gustilo, TLICS, SLIC…), X-ray measurements (TAD, Böhler, radial tilt, clear space, kyphosis), timing, approaches, implants and follow-up with mRUST. Free, works offline on iPhone, Android and PC.\n\niPhone: open in Safari → Share → Add to Home Screen.\nAndroid / PC: open in Chrome or Edge → Install app.\n\n';
+  try{if(isNative&&window.Capacitor.Plugins.Share){await window.Capacitor.Plugins.Share.share({title:'Fracture Planner',text:text+url});return}if(navigator.share){await navigator.share({title:'Fracture Planner',text,url});return}await navigator.clipboard.writeText(text+url);toast('Link copied')}catch{}};
+$('#setBtn').onclick=()=>{['doctor','title','clinic','phone','address'].forEach(k=>$('#set_'+k).value=SET[k]||'');$('#menuSheet').hidden=true;$('#setSheet').hidden=false};
+$('#setSave').onclick=async()=>{['doctor','title','clinic','phone','address'].forEach(k=>SET[k]=$('#set_'+k).value.trim());try{await DB.put({id:'__settings',set:SET})}catch{}$('#setSheet').hidden=true;toast('Letterhead saved')};
+
+/* ---------- tabs ---------- */
+const TABS=['rec','pt','fx','img','dec'];
+function update(){if(S.tab==='img')renderImg();if(S.tab==='dec')renderDec();draw();autosave()}
+function layout(){const w=$('#work');const showV=S.tab==='img'&&!S.noViewer;w.classList.toggle('calc',!showV);requestAnimationFrame(()=>{resize();fit()})}
+function selectTab(t){S.tab=t;$$('.tab').forEach(x=>x.setAttribute('aria-selected',x.dataset.t===t));TABS.forEach(n=>$('#p-'+n).hidden=n!==t);
+  if(t==='img'){const fx=curFx();if(!fx.meas.includes(S.mode))S.mode=fx.meas[0];if(!S.active||!MODES[S.mode].pts.some(p=>p[0]===S.active)){const ids=MODES[S.mode].pts.map(x=>x[0]);S.active=ids.find(k=>!P(S.mode,k))||ids[0]}}
+  layout();renderTab(t);$('#p-'+t).scrollTop=0;autosave()}
+$$('.tab').forEach(t=>t.onclick=()=>selectTab(t.dataset.t));
+$('#grab').onclick=()=>{$('#work').classList.toggle('tall');requestAnimationFrame(()=>{resize();fit()})};
+
+/* ---------- storage ---------- */
+const DB=(()=>{let p=null;const open=()=>p||(p=new Promise((res,rej)=>{try{const r=indexedDB.open('fracture-planner',1);r.onupgradeneeded=()=>r.result.createObjectStore('cases',{keyPath:'id'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}));
+  const tx=async(mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('cases',mode);const out=fn(t.objectStore('cases'));t.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);t.onerror=()=>rej(t.error)})};
+  return{put:v=>tx('readwrite',s=>s.put(v)),get:id=>tx('readonly',s=>s.get(id)),del:id=>tx('readwrite',s=>s.delete(id)),all:()=>tx('readonly',s=>s.getAll())}})();
+const snap=()=>JSON.parse(JSON.stringify({d:S.d,f:S.f,P:S.P,cal:S.cal,mode:S.mode,rec:S.rec}));
+const isDemoImg=()=>false;
+const saveNow=()=>{clearTimeout(saveT);const p=[DB.put({id:'__current',caseId:S.caseId,state:snap(),tab:S.tab,blobs:{...blobs},date:Date.now()})];if(S.caseId)p.push(DB.put(caseRow()));return Promise.all(p).catch(()=>{})};
+let saveT=0;function autosave(){clearTimeout(saveT);saveT=setTimeout(saveNow,400)}
+addEventListener('pagehide',saveNow);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveNow()});
+async function loadRecord(r){const st=JSON.parse(JSON.stringify(r.state));S.d={...G_BLANK,...st.d};if(!FX[S.d.fx])S.d.fx='drad';S.f=st.f||{};S.P=st.P||{};S.cal={screw:10.5,...st.cal};S.mode=MODES[st.mode]?st.mode:curFx().meas[0];S.regView=null;
+  {const b0=blankRec(),rr=st.rec||{};S.rec={...b0,...rr,op:{...(rr.op||{})},out:{...(rr.out||{})},visits:rr.visits||[]}}S.caseId=r.caseId||null;S.active=null;
+  imgs={};blobs={...(r.blobs||{})};for(const k in blobs){try{imgs[k]=await blobToCanvas(blobs[k])}catch{}}}
+$('#casesBtn').onclick=()=>{$('#caseSearch').value='';renderCases();$('#casesSheet').hidden=false};$('#menuBtn').onclick=()=>$('#menuSheet').hidden=false;
+$$('.sheet').forEach(s=>s.addEventListener('click',e=>{if(e.target===s||e.target.hasAttribute('data-close'))s.hidden=true}));
+$('#newCase').onclick=()=>{S={d:{...G_BLANK,fx:S.d.fx},f:{},P:{},cal:{screw:10.5},tab:'pt',mode:curFx().meas[0],active:null,noViewer:false,rec:blankRec(),caseId:null,regView:null};imgs={};blobs={};$('#menuSheet').hidden=true;selectTab('rec');toast('New patient')};
+$('#demoList').innerHTML=DEMOS.map((x,i)=>`<button class="btn" data-demo="${i}">${x.t}</button>`).join('');
+$$('[data-demo]').forEach(b=>b.onclick=()=>{$('#menuSheet').hidden=true;openDemo(+b.dataset.demo)});
+let toastT=0;function toast(m){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';document.body.appendChild(t)}t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2200)}
+
+/* ---------- iPhone install hint ---------- */
+(()=>{const ua=navigator.userAgent;const ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;let seen=false;try{seen=!!localStorage.getItem('iosHint')}catch{}
+  if(ios&&!standalone&&!isNative&&!seen){const h=$('#iosHint');setTimeout(()=>h.hidden=false,1500);$('#iosHintX').onclick=()=>{h.hidden=true;try{localStorage.setItem('iosHint','1')}catch{}}}})();
+
+
+/* ---------- boot ---------- */
+DB.get('__settings').then(r=>{if(r&&r.set)SET={...SET,...r.set}}).catch(()=>{});
+resize();
+(async()=>{let r=null;try{r=await DB.get('__current')}catch{}
+  if(r&&r.state){await loadRecord(r);selectTab(r.tab||'dec')}else openDemo(0)})();
+window.__fx={pdf:k=>loadPdfLib().then(()=>htmlToPdf(reportHTML(k))).then(blobToB64),decide,vals,computeImage,openDemo,selectTab,S:()=>S,FX,DEMOS,setMode:m=>chooseMode(m),setD:o=>{Object.assign(S.d,o);renderTab(S.tab)},setF:o=>{for(const k in o)setF(k,o[k]);renderTab(S.tab)},csv:exportCSV};
+if('serviceWorker' in navigator&&!isNative&&/^https?:$/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+
+})();
+</script>
+</body>
+</html>

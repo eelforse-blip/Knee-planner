@@ -39,6 +39,8 @@ jobs:
           cp -r tumour-app/www/. site/tumour/
           mkdir site/shoulder
           cp -r shoulder-app/www/. site/shoulder/
+          mkdir site/fractures
+          cp -r fracture-app/www/. site/fractures/
           mkdir site/ct
           cp -r ct-app/www/. site/ct/
           sh voice-app/fetch-libs.sh

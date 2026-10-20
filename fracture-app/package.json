@@ -1,0 +1,19 @@
+{
+  "name": "fracture-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fracture planning and decision making for upper limb, lower limb, pelvis and spine.",
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/share": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.2",
+    "esbuild": "^0.28.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4"
+  }
+}

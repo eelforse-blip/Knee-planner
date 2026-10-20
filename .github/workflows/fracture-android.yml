@@ -1,0 +1,49 @@
+name: Build Fracture Planner Android app
+
+on:
+  push:
+    branches: [main]
+    paths: ['fracture-app/**', '.github/workflows/fracture-android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fracture-app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install
+        run: npm ci
+      - name: Copy web app into Android project
+        run: npx cap sync android
+      - name: Build APK
+        working-directory: fracture-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk FracturePlanner.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FracturePlanner-apk
+          path: fracture-app/FracturePlanner.apk
+      - name: Publish to the "fracture-latest" release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete fracture-latest --yes --cleanup-tag || true
+          gh release create fracture-latest FracturePlanner.apk \
+            --title "Fracture Planner (latest build)" \
+            --notes "Built from ${GITHUB_SHA::7}. On Android: download FracturePlanner.apk, open it, allow installing from this source."
