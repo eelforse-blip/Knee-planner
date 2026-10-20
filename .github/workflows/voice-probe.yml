@@ -36,4 +36,4 @@ jobs:
         run: |
           cat tts.txt >> probe.txt || true
           gh release delete voice-probe --yes --cleanup-tag || true
-          gh release create voice-probe probe.txt --title "voice probe" --notes "CI probe output" --prerelease
+          gh release create voice-probe probe.txt ar.wav en.wav --title "voice probe" --notes "CI probe output" --prerelease
