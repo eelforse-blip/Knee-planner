@@ -207,7 +207,9 @@ details[open] summary{margin-bottom:8px}
         <button class="tab" role="tab" data-t="plan" aria-selected="false">Decision</button>
       </div>
 
+      <div id="sideWarn"></div>
       <div class="pane" id="p-pts">
+        <div class="row" style="align-items:center;gap:8px;margin-bottom:6px"><b style="font-size:13px">Limb</b><div class="chips" id="sideSeg"><button class="chip" data-side="R">Right</button><button class="chip" data-side="L">Left</button></div><span class="fine">Standard film: patient's right on the left of the screen</span></div>
         <p class="fine">Select a landmark, then tap the image. Drag a point to refine it; a magnifier appears. Pinch to zoom, drag empty space to pan. Osteotomy points are placed automatically; drag them to match your technique.</p>
         <div class="steps" id="steps"></div>
         <div class="row"><button class="btn danger" id="delPt2" hidden>Delete selected point</button><button class="btn" id="resetAuto" hidden>Reset osteotomy points to automatic</button></div>
@@ -333,7 +335,7 @@ let img=null, iw=0, ih=0, filtered=null, imgBlob=null, isDemo=false, demoIdx=0;
 let view={s:1,tx:0,ty:0};
 let pts={};
 let active='cal1';
-const S={calMM:25,target:62.5,targetAuto:true,planSel:null,lax:true,th:{...TH_DEFAULT},con:100,bri:100,inv:false,tab:'pts'};
+const S={side:'',calMM:25,target:62.5,targetAuto:true,planSel:null,lax:true,th:{...TH_DEFAULT},con:100,bri:100,inv:false,tab:'pts'};
 let dragInfo=null;
 
 /* ---------- storage (IndexedDB) ---------- */
@@ -343,12 +345,12 @@ const DB=(()=>{let p=null;const open=()=>p||(p=new Promise((res,rej)=>{try{const
   const tx=async(mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('cases',mode);const st=t.objectStore('cases');const out=fn(st);t.oncomplete=()=>res(out&&out.result!==undefined?out.result:out);t.onerror=()=>rej(t.error)})};
   return{put:v=>tx('readwrite',s=>s.put(v)),get:id=>tx('readonly',s=>s.get(id)),del:id=>tx('readwrite',s=>s.delete(id)),all:()=>tx('readonly',s=>s.getAll())}})();
 
-function snapshot(){return{pts:JSON.parse(JSON.stringify(pts)),active,calMM:S.calMM,target:S.target,targetAuto:S.targetAuto,planSel:S.planSel,lax:S.lax,th:{...S.th},con:S.con,bri:S.bri,inv:S.inv,isDemo,demoIdx}}
+function snapshot(){return{side:S.side,pts:JSON.parse(JSON.stringify(pts)),active,calMM:S.calMM,target:S.target,targetAuto:S.targetAuto,planSel:S.planSel,lax:S.lax,th:{...S.th},con:S.con,bri:S.bri,inv:S.inv,isDemo,demoIdx}}
 let saveT=0;
 function autosave(){clearTimeout(saveT);saveT=setTimeout(()=>{DB.put({id:'__current',...snapshot(),blob:isDemo?null:imgBlob,date:Date.now()}).catch(()=>{})},600)}
 function migrate(p,level){p={...p};if(p.hinge){const pre=level==='DFO'?'f':'t';p[pre+'H']=p.hinge;if(p.cut)p[pre+'C']=p.cut;delete p.hinge;delete p.cut}return p}
 async function loadRecord(r){
-  S.calMM=r.calMM||25;S.target=r.target??62.5;S.targetAuto=r.targetAuto??false;S.planSel=r.planSel||null;S.lax=r.lax??true;S.th={...TH_DEFAULT,...(r.th||{})};
+  S.side=r.side||'';S.calMM=r.calMM||25;S.target=r.target??62.5;S.targetAuto=r.targetAuto??false;S.planSel=r.planSel||null;S.lax=r.lax??true;S.th={...TH_DEFAULT,...(r.th||{})};
   S.con=r.con||100;S.bri=r.bri||100;S.inv=!!r.inv;
   $('#calmm').value=S.calMM;$('#con').value=S.con;$('#cono').textContent=S.con+'%';$('#bri').value=S.bri;$('#brio').textContent=S.bri+'%';$('#inv').checked=S.inv;
   if(r.isDemo||!r.blob){isDemo=true;demoIdx=r.demoIdx||0;imgBlob=null;setImage(makeDemo(DEMOS[demoIdx].pts))}
@@ -619,6 +621,7 @@ function overlays(){
   if(m.mLDFA!=null)tag(pts.fl,`mLDFA ${m.mLDFA.toFixed(1)}°`,COL.jl,-14,-12);
   if(m.MPTA!=null)tag(pts.tm,`MPTA ${m.MPTA.toFixed(1)}°`,COL.jl,14,20);
   if(m.HKA!=null)tag(o.knee,`HKA ${Math.abs(m.HKA).toFixed(1)}° ${m.HKA>=0?'varus':'valgus'}`,COL.axis,-14,-44);
+  if(pts.tm&&pts.tl){const sm=toS(pts.tm),sl=toS(pts.tl),dir=Math.sign(sl.x-sm.x)||1;ctx.save();ctx.font='700 11px "IBM Plex Mono", monospace';ctx.fillStyle='rgba(255,255,255,.85)';ctx.textAlign='center';ctx.fillText('MED',sm.x-dir*30,sm.y+4);ctx.fillText('LAT',sl.x+dir*30,sl.y+4);ctx.restore()}
   if(m.LDTA!=null)tag(pts.al,`LDTA ${m.LDTA.toFixed(1)}°`,COL.jl,-14,-14);
   if(o.hip){const s=toS(o.hip);ctx.strokeStyle=COL.pt;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(s.x-7,s.y);ctx.lineTo(s.x+7,s.y);ctx.moveTo(s.x,s.y-7);ctx.lineTo(s.x,s.y+7);ctx.stroke()}
   if(o.ankle){const s=toS(o.ankle);ctx.fillStyle=COL.pt;ctx.beginPath();ctx.arc(s.x,s.y,3,0,7);ctx.fill()}
@@ -734,7 +737,26 @@ function renderPlan(){
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(lastSummary).then(()=>$('#copied').textContent='Copied').catch(fail);else fail()};
   $('#share2').onclick=sharePlan;
 }
-function update(){renderSteps();if(S.tab==='ana')renderAnalysis();if(S.tab==='plan')renderPlan();draw();if(img)autosave()}
+/* ---------- medial / lateral label check ---------- */
+function labelIssues(){const o=derive(pts);const out=[];const v=(a,b)=>o[a]&&o[b]?sub(o[b],o[a]):null;
+  const F=v('fm','fl'),T=v('tm','tl'),A=v('am','al');
+  if(F&&T&&dot(F,T)<0)out.push('the femoral and tibial medial/lateral points point to opposite sides');
+  const ref=T||F;if(ref&&A&&dot(A,ref)<0)out.push('the ankle medial/lateral points are reversed relative to the knee');
+  if(S.side&&ref){const latScreen=S.side==='R'?-1:1;if(Math.sign(ref.x)!==latScreen)out.push(`for a ${S.side==='R'?'right':'left'} leg on a standard film the lateral side is on the ${S.side==='R'?'left':'right'} of the screen, but your lateral points are on the ${ref.x<0?'left':'right'}`)}
+  return out}
+function swapSides(){const o=derive(pts);const prs=[['fm','fl'],['tm','tl'],['am','al']].filter(([a,b])=>o[a]&&o[b]);
+  const sg=([a,b])=>Math.sign(o[b].x-o[a].x)||1;let target;
+  if(S.side)target=S.side==='R'?-1:1;else{const sum=prs.reduce((t,pr)=>t+sg(pr)*(pr[0]==='tm'?1.5:1),0);target=Math.sign(sum)||1}
+  let n=0;for(const pr of prs)if(sg(pr)!==target){const [a,b]=pr;const t=pts[a];pts[a]=pts[b];pts[b]=t;n++}
+  if(!n){toast('Nothing to swap');return}
+  for(const k of ['fH','fC','tH','tC'])delete pts[k];S.planSel=null;update();toast('Medial and lateral corrected – osteotomy points reset to automatic')}
+function renderSideWarn(){const is=labelIssues();const el=$('#sideWarn');
+  document.querySelectorAll('#sideSeg .chip').forEach(b=>b.classList.toggle('on',b.dataset.side===S.side));
+  if(!is.length){el.innerHTML='';return}
+  el.innerHTML=`<div class="banner warn" style="margin:8px 12px"><b>Check medial and lateral:</b> ${is.join('; ')}. Varus and valgus are read from these points, so a swap reverses the whole analysis. <div class="row" style="margin-top:6px"><button class="btn primary" id="swapSides">Correct medial ↔ lateral</button></div></div>`;
+  $('#swapSides').onclick=swapSides}
+document.querySelectorAll('#sideSeg .chip').forEach(b=>b.onclick=()=>{S.side=S.side===b.dataset.side?'':b.dataset.side;update()});
+function update(){renderSideWarn();renderSteps();if(S.tab==='ana')renderAnalysis();if(S.tab==='plan')renderPlan();draw();if(img)autosave()}
 
 /* ---------- share plan image ---------- */
 async function sharePlan(){
@@ -813,7 +835,7 @@ syncTh();resize();
 (async()=>{let r=null;try{r=await DB.get('__current')}catch{}
   if(r&&(r.blob||r.isDemo)){await loadRecord(r).catch(()=>openDemo(0));selectTab(REQUIRED.every(k=>pts[k])?'plan':'pts')}else openDemo(0)})();
 
-window.__planner={decide,openDemo,full,measure,S,getView:()=>view,selectTab:t=>selectTab(t),setPlan:k=>{S.planSel=k;update()}};
+window.__planner={pts:()=>pts,swapSides,labelIssues,decide,openDemo,full,measure,S,getView:()=>view,selectTab:t=>selectTab(t),setPlan:k=>{S.planSel=k;update()}};
 if('serviceWorker' in navigator&&!isNative&&/^https?:$/.test(location.protocol)){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
 })();
