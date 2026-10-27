@@ -320,6 +320,7 @@ const STEPS=[
  ['knee','Knee','Knee centre','Between the tibial spines, top of the notch'],
  ['tm','Knee','Medial plateau edge','Medial rim of the tibial plateau'],
  ['tl','Knee','Lateral plateau edge','Lateral rim of the tibial plateau'],
+ ['fib','Knee','Fibular head (checks lateral side)','Tip of the fibular head. Optional, but it lets the app confirm which side is lateral'],
  ['am','Ankle','Talar dome, medial','Medial shoulder of the talar dome'],
  ['al','Ankle','Talar dome, lateral','Lateral shoulder of the talar dome'],
  ['fH','Femur cut','Femoral hinge','Auto: 28 mm above the medial condyle, 15 mm inside the cortex. Drag to adjust'],
@@ -328,7 +329,7 @@ const STEPS=[
  ['tC','Tibia cut','Tibial cut entry','Auto: 38 mm below the medial plateau. Drag to adjust'],
 ];
 const AUTO=['fH','fC','tH','tC'];
-const REQUIRED=STEPS.filter(s=>!AUTO.includes(s[0])&&s[1]!=='Calibration').map(s=>s[0]);
+const REQUIRED=STEPS.filter(s=>!AUTO.includes(s[0])&&s[0]!=='fib'&&s[1]!=='Calibration').map(s=>s[0]);
 const TH_DEFAULT={mptaMax:95,mptaMin:85,ldfaMin:85,ldfaMax:92,jloMax:5,gapMax:15,femGoal:87,jlcaTrig:3};
 
 let img=null, iw=0, ih=0, filtered=null, imgBlob=null, isDemo=false, demoIdx=0;
@@ -742,11 +743,12 @@ function labelIssues(){const o=derive(pts);const out=[];const v=(a,b)=>o[a]&&o[b
   const F=v('fm','fl'),T=v('tm','tl'),A=v('am','al');
   if(F&&T&&dot(F,T)<0)out.push('the femoral and tibial medial/lateral points point to opposite sides');
   const ref=T||F;if(ref&&A&&dot(A,ref)<0)out.push('the ankle medial/lateral points are reversed relative to the knee');
+  if(o.fib&&o.knee&&ref){if(dot(sub(o.fib,o.knee),ref)<0)out.push('the fibular head is on the side you marked as medial');return out}
   if(S.side&&ref){const latScreen=S.side==='R'?-1:1;if(Math.sign(ref.x)!==latScreen)out.push(`for a ${S.side==='R'?'right':'left'} leg on a standard film the lateral side is on the ${S.side==='R'?'left':'right'} of the screen, but your lateral points are on the ${ref.x<0?'left':'right'}`)}
   return out}
 function swapSides(){const o=derive(pts);const prs=[['fm','fl'],['tm','tl'],['am','al']].filter(([a,b])=>o[a]&&o[b]);
   const sg=([a,b])=>Math.sign(o[b].x-o[a].x)||1;let target;
-  if(S.side)target=S.side==='R'?-1:1;else{const sum=prs.reduce((t,pr)=>t+sg(pr)*(pr[0]==='tm'?1.5:1),0);target=Math.sign(sum)||1}
+  if(o.fib&&o.knee)target=Math.sign(o.fib.x-o.knee.x)||1;else if(S.side)target=S.side==='R'?-1:1;else{const sum=prs.reduce((t,pr)=>t+sg(pr)*(pr[0]==='tm'?1.5:1),0);target=Math.sign(sum)||1}
   let n=0;for(const pr of prs)if(sg(pr)!==target){const [a,b]=pr;const t=pts[a];pts[a]=pts[b];pts[b]=t;n++}
   if(!n){toast('Nothing to swap');return}
   for(const k of ['fH','fC','tH','tC'])delete pts[k];S.planSel=null;update();toast('Medial and lateral corrected – osteotomy points reset to automatic')}
