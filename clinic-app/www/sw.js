@@ -1,4 +1,4 @@
-const VERSION='clinic-v1.0.0';
+const VERSION='clinic-ar-v2.0.0';
 const FILES=['./','./index.html','./app.js','./config.js','./lib.bundle.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png',
 './fonts/archivo-latin-400-normal.woff2','./fonts/archivo-latin-500-normal.woff2','./fonts/archivo-latin-600-normal.woff2','./fonts/archivo-latin-700-normal.woff2','./fonts/ibm-plex-mono-latin-500-normal.woff2','./fonts/ibm-plex-mono-latin-600-normal.woff2','./fonts/cairo-arabic-400-normal.woff2','./fonts/cairo-arabic-600-normal.woff2','./fonts/cairo-arabic-700-normal.woff2'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(VERSION).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));

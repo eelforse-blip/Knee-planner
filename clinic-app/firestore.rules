@@ -1,5 +1,5 @@
 rules_version = '2';
-// Firestore security rules for the Knee & Shoulder Clinic app.
+// Firestore security rules – تطبيق العيادة
 // Paste into Firebase console → Firestore Database → Rules → Publish.
 service cloud.firestore {
   match /databases/{db}/documents {
@@ -29,14 +29,19 @@ service cloud.firestore {
         allow create: if doctor(cid) || (owner(cid) && email == em() && request.resource.data.role == 'doctor');
         allow update, delete: if doctor(cid);
       }
-      // clinical notes: everyone in the clinic reads, only doctors write
+      // الزيارات والروشتات: الكل يقرأ، الطبيب فقط يكتب
       match /visits/{id} { allow read: if member(cid); allow write: if doctor(cid); }
+      match /rx/{id} { allow read: if member(cid); allow create, update: if member(cid); allow delete: if doctor(cid); }
       match /surgeries/{id} { allow read: if member(cid); allow write: if doctor(cid); }
-      // registration, scores, files, appointments: whole team
+      // التسجيل، المواعيد، الملفات، الصوت، المتابعة، الحسابات: كل الفريق
       match /patients/{id} { allow read, create, update: if member(cid); allow delete: if doctor(cid); }
-      match /scores/{id} { allow read, write: if member(cid); }
-      match /files/{id} { allow read, write: if member(cid); }
       match /appointments/{id} { allow read, write: if member(cid); }
+      match /files/{id} { allow read, write: if member(cid); }
+      match /blobs/{id} { allow read, write: if member(cid); }
+      match /voices/{id} { allow read, write: if member(cid); }
+      match /cases/{id} { allow read, create, update: if member(cid); allow delete: if doctor(cid); }
+      match /tx/{id} { allow read, create, update: if member(cid); allow delete: if doctor(cid); }
+      match /scores/{id} { allow read, write: if member(cid); }
     }
   }
 }

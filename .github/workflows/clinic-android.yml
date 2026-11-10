@@ -45,5 +45,5 @@ jobs:
         run: |
           gh release delete clinic-latest --yes --cleanup-tag || true
           gh release create clinic-latest ClinicApp.apk \
-            --title "Knee & Shoulder Clinic (latest build)" \
+            --title "العيادة (latest build)" \
             --notes "Built from ${GITHUB_SHA::7}. On Android: download ClinicApp.apk, open it, allow installing from this source."
