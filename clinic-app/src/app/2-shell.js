@@ -70,7 +70,7 @@ function shell(title,body,{back=false,action='',fab=''}={}){
   <nav class="nav"><a href="#/today" class="${on('today')}">${I.today}اليوم</a><a href="#/schedule" class="${on('schedule')}">${I.cal}المواعيد</a><a href="#/patients" class="${on('patients','p','pe','np')}">${I.pts}المرضى</a><a href="#/fu" class="${on('fu','case')}">${I.fu}المتابعة</a>${isDoc()?`<a href="#/acc" class="${on('acc')}">${I.acc}الحسابات</a>`:''}<a href="#/more" class="${on('more')}">${I.more}المزيد</a></nav>`;
   const b=$('#backBtn');if(b)b.onclick=()=>history.length>1?history.back():(location.hash='#/today');window.scrollTo(0,0)}
 function render(){closeSheet();if(!S.ready)return;const [r,a,b]=route();
-  const map={today:vToday,schedule:vSchedule,patients:vPatients,np:()=>vPatientForm(null),pe:()=>vPatientForm(a),p:()=>vPatient(a,b||'sum'),fu:vFollow,case:()=>vCase(a),acc:vAccounts,more:()=>a?vMoreSub(a):vMore};
+  const map={today:vToday,schedule:vSchedule,patients:vPatients,np:()=>vPatientForm(null),pe:()=>vPatientForm(a),p:()=>vPatient(a,b||'sum'),fu:vFollow,case:()=>vCase(a),acc:vAccounts,more:()=>a?vMoreSub(a):vMore()};
   (map[r]||vToday)()}
 addEventListener('hashchange',render);
 
