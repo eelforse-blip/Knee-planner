@@ -31,6 +31,8 @@ jobs:
           cp -r pf-app/www/. site/pf/
           mkdir site/clinic
           cp -r clinic-app/www/. site/clinic/
+          mkdir site/queue
+          cp -r queue-app/www/. site/queue/
           mkdir site/acl
           cp -r acl-app/www/. site/acl/
           mkdir site/meniscus

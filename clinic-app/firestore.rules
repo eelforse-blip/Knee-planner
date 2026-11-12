@@ -42,6 +42,41 @@ service cloud.firestore {
       match /cases/{id} { allow read, create, update: if member(cid); allow delete: if doctor(cid); }
       match /tx/{id} { allow read, create, update: if member(cid); allow delete: if doctor(cid); }
       match /scores/{id} { allow read, write: if member(cid); }
+
+      // ===== تطبيق الدور (المريض يسجّل من موبايله بحساب مجهول) =====
+      match /qcfg/{x} { allow read, write: if member(cid); }
+      match /qday/{d} {
+        allow read: if true;
+        allow create, delete: if member(cid);
+        allow update: if member(cid) || (request.auth != null && resource.data.open == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nextNo'])
+          && request.resource.data.nextNo == resource.data.nextNo + 1);
+        match /t/{id} {
+          allow read: if member(cid) || (request.auth != null && resource.data.uid == request.auth.uid);
+          allow create: if member(cid) || (request.auth != null
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.status == 'waiting'
+            && request.resource.data.name is string && request.resource.data.name.size() < 80
+            && request.resource.data.code == get(/databases/$(db)/documents/clinics/$(cid)/qcfg/main).data.code
+            && request.resource.data.no == getAfter(/databases/$(db)/documents/clinics/$(cid)/qday/$(d)).data.nextNo);
+          allow update: if member(cid) || (request.auth != null && resource.data.uid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status == 'cancelled');
+          allow delete: if member(cid);
+        }
+        match /p/{id} {
+          allow read: if true;
+          allow create: if member(cid) || (request.auth != null
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.status == 'waiting'
+            && request.resource.data.no == getAfter(/databases/$(db)/documents/clinics/$(cid)/qday/$(d)).data.nextNo
+            && getAfter(/databases/$(db)/documents/clinics/$(cid)/qday/$(d)/t/$(id)).data.uid == request.auth.uid);
+          allow update: if member(cid) || (request.auth != null && resource.data.uid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status == 'cancelled');
+          allow delete: if member(cid);
+        }
+      }
     }
   }
 }

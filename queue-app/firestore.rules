@@ -1,0 +1,82 @@
+rules_version = '2';
+// Firestore security rules – تطبيق العيادة
+// Paste into Firebase console → Firestore Database → Rules → Publish.
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function em() { return request.auth.token.email.lower(); }
+    function memberDoc(cid) { return /databases/$(db)/documents/clinics/$(cid)/members/$(em()); }
+    function member(cid) { return signedIn() && exists(memberDoc(cid)); }
+    function doctor(cid) { return member(cid) && get(memberDoc(cid)).data.role == 'doctor'; }
+    function owner(cid) { return signedIn() && get(/databases/$(db)/documents/clinics/$(cid)).data.ownerUid == request.auth.uid; }
+
+    // email -> clinic lookup used at sign-in
+    match /memberships/{email} {
+      allow read: if signedIn() && email == em();
+      allow create, update: if signedIn() && (
+        doctor(request.resource.data.clinicId) ||
+        (email == em() && request.resource.data.role == 'doctor' && owner(request.resource.data.clinicId)));
+      allow delete: if signedIn() && doctor(resource.data.clinicId);
+    }
+
+    match /clinics/{cid} {
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if member(cid);
+      allow update: if doctor(cid);
+
+      match /members/{email} {
+        allow read: if member(cid) || (signedIn() && email == em());
+        allow create: if doctor(cid) || (owner(cid) && email == em() && request.resource.data.role == 'doctor');
+        allow update, delete: if doctor(cid);
+      }
+      // الزيارات والروشتات: الكل يقرأ، الطبيب فقط يكتب
+      match /visits/{id} { allow read: if member(cid); allow write: if doctor(cid); }
+      match /rx/{id} { allow read: if member(cid); allow create, update: if member(cid); allow delete: if doctor(cid); }
+      match /surgeries/{id} { allow read: if member(cid); allow write: if doctor(cid); }
+      // التسجيل، المواعيد، الملفات، الصوت، المتابعة، الحسابات: كل الفريق
+      match /patients/{id} { allow read, create, update: if member(cid); allow delete: if doctor(cid); }
+      match /appointments/{id} { allow read, write: if member(cid); }
+      match /files/{id} { allow read, write: if member(cid); }
+      match /blobs/{id} { allow read, write: if member(cid); }
+      match /voices/{id} { allow read, write: if member(cid); }
+      match /cases/{id} { allow read, create, update: if member(cid); allow delete: if doctor(cid); }
+      match /tx/{id} { allow read, create, update: if member(cid); allow delete: if doctor(cid); }
+      match /scores/{id} { allow read, write: if member(cid); }
+
+      // ===== تطبيق الدور (المريض يسجّل من موبايله بحساب مجهول) =====
+      match /qcfg/{x} { allow read, write: if member(cid); }
+      match /qday/{d} {
+        allow read: if true;
+        allow create, delete: if member(cid);
+        allow update: if member(cid) || (request.auth != null && resource.data.open == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nextNo'])
+          && request.resource.data.nextNo == resource.data.nextNo + 1);
+        match /t/{id} {
+          allow read: if member(cid) || (request.auth != null && resource.data.uid == request.auth.uid);
+          allow create: if member(cid) || (request.auth != null
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.status == 'waiting'
+            && request.resource.data.name is string && request.resource.data.name.size() < 80
+            && request.resource.data.code == get(/databases/$(db)/documents/clinics/$(cid)/qcfg/main).data.code
+            && request.resource.data.no == getAfter(/databases/$(db)/documents/clinics/$(cid)/qday/$(d)).data.nextNo);
+          allow update: if member(cid) || (request.auth != null && resource.data.uid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status == 'cancelled');
+          allow delete: if member(cid);
+        }
+        match /p/{id} {
+          allow read: if true;
+          allow create: if member(cid) || (request.auth != null
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.status == 'waiting'
+            && request.resource.data.no == getAfter(/databases/$(db)/documents/clinics/$(cid)/qday/$(d)).data.nextNo
+            && getAfter(/databases/$(db)/documents/clinics/$(cid)/qday/$(d)/t/$(id)).data.uid == request.auth.uid);
+          allow update: if member(cid) || (request.auth != null && resource.data.uid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status == 'cancelled');
+          allow delete: if member(cid);
+        }
+      }
+    }
+  }
+}
