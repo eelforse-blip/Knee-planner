@@ -120,31 +120,35 @@ function qrImg(text,cell=6){const q=qrcode(0,'M');q.addData(text);q.make();retur
 async function ensureDay(){const ref=dayRef(ST.cid);const s=await FB.getDoc(ref);if(!s.exists())await FB.setDoc(ref,{open:true,nextNo:0,current:null,waiting:0,avgMin:ST.q.avgMin||10,name:ST.clinic.name||'العيادة',doctor:ST.clinic.doctor||'',msg:ST.q.msg||'',lastCall:null});return ref}
 async function adminView(){await ensureDay();let day={},tk=[];
   const draw=()=>{const w=tk.filter(t=>t.status==='waiting').sort((a,b)=>a.no-b.no),called=tk.filter(t=>t.status==='called').sort((a,b)=>b.calledAt-a.calledAt),sk=tk.filter(t=>t.status==='skipped'),done=tk.filter(t=>t.status==='done');
-    const keep=document.activeElement&&document.activeElement.id;if(keep&&['wn','wp'].includes(keep))return;
-    $('#app').innerHTML=`<header class="top"><h1>الدور – ${esc(day.name||'')}</h1><a class="ib" href="#/tv" title="شاشة الانتظار" style="width:auto;padding:0 10px">📺</a></header><main id="main">
-     <div class="row" style="justify-content:space-between"><label class="tog" style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" id="open" ${day.open?'checked':''}> التسجيل ${day.open?'مفتوح':'مقفول'}</label><span class="fine">${new Date().toLocaleDateString('ar-EG',{weekday:'long',day:'numeric',month:'long'})}</span></div>
-     <div class="stats" style="margin-top:10px"><div class="stat"><div class="k">الدور الحالي</div><div class="v">${day.current?ar(day.current):'—'}</div></div><div class="stat"><div class="k">في الانتظار</div><div class="v">${ar(w.length)}</div></div><div class="stat"><div class="k">خلصوا</div><div class="v">${ar(done.length)}</div></div><div class="stat"><div class="k">متوسط الكشف</div><div class="v sm">${ar(Math.round(day.avgMin||10))} د</div></div></div>
-     <button class="btn primary" id="next" style="width:100%;font-size:20px;padding:16px;margin-top:12px" ${w.length?'':'disabled'}>📢 نادِ التالي${w.length?' – رقم '+ar(w[0].no):''}</button>
-     ${called.length?`<h3>اتنادى</h3><div class="list tq">${called.map(t=>row(t,'called')).join('')}</div>`:''}
-     <h3>في الانتظار (${ar(w.length)})</h3><div class="list tq">${w.map((t,i)=>row(t,'waiting',i)).join('')||'<div class="empty">مفيش حد في الانتظار</div>'}</div>
-     <div class="card form" style="margin-top:12px"><b>إضافة مريض بنفسك (لو معهوش موبايل)</b><div class="grid2"><input class="in" id="wn" placeholder="الاسم"><input class="in" id="wp" placeholder="الموبايل" dir="ltr" type="tel"></div><button class="btn" id="wadd">إضافة للدور</button></div>
+    const keep=document.activeElement&&document.activeElement.id;if(keep&&['wn','wp','avg','msg'].includes(keep))return;const openS=$('#more')&&$('#more').open,openA=$('#addBox')&&$('#addBox').open;
+    const cur=called[0];
+    $('#app').innerHTML=`<header class="top"><h1>${esc(day.name||'الدور')}</h1></header><main id="main">
+     ${day.open?'':`<div class="card" style="background:color-mix(in srgb,var(--bad) 14%,var(--surface));text-align:center"><b>التسجيل مقفول – المرضى مش هيقدروا يسجلوا</b><br><button class="btn primary" id="openB" style="margin-top:8px">افتح التسجيل</button></div>`}
+     <div class="ticket" style="margin-top:6px"><div class="lbl">الدور الحالي</div><div class="big no" style="font-size:80px">${cur?ar(cur.no):'—'}</div><div style="font-size:18px">${cur?esc(cur.name):'لسه ما اتنادىش على حد'}</div>
+      ${cur?`<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-id="${cur.id}" data-a="recall">📢 نادِ تاني</button><button class="btn" data-id="${cur.id}" data-a="skip">ما حضرش</button></div>`:''}</div>
+     <button class="btn primary" id="next" style="width:100%;font-size:22px;padding:18px;margin-top:12px" ${w.length||cur?'':'disabled'}>${w.length?`📢 نادِ التالي<br><span style="font-size:16px;font-weight:400">رقم ${ar(w[0].no)} – ${esc(w[0].name)}</span>`:cur?'✓ خلص الكشف':'مفيش حد مستني'}</button>
+     <h3>مستنيين (${ar(w.length)})</h3><div class="list tq">${w.map((t,i)=>row(t,'waiting',i)).join('')||'<div class="empty">مفيش حد مستني</div>'}</div>
+     <details id="addBox" ${openA?'open':''} style="margin-top:10px"><summary class="btn" style="list-style:none;text-align:center">➕ إضافة مريض معهوش موبايل</summary><div class="card form" style="margin-top:8px"><input class="in" id="wn" placeholder="الاسم"><input class="in" id="wp" placeholder="رقم الموبايل (اختياري)" dir="ltr" type="tel"><button class="btn primary" id="wadd">إضافة للدور</button></div></details>
      ${sk.length?`<h3>ما حضروش (${ar(sk.length)})</h3><div class="list tq">${sk.map(t=>row(t,'skipped')).join('')}</div>`:''}
-     ${done.length?`<details style="margin-top:12px"><summary class="fine">اللي خلصوا (${ar(done.length)})</summary><div class="list tq">${done.sort((a,b)=>b.no-a.no).map(t=>row(t,'done')).join('')}</div></details>`:''}
-     <h3>كود التسجيل للمرضى</h3><div class="card" style="text-align:center"><div class="qrbox"><img src="${qrImg(joinLink(),5)}" alt="QR"></div><p class="fine">المريض يمسح الكود بكاميرا الموبايل، يكتب اسمه، ويمشي.</p>
-      <div class="row" style="justify-content:center"><a class="btn" href="#/poster">🖨️ طباعة الكود</a><button class="btn" id="cp">نسخ الرابط</button><a class="btn" href="#/tv">📺 شاشة الانتظار</a></div></div>
-     <details style="margin-top:12px"><summary><b>إعدادات</b></summary><div class="form" style="margin-top:8px"><label class="f">متوسط مدة الكشف بالدقائق (بيتعدّل لوحده مع الشغل)<input class="in" type="number" id="avg" value="${Math.round(day.avgMin||10)}" dir="ltr"></label>
-      <label class="f">رسالة تظهر للمرضى<input class="in" id="msg" value="${esc(day.msg||'')}" placeholder="مثلاً: الدكتور في عملية وهيوصل الساعة ٦"></label><button class="btn" id="sv">حفظ</button>
-      <button class="btn danger" id="rot">تغيير كود التسجيل (الكود القديم يبطل)</button><button class="btn" id="out">تسجيل خروج</button></div></details></main>`;
+     <p class="fine" style="text-align:center;margin-top:12px">خلص النهارده: ${ar(done.length)} مريض · متوسط الكشف ${ar(Math.round(day.avgMin||10))} دقيقة</p>
+     <details id="more" ${openS?'open':''} style="margin-top:6px"><summary class="btn" style="list-style:none;text-align:center">⚙️ الكود وشاشة الانتظار والإعدادات</summary>
+      <div class="card" style="text-align:center;margin-top:8px"><div class="qrbox"><img src="${qrImg(joinLink(),5)}" alt="QR"></div><p class="fine">المريض يصوّر الكود ده بكاميرا الموبايل، يكتب اسمه، ويمشي.</p>
+       <div class="row" style="justify-content:center"><a class="btn" href="#/poster">🖨️ طباعة الكود</a><a class="btn" href="#/tv">📺 شاشة الانتظار</a><button class="btn" id="cp">نسخ الرابط</button></div></div>
+      <div class="card form" style="margin-top:8px">${day.open?'<button class="btn" id="closeB">قفل التسجيل (آخر اليوم)</button>':''}
+       <label class="f">متوسط الكشف بالدقايق (بيتظبط لوحده)<input class="in" type="number" id="avg" value="${Math.round(day.avgMin||10)}" dir="ltr"></label>
+       <label class="f">رسالة للمرضى<input class="in" id="msg" value="${esc(day.msg||'')}" placeholder="مثلاً: الدكتور هيوصل الساعة ٦"></label><button class="btn" id="sv">حفظ</button>
+       ${done.length?`<details><summary class="fine">اللي خلصوا (${ar(done.length)})</summary><div class="list tq">${done.sort((a,b)=>b.no-a.no).map(t=>row(t,'done')).join('')}</div></details>`:''}
+       <button class="btn danger" id="rot">تغيير الكود (لو اتسرّب)</button><button class="btn" id="out">تسجيل خروج</button></div></details></main>`;
     bind(w)};
-  const row=(t,kind,i)=>`<div class="item" data-t="${t.id}"><span class="num0">${ar(t.no)}</span><span class="m"><span class="t">${esc(t.name)}</span><span class="s">${t.phone?`<span dir="ltr">${esc(t.phone)}</span> · `:''}${hm(t.at)}${kind==='waiting'?` · مستني ${mins((Date.now()-t.at)/6e4)}`:''}</span></span><span class="acts" style="margin:0">
-     ${kind==='waiting'?`<button class="btn sm" data-a="call">نادِ</button>${t.phone&&i<3?`<button class="btn sm wa" data-a="wa">واتساب</button>`:''}<button class="btn sm" data-a="x">✕</button>`:''}
-     ${kind==='called'?`<button class="btn sm primary" data-a="done">دخل</button><button class="btn sm" data-a="skip">ما حضرش</button><button class="btn sm" data-a="recall">📢 تاني</button>`:''}
-     ${kind==='skipped'?`<button class="btn sm" data-a="back">رجّعه للدور</button>`:''}${kind==='done'?'':''}</span></div>`;
+  const row=(t,kind,i)=>`<div class="item" data-t="${t.id}"><span class="num0">${ar(t.no)}</span><span class="m"><span class="t">${esc(t.name)}</span><span class="s">${kind==='waiting'?`مستني ${mins((Date.now()-t.at)/6e4)}`:hm(t.at)}${t.phone?` · <span dir="ltr">${esc(t.phone)}</span>`:''}</span></span><span class="acts" style="margin:0">
+     ${kind==='waiting'?`${t.phone&&i<3?`<button class="btn sm wa" data-a="wa">واتساب</button>`:''}<button class="btn sm" data-a="x" title="إلغاء">✕</button>`:''}
+     ${kind==='skipped'?`<button class="btn sm" data-a="back">رجّعه</button>`:''}</span></div>`;
   const setSt=async(t,status,extra={})=>{try{await FB.updateDoc(tRef(ST.cid,t.id),{status,...extra});await FB.updateDoc(pRef(ST.cid,t.id),{status,...extra})}catch(e){err(e)}};
   const syncWaiting=()=>{const n=tk.filter(t=>t.status==='waiting').length;if(n!==day.waiting)FB.updateDoc(dayRef(ST.cid),{waiting:n}).catch(()=>{})};
   const call=async t=>{const now=Date.now();let avg=day.avgMin||10;if(day.lastCall&&now-day.lastCall<90*6e4&&now-day.lastCall>6e4)avg=avg*.7+((now-day.lastCall)/6e4)*.3;
     await setSt(t,'called',{calledAt:now});await FB.updateDoc(dayRef(ST.cid),{current:t.no,lastCall:now,avgMin:Math.round(avg*10)/10,callSeq:(day.callSeq||0)+1})};
-  const bind=w=>{$('#open').onchange=e=>FB.updateDoc(dayRef(ST.cid),{open:e.target.checked});
+  const bind=w=>{const ob=$('#openB');if(ob)ob.onclick=()=>FB.updateDoc(dayRef(ST.cid),{open:true});const cb=$('#closeB');if(cb)cb.onclick=()=>{if(!cb.dataset.arm){cb.dataset.arm=1;cb.textContent='متأكد؟ اضغط تاني';return}FB.updateDoc(dayRef(ST.cid),{open:false})};
+    $$('[data-id]').forEach(b=>b.onclick=()=>{const t=tk.find(x=>x.id===b.dataset.id);if(b.dataset.a==='skip')setSt(t,'skipped');else{FB.updateDoc(dayRef(ST.cid),{current:t.no,callSeq:(day.callSeq||0)+1});toast('اتنادى تاني')}});
     $('#next').onclick=async()=>{for(const t of tk.filter(x=>x.status==='called'))await setSt(t,'done',{doneAt:Date.now()});if(w[0])await call(w[0])};
     $$('[data-t]').forEach(el=>{const t=tk.find(x=>x.id===el.dataset.t);el.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const a=b.dataset.a;
       if(a==='call')call(t);else if(a==='done')setSt(t,'done',{doneAt:Date.now()});else if(a==='skip')setSt(t,'skipped');else if(a==='back')setSt(t,'waiting');
