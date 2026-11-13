@@ -62,6 +62,7 @@ function vMore(){const c=CL();shell('المزيد',`<div class="card"><b>${esc(c
    <a class="item" href="#/more/drugs"><span class="m"><span class="t">الأدوية المفضلة</span><span class="s">${drugs().length} دواء</span></span></a>`:''}
    ${S.mode==='cloud'&&isDoc()?`<a class="item" href="#/more/team"><span class="m"><span class="t">الفريق</span><span class="s">إضافة السكرتارية والمساعدين</span></span></a><a class="item" href="#/more/code"><span class="m"><span class="t">كود إعداد العيادة</span><span class="s">لتشغيل التطبيق على جهاز المساعد</span></span></a>`:''}
    ${S.mode==='local'?`<a class="item" href="#/more/connect"><span class="m"><span class="t">ربط قاعدة بيانات العيادة</span><span class="s">عشان الطبيب والسكرتارية يشتغلوا على نفس البيانات من أكتر من جهاز</span></span></a>`:''}
+   ${S.mode==='cloud'&&isDoc()&&localStorage.getItem('hadLocal')?`<a class="item" href="#/more/migrate"><span class="m"><span class="t" style="color:var(--accent)">نقل البيانات القديمة من الجهاز ده</span><span class="s">المرضى والمواعيد اللي اتسجلت قبل ربط قاعدة البيانات</span></span></a>`:''}
    <a class="item" href="#/more/backup"><span class="m"><span class="t">نسخة احتياطية</span><span class="s">حفظ واسترجاع كل البيانات</span></span></a>
    <a class="item" href="#/more/booklink"><span class="m"><span class="t">رابط حجز للمرضى على الواتساب</span><span class="s">حطه على فيسبوك وإنستجرام</span></span></a>
    ${S.mode==='cloud'?'<button class="item" id="out"><span class="m"><span class="t" style="color:var(--bad)">تسجيل خروج</span></span></button>':''}
@@ -90,6 +91,10 @@ function vMoreSub(k){const c=CL();
      <div class="card form" style="margin-top:10px"><label class="f">الدواء<input class="in ltr" id="dn"></label><label class="f">الجرعة<input class="in" id="df"></label><label class="f">المدة<input class="in" id="du"></label><button class="btn primary" id="add">إضافة</button></div>`,{back:true});
     $$('[data-rm]').forEach(b=>b.onclick=()=>{list.splice(+b.dataset.rm,1);saveClinic({drugs:[...list]});render()});
     $('#add').onclick=()=>{if(!val('dn'))return;saveClinic({drugs:[...list,{n:val('dn'),f:val('df'),u:val('du')}]});render()};return}
+  if(k==='migrate'){shell('نقل البيانات القديمة',`<p>هينقل كل البيانات اللي كانت محفوظة على الجهاز ده بس (قبل ربط قاعدة البيانات) لقاعدة بيانات العيادة، عشان تظهر على كل الأجهزة.</p><button class="btn primary" id="go">نقل البيانات</button><p class="fine" id="st"></p>`,{back:true});
+    $('#go').onclick=async()=>{const b=$('#go');b.disabled=true;let n=0;try{const lc=await LocalDB.get('clinics/local');if(lc){const {createdAt,...rest}=lc;saveClinic(rest)}
+      for(const c of COLS){const l=await LocalDB.list('clinics/local/'+c);for(const d of l){const {id,...rest}=d;await D.set(C(c+'/'+id),rest);n++;if(n%20===0)$('#st').textContent='جاري النقل… '+n}}
+      localStorage.removeItem('hadLocal');$('#st').textContent=`تم نقل ${n} سجل`;toast('تم النقل')}catch(e){err(e);b.disabled=false}};return}
   if(k==='team')return vTeam();if(k==='code')return vSetupCode();if(k==='backup')return vBackup();
   if(k==='connect'){shell('ربط قاعدة بيانات العيادة',`<p>عشان الطبيب والسكرتارية يشتغلوا على نفس المواعيد وملفات المرضى من أكتر من جهاز (موبايل، كمبيوتر الاستقبال)، محتاج قاعدة بيانات Firebase مجانية:</p>
      <ol style="line-height:2"><li>ادخل <span class="ltr">console.firebase.google.com</span> ← Add project.</li><li>Authentication ← Email/Password ← Enable.</li><li>Firestore Database ← Create database ← Production.</li><li>Firestore ← Rules: الصق القواعد من ملف <span class="ltr">firestore.rules</span>.</li><li>Project settings ← Your apps ← Web ← انسخ <span class="ltr">firebaseConfig</span> والصقه هنا.</li></ol>

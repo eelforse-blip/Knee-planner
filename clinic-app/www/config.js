@@ -1,1 +1,1 @@
-window.FIREBASE_CONFIG = null; // replaced with the clinic Firebase web config when building the clinic version
+window.FIREBASE_CONFIG = {apiKey:"AIzaSyA_sqJG2JGHBCNSeqvKjuEUacbACshw9So",authDomain:"elforse-clinic.firebaseapp.com",projectId:"elforse-clinic",storageBucket:"elforse-clinic.firebasestorage.app",messagingSenderId:"431218806663",appId:"1:431218806663:web:e065efe61e9d63126a4d22"};

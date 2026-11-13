@@ -2,6 +2,7 @@
 /* ================= التشغيل وتسجيل الدخول ================= */
 function getConfig(){if(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey)return window.FIREBASE_CONFIG;try{const c=localStorage.getItem('fbconfig');return c?JSON.parse(c):null}catch{return null}}
 async function boot(){let mode=null;try{mode=localStorage.getItem('mode')}catch{}
+  if(mode==='local'&&window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey){try{localStorage.setItem('hadLocal','1');localStorage.removeItem('mode')}catch{}mode=null}
   if(mode==='local')return startLocal();
   const cfg=getConfig();if(!cfg)return screenWelcome();
   try{const app=FB.initializeApp(cfg);auth=FB.initializeAuth(app,{persistence:[FB.indexedDBLocalPersistence,FB.browserLocalPersistence]});
