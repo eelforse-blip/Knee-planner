@@ -22,6 +22,7 @@ function getCfg(){if(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey)retur
 function parseCfg(t){t=String(t||'').trim();let c=null;try{c=JSON.parse(t)}catch{c=b64d(t);if(!c){try{c=JSON.parse(decodeURIComponent(escape(atob(t))))}catch{}}}
   if(!c){const m=t.match(/firebaseConfig\s*=\s*(\{[\s\S]*?\})/)||t.match(/(\{[\s\S]*apiKey[\s\S]*\})/);if(m){try{c=Function('return '+m[1])()}catch{}}}return c&&c.apiKey&&c.projectId?c:null}
 let app,auth,db,cfg;
+let installEv=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEv=e;const b=$('#inst');if(b)b.hidden=false});addEventListener('appinstalled',()=>{installEv=null;toast('اتثبت على سطح المكتب')});
 const withTimeout=(p,ms,tag)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error('timeout'),{code:'timeout',tag})),ms))]);
 function errMsg(e){const c=(e&&e.code)||'';return c==='timeout'?'الاتصال بطيء أو مقطوع – جرّب تفتح الواي فاي أو بيانات الموبايل وحاول تاني':c.includes('permission')?'الكود قديم – امسح الكود اللي في الاستقبال تاني':c.includes('admin-restricted')||c.includes('operation-not-allowed')?'التسجيل مقفول من إعدادات العيادة':(c||e.message||'خطأ غير معروف')}const cid0=Q.get('c')||LS.get('cid');
 const P=(...a)=>a.join('/');
@@ -124,7 +125,7 @@ async function adminView(){await ensureDay();let day={},tk=[];
   const draw=()=>{const w=tk.filter(t=>t.status==='waiting').sort((a,b)=>a.no-b.no),called=tk.filter(t=>t.status==='called').sort((a,b)=>b.calledAt-a.calledAt),sk=tk.filter(t=>t.status==='skipped'),done=tk.filter(t=>t.status==='done');
     const keep=document.activeElement&&document.activeElement.id;if(keep&&['wn','wp','avg','msg'].includes(keep))return;const openS=$('#more')&&$('#more').open,openA=$('#addBox')&&$('#addBox').open;
     const cur=called[0];
-    $('#app').innerHTML=`<header class="top"><h1>${esc(day.name||'الدور')}</h1></header><main id="main">
+    $('#app').innerHTML=`<header class="top"><h1>${esc(day.name||'الدور')}</h1><button class="btn sm" id="inst" ${installEv?'':'hidden'} style="margin-inline-start:auto">📌 تثبيت على سطح المكتب</button></header><main id="main">
      ${day.open?'':`<div class="card" style="background:color-mix(in srgb,var(--bad) 14%,var(--surface));text-align:center"><b>التسجيل مقفول – المرضى مش هيقدروا يسجلوا</b><br><button class="btn primary" id="openB" style="margin-top:8px">افتح التسجيل</button></div>`}
      <div class="ticket" style="margin-top:6px"><div class="lbl">الدور الحالي</div><div class="big no" style="font-size:80px">${cur?ar(cur.no):'—'}</div><div style="font-size:18px">${cur?esc(cur.name):'لسه ما اتنادىش على حد'}</div>
       ${cur?`<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-id="${cur.id}" data-a="recall">📢 نادِ تاني</button><button class="btn" data-id="${cur.id}" data-a="skip">ما حضرش</button></div>`:''}</div>
@@ -149,7 +150,7 @@ async function adminView(){await ensureDay();let day={},tk=[];
   const syncWaiting=()=>{const n=tk.filter(t=>t.status==='waiting').length;if(n!==day.waiting)FB.updateDoc(dayRef(ST.cid),{waiting:n}).catch(()=>{})};
   const call=async t=>{const now=Date.now();let avg=day.avgMin||10;if(day.lastCall&&now-day.lastCall<90*6e4&&now-day.lastCall>6e4)avg=avg*.7+((now-day.lastCall)/6e4)*.3;
     await setSt(t,'called',{calledAt:now});await FB.updateDoc(dayRef(ST.cid),{current:t.no,lastCall:now,avgMin:Math.round(avg*10)/10,callSeq:(day.callSeq||0)+1})};
-  const bind=w=>{const ob=$('#openB');if(ob)ob.onclick=()=>FB.updateDoc(dayRef(ST.cid),{open:true});const cb=$('#closeB');if(cb)cb.onclick=()=>{if(!cb.dataset.arm){cb.dataset.arm=1;cb.textContent='متأكد؟ اضغط تاني';return}FB.updateDoc(dayRef(ST.cid),{open:false})};
+  const bind=w=>{const ib=$('#inst');if(ib)ib.onclick=async()=>{if(!installEv)return toast('من Chrome: ⋮ ← حفظ ومشاركة ← تثبيت الصفحة كتطبيق');installEv.prompt();const r=await installEv.userChoice;if(r.outcome==='accepted'){installEv=null;ib.hidden=true}};const ob=$('#openB');if(ob)ob.onclick=()=>FB.updateDoc(dayRef(ST.cid),{open:true});const cb=$('#closeB');if(cb)cb.onclick=()=>{if(!cb.dataset.arm){cb.dataset.arm=1;cb.textContent='متأكد؟ اضغط تاني';return}FB.updateDoc(dayRef(ST.cid),{open:false})};
     $$('[data-id]').forEach(b=>b.onclick=()=>{const t=tk.find(x=>x.id===b.dataset.id);if(b.dataset.a==='skip')setSt(t,'skipped');else{FB.updateDoc(dayRef(ST.cid),{current:t.no,callSeq:(day.callSeq||0)+1});toast('اتنادى تاني')}});
     $('#next').onclick=async()=>{for(const t of tk.filter(x=>x.status==='called'))await setSt(t,'done',{doneAt:Date.now()});if(w[0])await call(w[0])};
     $$('[data-t]').forEach(el=>{const t=tk.find(x=>x.id===el.dataset.t);el.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{const a=b.dataset.a;
