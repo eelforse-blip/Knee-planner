@@ -48,7 +48,7 @@ function screenSetup(){shell(`<div class="logo">دوري في العيادة</di
 /* ================= شاشة المريض ================= */
 let myT=null;
 async function patientFlow(cid){shell('<div class="sub">جاري التحميل…</div>');
-  try{if(!auth.currentUser)await FB.signInAnonymously(auth)}catch(e){return shell(`<div class="logo">دوري</div><div class="sub">تعذّر الاتصال. تأكد من الإنترنت وأعد المحاولة.</div><button class="btn primary" onclick="location.reload()">إعادة المحاولة</button>`)}
+  try{await auth.authStateReady();if(!auth.currentUser)await FB.signInAnonymously(auth)}catch(e){return shell(`<div class="logo">دوري</div><div class="sub">تعذّر الاتصال. تأكد من الإنترنت وأعد المحاولة.</div><button class="btn primary" onclick="location.reload()">إعادة المحاولة</button>`)}
   const saved=LS.get('ticket');if(saved&&saved.cid===cid&&saved.day===dayKey()){myT=saved;return track(cid)}
   const k=Q.get('k');
   const stop=FB.onSnapshot(dayRef(cid),s=>{const d=s.exists()?s.data():null;if($('#jn'))return;
