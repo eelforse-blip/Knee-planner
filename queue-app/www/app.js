@@ -21,7 +21,9 @@ const route=()=>(location.hash.replace(/^#\/?/,'').split('?')[0]||'');
 function getCfg(){if(window.FIREBASE_CONFIG&&window.FIREBASE_CONFIG.apiKey)return window.FIREBASE_CONFIG;const f=Q.get('f');if(f){const c=b64d(f);if(c&&c.apiKey){LS.set('fbcfg',c);return c}}return LS.get('fbcfg')}
 function parseCfg(t){t=String(t||'').trim();let c=null;try{c=JSON.parse(t)}catch{c=b64d(t);if(!c){try{c=JSON.parse(decodeURIComponent(escape(atob(t))))}catch{}}}
   if(!c){const m=t.match(/firebaseConfig\s*=\s*(\{[\s\S]*?\})/)||t.match(/(\{[\s\S]*apiKey[\s\S]*\})/);if(m){try{c=Function('return '+m[1])()}catch{}}}return c&&c.apiKey&&c.projectId?c:null}
-let app,auth,db,cfg;const cid0=Q.get('c')||LS.get('cid');
+let app,auth,db,cfg;
+const withTimeout=(p,ms,tag)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error('timeout'),{code:'timeout',tag})),ms))]);
+function errMsg(e){const c=(e&&e.code)||'';return c==='timeout'?'الاتصال بطيء أو مقطوع – جرّب تفتح الواي فاي أو بيانات الموبايل وحاول تاني':c.includes('permission')?'الكود قديم – امسح الكود اللي في الاستقبال تاني':c.includes('admin-restricted')||c.includes('operation-not-allowed')?'التسجيل مقفول من إعدادات العيادة':(c||e.message||'خطأ غير معروف')}const cid0=Q.get('c')||LS.get('cid');
 const P=(...a)=>a.join('/');
 const dayRef=(cid,d=dayKey())=>FB.doc(db,P('clinics',cid,'qday',d));
 const tRef=(cid,id,d=dayKey())=>FB.doc(db,P('clinics',cid,'qday',d,'t',id));
@@ -35,7 +37,7 @@ function err(e){console.error(e);toast(e&&e.code==='permission-denied'?'غير �
 
 function boot(){cfg=getCfg();const r=route();
   if(!cfg){if(r.startsWith('admin')||r==='tv'||r==='')return screenSetup();return shell('<div class="logo">دوري</div><div class="sub">الرابط ناقص. امسح الكود اللي في العيادة تاني.</div>')}
-  app=FB.initializeApp(cfg);auth=FB.getAuth(app);db=FB.getFirestore(app);
+  app=FB.initializeApp(cfg);auth=FB.getAuth(app);db=FB.initializeFirestore(app,{experimentalForceLongPolling:true});
   addEventListener('hashchange',()=>route1());route1()}
 let stopFns=[];const clearSubs=()=>{stopFns.forEach(f=>{try{f()}catch{}});stopFns=[]};
 function route1(){clearSubs();const r=route();if(r==='admin')return adminGate(adminView);if(r==='tv')return adminGate(tvView);if(r==='poster')return adminGate(posterView);
@@ -48,7 +50,7 @@ function screenSetup(){shell(`<div class="logo">دوري في العيادة</di
 /* ================= شاشة المريض ================= */
 let myT=null;
 async function patientFlow(cid){shell('<div class="sub">جاري التحميل…</div>');
-  try{await auth.authStateReady();if(!auth.currentUser)await FB.signInAnonymously(auth)}catch(e){return shell(`<div class="logo">دوري</div><div class="sub">تعذّر الاتصال. تأكد من الإنترنت وأعد المحاولة.</div><button class="btn primary" onclick="location.reload()">إعادة المحاولة</button>`)}
+  try{await withTimeout(auth.authStateReady(),8000,'auth');if(!auth.currentUser)await withTimeout(FB.signInAnonymously(auth),15000,'anon')}catch(e){console.error(e);return shell(`<div class="logo">دوري</div><div class="sub">تعذّر الاتصال.<br><small>${esc(errMsg(e))}</small></div><button class="btn primary" onclick="location.reload()">إعادة المحاولة</button>`)}
   const saved=LS.get('ticket');if(saved&&saved.cid===cid&&saved.day===dayKey()){myT=saved;return track(cid)}
   const k=Q.get('k');
   const stop=FB.onSnapshot(dayRef(cid),s=>{const d=s.exists()?s.data():null;if($('#jn'))return;
@@ -62,12 +64,12 @@ async function patientFlow(cid){shell('<div class="sub">جاري التحميل�
     $('#jn').onclick=()=>join(cid,k)},err);stopFns.push(stop)}
 async function join(cid,k){const name=$('#nm').value.trim(),phone=$('#ph').value.trim();if(name.length<2)return toast('اكتب اسمك');
   const b=$('#jn');b.disabled=true;b.textContent='جاري التسجيل…';const id=rid();const uid=auth.currentUser.uid;
-  try{const no=await FB.runTransaction(db,async tx=>{const ds=await tx.get(dayRef(cid));if(!ds.exists()||!ds.data().open)throw new Error('closed');
+  try{const no=await withTimeout(FB.runTransaction(db,async tx=>{const ds=await tx.get(dayRef(cid));if(!ds.exists()||!ds.data().open)throw new Error('closed');
       const n=(ds.data().nextNo||0)+1;tx.update(dayRef(cid),{nextNo:n});
       tx.set(tRef(cid,id),{no:n,name,phone,uid,code:k,status:'waiting',at:Date.now()});
-      tx.set(pRef(cid,id),{no:n,uid,status:'waiting',at:Date.now()});return n});
+      tx.set(pRef(cid,id),{no:n,uid,status:'waiting',at:Date.now()});return n}),20000,'join');
     myT={cid,day:dayKey(),id,no,name};LS.set('ticket',myT);askNotify();clearSubs();track(cid)}
-  catch(e){b.disabled=false;b.textContent='سجّل دوري';if(e.message==='closed')toast('الحجز مقفول دلوقتي');else if(e.code==='permission-denied')toast('الكود قديم – امسح الكود اللي في الاستقبال تاني');else err(e)}}
+  catch(e){b.disabled=false;b.textContent='سجّل دوري';console.error(e);if(e.message==='closed')toast('الحجز مقفول دلوقتي');else toast(errMsg(e))}}
 let alerted={near:false,called:false},beepT=null;
 function track(cid){const me=myT;let day=null,list=[];
   const draw=()=>{const mine=list.find(x=>x.id===me.id);const st=mine?mine.status:'waiting';
